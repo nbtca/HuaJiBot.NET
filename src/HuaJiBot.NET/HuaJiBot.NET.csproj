@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net7.0;net462</TargetFrameworks>
+		<Nullable>enable</Nullable>
+		<LangVersion>11</LangVersion>
+	</PropertyGroup>
+
+</Project>
