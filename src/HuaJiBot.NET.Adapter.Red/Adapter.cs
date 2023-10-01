@@ -1,4 +1,6 @@
-﻿namespace HuaJiBot.NET.Red;
+﻿using HuaJiBot.NET.Bot;
+
+namespace HuaJiBot.NET.Adapter.Red;
 
 public class RedProtocolAdapter : BotServiceBase
 {
@@ -17,22 +19,22 @@ public class RedProtocolAdapter : BotServiceBase
         throw new NotImplementedException();
     }
 
-    public override string GetMemberCard(string robotId, string targetGroup, string id)
+    public override string GetMemberCard(string robotId, string targetGroup, string userId)
     {
         throw new NotImplementedException();
     }
 
-    public override void FeedbackAt(string robotId, string targetGroup, string id, string text)
+    public override void FeedbackAt(string robotId, string targetGroup, string userId, string text)
     {
         throw new NotImplementedException();
     }
 
-    public override MemberType GetMemberType(string robotId, string targetGroup, string id)
+    public override MemberType GetMemberType(string robotId, string targetGroup, string userId)
     {
         throw new NotImplementedException();
     }
 
-    public override string GetNick(string robotId, string id)
+    public override string GetNick(string robotId, string userId)
     {
         throw new NotImplementedException();
     }

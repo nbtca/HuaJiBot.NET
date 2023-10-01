@@ -3,7 +3,11 @@
 	<PropertyGroup>
 		<TargetFrameworks>net7.0;net462</TargetFrameworks>
 		<Nullable>enable</Nullable>
-		<LangVersion>11</LangVersion>
+		<LangVersion>preview</LangVersion>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Folder Include="Events\" />
+	</ItemGroup>
 
 </Project>
