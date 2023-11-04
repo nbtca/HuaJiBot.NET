@@ -14,7 +14,6 @@ public class Events
 
     internal static void CallOnStartup()
     {
-        Internal.OnStartup();
         Global.Service.Events.OnStartup?.Invoke(Global.Service, EventArgs.Empty);
     }
 
