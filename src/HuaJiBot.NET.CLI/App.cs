@@ -2,11 +2,19 @@
 using HuaJiBot.NET.Adapter.Red;
 using HuaJiBot.NET.CLI.Config;
 
-Internal.SetupService(new RedProtocolAdapter()); //协议适配器
-var api = Global.Service; //获取服务实例
+var token = File.ReadAllText(
+    Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "BetterUniverse",
+        "QQNT",
+        "RED_PROTOCOL_TOKEN"
+    )
+);
+var api = new RedProtocolAdapter("ws://localhost:16530", token);
+await Internal.SetupService(api); //协议适配器
 var config = Config.Load(); //配置文件
+config.Save();
 Internal.Setup(); //启动
-
 Console.WriteLine("setup");
 while (true)
 {

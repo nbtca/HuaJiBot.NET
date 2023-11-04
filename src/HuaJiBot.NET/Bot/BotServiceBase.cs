@@ -1,4 +1,6 @@
-﻿namespace HuaJiBot.NET.Bot;
+﻿using System.Threading.Tasks;
+
+namespace HuaJiBot.NET.Bot;
 
 public enum MemberType
 {
@@ -10,6 +12,8 @@ public enum MemberType
 
 public abstract class BotServiceBase
 {
+    public abstract Task SetupService();
+
     public Events.Events Events { get; } = new();
     public abstract string[] GetAllRobots();
     public abstract void SendGroupMessage(string robotId, string targetGroup, string message);

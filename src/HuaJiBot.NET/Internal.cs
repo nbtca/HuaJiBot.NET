@@ -1,15 +1,17 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
 using HuaJiBot.NET.Bot;
 
 namespace HuaJiBot.NET;
 
 public static class Internal
 {
-    public static void SetupService<T>(T service)
+    public static async Task SetupService<T>(T service)
         where T : BotServiceBase
     {
+        await service.SetupService();
         Global.ServiceInstance = service;
     }
 

@@ -15,7 +15,7 @@ internal partial class Config
     /// <returns>配置对象</returns>
     internal static Config Load()
     {
-        if (File.Exists(ConfigFileName))
+        if (!File.Exists(ConfigFileName))
         {
             return new Config();
         }

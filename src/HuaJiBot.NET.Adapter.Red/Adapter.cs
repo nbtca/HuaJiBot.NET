@@ -2,8 +2,15 @@
 
 namespace HuaJiBot.NET.Adapter.Red;
 
-public class RedProtocolAdapter : BotServiceBase
+public class RedProtocolAdapter(string url, string token) : BotServiceBase
 {
+    readonly Connector _connector = new(url);
+
+    public override async Task SetupService()
+    {
+        await _connector.Connect(token);
+    }
+
     public override string[] GetAllRobots()
     {
         throw new NotImplementedException();
