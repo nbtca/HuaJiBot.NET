@@ -10,6 +10,7 @@ public enum MemberType
 
 public abstract class BotServiceBase
 {
+    public Events.Events Events { get; } = new();
     public abstract string[] GetAllRobots();
     public abstract void SendGroupMessage(string robotId, string targetGroup, string message);
     public abstract string GetGroupName(string robotId, string targetGroup);

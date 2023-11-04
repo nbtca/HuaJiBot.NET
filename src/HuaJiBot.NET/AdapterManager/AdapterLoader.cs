@@ -1,3 +1,3 @@
-﻿namespace HuaJiBot.NET.AdapterManager;
+﻿//namespace HuaJiBot.NET.AdapterManager;
 
-internal class AdapterLoader { }
+//internal class AdapterLoader { }
