@@ -36,4 +36,18 @@ public class Events
     {
         Global.Service.Events.OnInitialized?.Invoke(Global.Service, EventArgs.Empty);
     }
+
+    public event EventHandler<BotLoginEventArgs>? OnBotLogin;
+
+    public static void CallOnBotLogin(BotLoginEventArgs e)
+    {
+        Global.Service.Events.OnBotLogin?.Invoke(Global.Service, e);
+    }
+
+    public event EventHandler<GroupMessageEventArgs>? OnGroupMessageReceived;
+
+    public static void CallOnGroupMessageReceived(GroupMessageEventArgs e)
+    {
+        Global.Service.Events.OnGroupMessageReceived?.Invoke(Global.Service, e);
+    }
 }

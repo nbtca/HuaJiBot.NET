@@ -1,5 +1,9 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Runtime.InteropServices.JavaScript;
+using System.Text;
+using HuaJiBot.NET.Events;
+using Timer = System.Timers.Timer;
 
 namespace HuaJiBot.NET.Adapter.Red;
 
@@ -13,8 +17,12 @@ internal class Connector(string url)
                 {
                     Options = { KeepAliveInterval = TimeSpan.FromSeconds(5), }
                 }
-        );
+        )
+        {
+            IsReconnectionEnabled = true,
+        };
 
+    //private Timer? _keepAliveTimer = new(1_0000);
     public async Task Connect(string authorizationToken)
     {
         Client.MessageReceived.Subscribe(msg =>
@@ -28,14 +36,16 @@ internal class Connector(string url)
         Client.ReconnectionHappened.Subscribe(info =>
         {
             Console.WriteLine("reconnected " + info.Type);
+            //_ = SendConnectMsg(authorizationToken);
         });
-        Client.ErrorReconnectTimeout =
-            Client.ReconnectTimeout =
-            Client.LostReconnectTimeout =
-                TimeSpan.FromSeconds(10);
         await Client.Start();
-        Console.WriteLine("Connect to Red");
+        Console.WriteLine("Connect to Red.");
         await SendConnectMsg(authorizationToken);
+        //_keepAliveTimer.Start();
+        //_keepAliveTimer.Elapsed += async (sender, args) =>
+        //{
+        //    await Client.SendInstant("{}");
+        //};
     }
 
     private async Task SendConnectMsg(string authorizationToken)
@@ -51,36 +61,80 @@ internal class Connector(string url)
 
     private void ProcessMessage(string? jsonString)
     {
-        var data = JsonConvert.DeserializeObject<Payload<JToken>>(jsonString);
-        switch (data.Type)
+        try
         {
-            case "meta::connect": //连接成功
-                //{
-                //  "type": "meta::connect",
-                //  "payload": {
-                //    "version": "0.0.48",
-                //    "name": "chronocat",
-                //    "authData": {
-                //      "account": "111",
-                //      "mainAccount": "",
-                //      "uin": "111",
-                //      "uid": "u_i11-1111",
-                //      "nickName": "",
-                //      "gender": 0,
-                //      "age": 0,
-                //      "faceUrl": "",
-                //      "a2": "",
-                //      "d2": "",
-                //      "d2key": ""
-                //    }
-                //  }
-                //}
-                var connect = data.Data.ToObject<ConnectRecv>()!;
-                Console.WriteLine(
-                    $"已链接到{connect.Name}@{connect.Version} 账号{connect.AuthData!.Account}"
-                );
-                break;
+            var data = JsonConvert.DeserializeObject<Payload<JToken>>(jsonString!);
+            switch (data!.Type)
+            {
+                case "meta::connect": //连接成功
+                    //{
+                    //  "type": "meta::connect",
+                    //  "payload": {
+                    //    "version": "0.0.48",
+                    //    "name": "chronocat",
+                    //    "authData": {
+                    //      "account": "111",
+                    //      "mainAccount": "",
+                    //      "uin": "111",
+                    //      "uid": "u_i11-1111",
+                    //      "nickName": "",
+                    //      "gender": 0,
+                    //      "age": 0,
+                    //      "faceUrl": "",
+                    //      "a2": "",
+                    //      "d2": "",
+                    //      "d2key": ""
+                    //    }
+                    //  }
+                    //}
+                    var connect = data.Data.ToObject<ConnectRecv>()!;
+                    Events.Events.CallOnBotLogin(
+                        new BotLoginEventArgs
+                        {
+                            AccountId = connect.AuthData!.Account!,
+                            ClientName = connect.Name!,
+                            ClientVersion = connect.Version!
+                        }
+                    );
+                    break;
+                case "message::recv":
+                    foreach (var msg in data.Data.ToObject<MessageRecv[]>()!)
+                    {
+                        Events.Events.CallOnGroupMessageReceived(
+                            new GroupMessageEventArgs
+                            {
+                                GroupId = msg.GroupId!,
+                                SenderId = msg.senderUid!,
+                                GroupName = msg.peerName!,
+                                SenderMemberCard = string.IsNullOrWhiteSpace(msg.sendMemberName)
+                                    ? msg.sendNickName!
+                                    : msg.sendMemberName!,
+                                TextMessageLazy = new(() =>
+                                {
+                                    var sb = new StringBuilder();
+                                    foreach (var element in msg.Elements)
+                                    {
+                                        if (element.textElement is { } text)
+                                        {
+                                            sb.Append(text);
+                                        }
+                                        else
+                                        {
+                                            sb.Append($"[消息类型：{element.elementType}]");
+                                        }
+                                    }
+                                    return sb.ToString();
+                                })
+                            }
+                        );
+                    }
+                    break;
+            }
+            Console.WriteLine("message received " + jsonString);
         }
-        Console.WriteLine("message received " + jsonString);
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
     }
 }

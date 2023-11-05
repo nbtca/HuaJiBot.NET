@@ -20,11 +20,11 @@ public class Payload<T> : Payload
         if (Data is MessageRecv data)
         {
             messageInfo.ChatType = data.chatType;
-            messageInfo.Uin = data.senderUin;
+            messageInfo.Uin = data.SenderId;
             messageInfo.SenderName = string.IsNullOrEmpty(data.sendMemberName)
                 ? data.sendNickName
                 : data.sendMemberName;
-            messageInfo.PeerUin = data.peerUin;
+            messageInfo.PeerUin = data.GroupId;
             messageInfo.PeerName = data.peerName;
             messageInfo.Time = DateTimeOffset
                 .FromUnixTimeSeconds(long.Parse(data.msgTime))
@@ -136,7 +136,9 @@ public class MessageRecv
     public string? sendNickName { get; set; }
     public string? guildName { get; set; }
     public string? channelName { get; set; }
-    public List<Elements> elements { get; set; } //消息主体
+
+    [JsonProperty("elements")]
+    public List<Elements> Elements { get; set; } //消息主体
 
     //public object? records { get; set; }
     //public object? emojiLikesList { get; set; }
@@ -166,8 +168,12 @@ public class MessageRecv
     public string? anonymousExtInfo { get; set; }
     public string? personalMedal { get; set; }
     public string? roleManagementTag { get; set; }
-    public string? senderUin { get; set; }
-    public string? peerUin { get; set; }
+
+    [JsonProperty("senderUin")]
+    public string? SenderId { get; set; }
+
+    [JsonProperty("peerUin")]
+    public string? GroupId { get; set; }
 }
 
 public class RoleInfo

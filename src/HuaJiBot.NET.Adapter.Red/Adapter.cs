@@ -21,16 +21,6 @@ public class RedProtocolAdapter(string url, string token) : BotServiceBase
         throw new NotImplementedException();
     }
 
-    public override string GetGroupName(string robotId, string targetGroup)
-    {
-        throw new NotImplementedException();
-    }
-
-    public override string GetMemberCard(string robotId, string targetGroup, string userId)
-    {
-        throw new NotImplementedException();
-    }
-
     public override void FeedbackAt(string robotId, string targetGroup, string userId, string text)
     {
         throw new NotImplementedException();
