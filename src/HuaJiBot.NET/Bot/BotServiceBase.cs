@@ -21,6 +21,7 @@ public abstract class BotServiceBase
     public abstract MemberType GetMemberType(string robotId, string targetGroup, string userId);
     public abstract string GetNick(string robotId, string userId);
     public abstract void Log(object message);
+    public abstract void Warn(object message);
     public abstract void LogDebug(object message);
     public abstract void LogError(object message, object detail);
     public abstract string GetPluginDataPath();

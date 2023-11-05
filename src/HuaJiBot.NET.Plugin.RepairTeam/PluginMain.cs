@@ -2,9 +2,16 @@
 
 public class PluginMain : PluginBase
 {
-    protected override void Initialize()
+    protected override Task Initialize()
     {
+        Service.Events.OnGroupMessageReceived += Events_OnGroupMessageReceived;
         Service.Log("[1] 启动成功！");
+        return Task.CompletedTask;
+    }
+
+    private void Events_OnGroupMessageReceived(object? sender, Events.GroupMessageEventArgs e)
+    {
+        Service.Log($"[{e.GroupName}] <{e.SenderMemberCard}> {e.TextMessage}");
     }
 
     protected override void Unload() { }

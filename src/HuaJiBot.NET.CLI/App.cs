@@ -2,9 +2,9 @@
 using HuaJiBot.NET.Adapter.Red;
 using HuaJiBot.NET.CLI.Config;
 
+Console.WriteLine("运行路径：" + Environment.CurrentDirectory);
 var config = Config.Load(); //配置文件
 config.Save();
-
 var token = File.ReadAllText(
     Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -18,26 +18,53 @@ await Internal.SetupService(api); //协议适配器
 var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>
 {
-    Console.WriteLine(
-        $"已链接到{eventArgs.ClientName}@{eventArgs.ClientVersion} 账号{eventArgs.AccountId}"
-    );
+    api.Log($"已链接到 {eventArgs.ClientName}@{eventArgs.ClientVersion} 账号{eventArgs.AccountId}");
     accountId = eventArgs.AccountId;
 };
-Internal.Setup(); //启动
-Console.WriteLine("setup");
+var pluginDir = Path.Combine(Environment.CurrentDirectory, "plugins"); //插件目录
+#region 额外插件
+//复制额外插件（主要开发使用）
+if (config.ExtraPlugins is { Length: > 0 })
+{
+    var extraPlugins = Path.Combine(pluginDir, "extra");
+
+    if (Directory.Exists(extraPlugins))
+        Directory.Delete(extraPlugins, true);
+    Directory.CreateDirectory(extraPlugins);
+    foreach (var file in config.ExtraPlugins)
+    {
+        if (File.Exists(file))
+        {
+            var fileName = Path.GetFileName(file);
+            if (fileName.EndsWith(".dll"))
+            {
+                File.Copy(file, Path.Combine(extraPlugins, fileName), true);
+                api.Log($"复制额外插件 {fileName} 成功。");
+            }
+        }
+        else
+        {
+            api.Warn($"额外插件 {file} 不存在。");
+        }
+    }
+}
+#endregion
+await Internal.Setup(api, pluginDir); //启动
 while (true)
 {
-    var line = Console.ReadLine();
-    var cmds = line.Split(' ');
-    switch (cmds)
+    if (Console.ReadLine() is { } line)
     {
-        case ["quit" or "q"]:
-            break;
-        case ["send", var targetGroup, var message]:
-            api.SendGroupMessage(accountId, targetGroup, message);
-            break;
-        default:
-            Console.WriteLine($"未知的命令{line}");
-            break;
+        var cmds = line.Split(' ');
+        switch (cmds)
+        {
+            case ["quit" or "q"]:
+                break;
+            case ["send", var targetGroup, var message]:
+                api.SendGroupMessage(accountId, targetGroup, message);
+                break;
+            default:
+                Console.WriteLine($"未知的命令 {line} .");
+                break;
+        }
     }
 }

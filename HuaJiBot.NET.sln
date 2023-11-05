@@ -9,7 +9,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HuaJiBot.NET.Adapter.Red", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HuaJiBot.NET.Plugin.RepairTeam", "src\HuaJiBot.NET.Plugin.RepairTeam\HuaJiBot.NET.Plugin.RepairTeam.csproj", "{729D022F-6631-401D-9378-BC28A5014772}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuaJiBot.NET.CLI", "src\HuaJiBot.NET.CLI\HuaJiBot.NET.CLI.csproj", "{92DB2C82-CB1E-43BC-AE2F-4971871FDA6E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HuaJiBot.NET.CLI", "src\HuaJiBot.NET.CLI\HuaJiBot.NET.CLI.csproj", "{92DB2C82-CB1E-43BC-AE2F-4971871FDA6E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{729D022F-6631-401D-9378-BC28A5014772} = {729D022F-6631-401D-9378-BC28A5014772}
+		{7773E08C-333A-4005-B2D1-ACA9057B31F2} = {7773E08C-333A-4005-B2D1-ACA9057B31F2}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using HuaJiBot.NET.Bot;
 
 namespace HuaJiBot.NET;
@@ -11,7 +12,7 @@ public abstract class PluginBase
     /// <summary>
     /// 插件初始化
     /// </summary>
-    protected internal abstract void Initialize();
+    protected internal abstract Task Initialize();
 
     /// <summary>
     /// 插件卸载

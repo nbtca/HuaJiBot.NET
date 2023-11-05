@@ -1,13 +1,12 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Runtime.InteropServices.JavaScript;
 using System.Text;
+using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Events;
-using Timer = System.Timers.Timer;
 
 namespace HuaJiBot.NET.Adapter.Red;
 
-internal class Connector(string url)
+internal class Connector(BotServiceBase api, string url)
 {
     readonly Websocket.Client.WebsocketClient Client =
         new(
@@ -31,16 +30,16 @@ internal class Connector(string url)
         });
         Client.DisconnectionHappened.Subscribe(info =>
         {
-            Console.WriteLine("disconnected " + info.Type);
+            api.Warn("断开连接 原因：" + info.Type);
         });
         Client.ReconnectionHappened.Subscribe(info =>
         {
-            Console.WriteLine("reconnected " + info.Type);
-            //_ = SendConnectMsg(authorizationToken);
+            api.Warn("建立连接：" + info.Type);
+            SendConnectMsg(authorizationToken); //重连后重新发送连接消息
         });
         await Client.Start();
-        Console.WriteLine("Connect to Red.");
-        await SendConnectMsg(authorizationToken);
+        api.Log("Websocket连接已建立。");
+        //await SendConnectMsg(authorizationToken);
         //_keepAliveTimer.Start();
         //_keepAliveTimer.Elapsed += async (sender, args) =>
         //{
@@ -48,7 +47,7 @@ internal class Connector(string url)
         //};
     }
 
-    private async Task SendConnectMsg(string authorizationToken)
+    private void SendConnectMsg(string authorizationToken)
     {
         var payload = new Payload<ConnectSend>
         {
@@ -56,7 +55,7 @@ internal class Connector(string url)
             Data = new ConnectSend { token = authorizationToken }
         };
         var json = JsonConvert.SerializeObject(payload);
-        await Client.SendInstant(json);
+        Client.Send(json);
     }
 
     private void ProcessMessage(string? jsonString)
@@ -116,7 +115,7 @@ internal class Connector(string url)
                                     {
                                         if (element.textElement is { } text)
                                         {
-                                            sb.Append(text);
+                                            sb.Append(text.content);
                                         }
                                         else
                                         {
@@ -130,11 +129,11 @@ internal class Connector(string url)
                     }
                     break;
             }
-            Console.WriteLine("message received " + jsonString);
+            //api.LogDebug("message received " + jsonString);
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex);
+            api.LogError(nameof(ProcessMessage), ex);
         }
     }
 }
