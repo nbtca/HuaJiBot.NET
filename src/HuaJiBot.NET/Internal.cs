@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using HuaJiBot.NET.Bot;
@@ -66,12 +67,24 @@ public static class Internal
 
     private static void LoadAllPlugins(BotServiceBase api, DirectoryInfo directoryInfo)
     {
-        foreach (var file in directoryInfo.EnumerateFiles("*.dll", SearchOption.AllDirectories))
-        //遍历所有dll文件
-        //SearchOption.AllDirectories 包括所有子目录
+        var libsDir = Path.Combine(directoryInfo.FullName, "libs");
+        if (!Directory.Exists(libsDir))
+            Directory.CreateDirectory(libsDir);
+        var libs = Directory.GetFiles(libsDir, "*.dll", SearchOption.AllDirectories); //获取所有依赖库
+        foreach (var lib in libs)
+        {
+            api.Log("加载依赖库：" + Path.GetRelativePath(Environment.CurrentDirectory, lib));
+            Assembly.LoadFrom(lib); //加载依赖库
+        }
+        foreach (
+            var file in directoryInfo
+                .EnumerateFiles("*.dll", SearchOption.AllDirectories) //遍历所有dll文件
+                //SearchOption.AllDirectories 包括所有子目录
+                .SkipWhile(x => libs.Contains(x.FullName)) //跳过libs目录下的dll
+        )
         {
             api.Log("加载动态链接库：" + Path.GetRelativePath(Environment.CurrentDirectory, file.FullName));
-            var assembly = Assembly.LoadFile(file.FullName); //加载程序集
+            var assembly = Assembly.LoadFrom(file.FullName); //加载程序集
             foreach (var module in assembly.Modules)
             {
                 foreach (var entryPoint in module.GetCustomAttributes<EntryPointBase>()) //遍历所有EntryPoint注解

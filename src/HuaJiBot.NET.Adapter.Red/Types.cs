@@ -6,13 +6,13 @@ namespace HuaJiBot.NET.Adapter.Red;
 public class Payload //载荷
 {
     [JsonProperty("type")]
-    public string Type { get; set; }
+    public required string Type { get; set; }
 }
 
 public class Payload<T> : Payload
 {
     [JsonProperty("payload")]
-    public T Data { get; set; }
+    public required T Data { get; set; }
 
     internal MessageInfo GetMessageInfo()
     {
@@ -24,7 +24,7 @@ public class Payload<T> : Payload
             messageInfo.SenderName = string.IsNullOrEmpty(data.sendMemberName)
                 ? data.sendNickName
                 : data.sendMemberName;
-            messageInfo.PeerUin = data.GroupId;
+            messageInfo.PeerUin = data.PeerUin;
             messageInfo.PeerName = data.peerName;
             messageInfo.Time = DateTimeOffset
                 .FromUnixTimeSeconds(long.Parse(data.msgTime))
@@ -173,7 +173,7 @@ public class MessageRecv
     public string? SenderId { get; set; }
 
     [JsonProperty("peerUin")]
-    public string? GroupId { get; set; }
+    public string? PeerUin { get; set; }
 }
 
 public class RoleInfo
@@ -355,7 +355,7 @@ public class XmlElement
 
 public class ReplyElement
 {
-    public string? replayMsgSeq { get; set; }
+    public string? replyMsgSeq { get; set; }
     public string? replyMsgId { get; set; }
     public string? senderUin { get; set; }
     public string? senderUinStr { get; set; }

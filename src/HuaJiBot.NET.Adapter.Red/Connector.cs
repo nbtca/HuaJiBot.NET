@@ -6,11 +6,11 @@ using HuaJiBot.NET.Events;
 
 namespace HuaJiBot.NET.Adapter.Red;
 
-internal class Connector(BotServiceBase api, string url)
+internal partial class Connector(BotServiceBase api, string url, string authorizationToken)
 {
-    readonly Websocket.Client.WebsocketClient Client =
+    readonly Websocket.Client.WebsocketClient _client =
         new(
-            new(url),
+            new("ws://" + url),
             () =>
                 new System.Net.WebSockets.ClientWebSocket()
                 {
@@ -22,22 +22,22 @@ internal class Connector(BotServiceBase api, string url)
         };
 
     //private Timer? _keepAliveTimer = new(1_0000);
-    public async Task Connect(string authorizationToken)
+    public async Task Connect()
     {
-        Client.MessageReceived.Subscribe(msg =>
+        _client.MessageReceived.Subscribe(msg =>
         {
             ProcessMessage(msg.Text);
         });
-        Client.DisconnectionHappened.Subscribe(info =>
+        _client.DisconnectionHappened.Subscribe(info =>
         {
             api.Warn("断开连接 原因：" + info.Type);
         });
-        Client.ReconnectionHappened.Subscribe(info =>
+        _client.ReconnectionHappened.Subscribe(info =>
         {
             api.Warn("建立连接：" + info.Type);
             SendConnectMsg(authorizationToken); //重连后重新发送连接消息
         });
-        await Client.Start();
+        await _client.Start();
         api.Log("Websocket连接已建立。");
         //await SendConnectMsg(authorizationToken);
         //_keepAliveTimer.Start();
@@ -55,7 +55,7 @@ internal class Connector(BotServiceBase api, string url)
             Data = new ConnectSend { token = authorizationToken }
         };
         var json = JsonConvert.SerializeObject(payload);
-        Client.Send(json);
+        _client.Send(json);
     }
 
     private void ProcessMessage(string? jsonString)
@@ -92,17 +92,20 @@ internal class Connector(BotServiceBase api, string url)
                         {
                             AccountId = connect.AuthData!.Account!,
                             ClientName = connect.Name!,
-                            ClientVersion = connect.Version!
+                            ClientVersion = connect.Version!,
+                            Service = api
                         }
                     );
                     break;
                 case "message::recv":
+                    api.LogDebug(data.Data);
                     foreach (var msg in data.Data.ToObject<MessageRecv[]>()!)
                     {
                         Events.Events.CallOnGroupMessageReceived(
                             new GroupMessageEventArgs
                             {
-                                GroupId = msg.GroupId!,
+                                Service = api,
+                                GroupId = msg.PeerUin!,
                                 SenderId = msg.senderUid!,
                                 GroupName = msg.peerName!,
                                 SenderMemberCard = string.IsNullOrWhiteSpace(msg.sendMemberName)
@@ -135,5 +138,10 @@ internal class Connector(BotServiceBase api, string url)
         {
             api.LogError(nameof(ProcessMessage), ex);
         }
+    }
+
+    public void Send(string json)
+    {
+        _client.Send(json);
     }
 }

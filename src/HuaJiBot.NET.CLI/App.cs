@@ -13,7 +13,7 @@ var token = File.ReadAllText(
         "RED_PROTOCOL_TOKEN"
     )
 ); //读取密钥
-var api = new RedProtocolAdapter("ws://localhost:16530", token); //链接协议适配器
+var api = new RedProtocolAdapter("localhost:16530", token); //链接协议适配器
 await Internal.SetupService(api); //协议适配器
 var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>

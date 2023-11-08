@@ -16,8 +16,13 @@ public abstract class BotServiceBase
 
     public Events.Events Events { get; } = new();
     public abstract string[] GetAllRobots();
-    public abstract void SendGroupMessage(string robotId, string targetGroup, string message);
-    public abstract void FeedbackAt(string robotId, string targetGroup, string userId, string text);
+    public abstract void SendGroupMessage(string? robotId, string targetGroup, string message);
+    public abstract void FeedbackAt(
+        string? robotId,
+        string targetGroup,
+        string userId,
+        string text
+    );
     public abstract MemberType GetMemberType(string robotId, string targetGroup, string userId);
     public abstract string GetNick(string robotId, string userId);
     public abstract void Log(object message);

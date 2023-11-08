@@ -1,4 +1,7 @@
-﻿using HuaJiBot.NET.Bot;
+﻿using HuaJiBot.NET.Adapter.Red.Message;
+using HuaJiBot.NET.Bot;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.Red;
 
@@ -6,16 +9,14 @@ public class RedProtocolAdapter : BotServiceBase
 {
     public RedProtocolAdapter(string url, string token)
     {
-        _connector = new(this, url);
-        _token = token;
+        _connector = new(this, url, token);
     }
 
     readonly Connector _connector;
-    readonly string _token;
 
     public override async Task SetupService()
     {
-        await _connector.Connect(_token);
+        await _connector.Connect();
     }
 
     public override string[] GetAllRobots()
@@ -23,14 +24,103 @@ public class RedProtocolAdapter : BotServiceBase
         throw new NotImplementedException();
     }
 
-    public override void SendGroupMessage(string robotId, string targetGroup, string message)
+    public override void SendGroupMessage(string? robotId, string targetGroup, string message)
     {
-        throw new NotImplementedException();
+        SendGroupMessageInternal(targetGroup, message);
     }
 
-    public override void FeedbackAt(string robotId, string targetGroup, string userId, string text)
+    public override void FeedbackAt(string? robotId, string targetGroup, string userId, string text)
     {
-        throw new NotImplementedException();
+        SendGroupMessageInternal(targetGroup, text, userId);
+    }
+
+    public void SendGroupMessageInternal(
+        string targetGroup,
+        string message,
+        string atNtUid = "",
+        string atUid = ""
+    )
+    {
+        _ = _connector.Send(
+            new MessageBuilder()
+                .SetTarget(targetGroup, ChatTypes.GroupMessage)
+                .AddText("test")
+                .Build()
+        );
+
+        /*
+      {
+  "type": "message::send",
+  "payload": {
+    "msgId": "0",
+    "elements": [
+      {
+        "elementId": "",
+        "elementType": 1,
+        "textElement": {
+          "content": "。",
+          "atUid": "",
+          "atNtUid": "",
+          "atTinyUid": "",
+          "atType": 0
+        }
+      }
+    ],
+    "peer": { "chatType": 2, "guildId": "", "peerUid": "626872357" }
+  }
+}
+*/
+        //var arr = new JArray();
+        //var hasAt = !string.IsNullOrWhiteSpace(atUid);
+        //if (hasAt)
+        //{
+        //    arr.Add(
+        //        new JObject
+        //        {
+        //            ["elementId"] = "",
+        //            ["elementType"] = 1,
+        //            ["textElement"] = new JObject
+        //            {
+        //                ["content"] = "@atUid",
+        //                ["atUid"] = atUid,
+        //                ["atNtUid"] = atNtUid,
+        //                ["atTinyUid"] = "",
+        //                ["atType"] = 2
+        //            }
+        //        }
+        //    );
+        //}
+        //arr.Add(
+        //    new JObject
+        //    {
+        //        ["elementId"] = "",
+        //        ["elementType"] = 1,
+        //        ["textElement"] = new JObject
+        //        {
+        //            ["content"] = (hasAt ? " " : "") + message,
+        //            ["atUid"] = "",
+        //            ["atNtUid"] = "",
+        //            ["atTinyUid"] = "",
+        //            ["atType"] = 0
+        //        }
+        //    }
+        //);
+        //var obj = new JObject
+        //{
+        //    ["type"] = "message::send",
+        //    ["payload"] = new JObject
+        //    {
+        //        ["msgId"] = "0",
+        //        ["elements"] = arr,
+        //        ["peer"] = new JObject()
+        //        {
+        //            ["chatType"] = 2,
+        //            ["guildId"] = "",
+        //            ["peerUid"] = targetGroup
+        //        }
+        //    }
+        //};
+        //_connector.Send(obj.ToString(Formatting.None));
     }
 
     public override MemberType GetMemberType(string robotId, string targetGroup, string userId)

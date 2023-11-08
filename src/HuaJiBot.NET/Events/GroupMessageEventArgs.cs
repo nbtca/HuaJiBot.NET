@@ -1,11 +1,17 @@
 ﻿using System;
+using HuaJiBot.NET.Bot;
 
 namespace HuaJiBot.NET.Events;
+
+public class BotEventArgs : EventArgs
+{
+    public required BotServiceBase Service { get; init; }
+}
 
 /// <summary>
 /// 机器人账号登录成功事件
 /// </summary>
-public class BotLoginEventArgs : EventArgs
+public class BotLoginEventArgs : BotEventArgs
 {
     /// <summary>账户ID</summary>
     public required string AccountId { get; init; }
@@ -17,7 +23,7 @@ public class BotLoginEventArgs : EventArgs
 /// <summary>
 /// 群消息事件
 /// </summary>
-public class GroupMessageEventArgs : EventArgs
+public class GroupMessageEventArgs : BotEventArgs
 {
     /// <summary>群ID</summary>
     public required string GroupId { get; init; }
@@ -32,4 +38,13 @@ public class GroupMessageEventArgs : EventArgs
     public required string SenderMemberCard { get; init; }
     public required Lazy<string> TextMessageLazy { get; init; }
     public string TextMessage => TextMessageLazy.Value;
+
+    /// <summary>
+    /// 返回消息给发送者（at发送者）
+    /// </summary>
+    /// <param name="message"></param>
+    public void Feedback(string message)
+    {
+        Service.FeedbackAt(null, GroupId, SenderId, message);
+    }
 }
