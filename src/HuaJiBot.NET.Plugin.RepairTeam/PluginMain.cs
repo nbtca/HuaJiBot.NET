@@ -1,4 +1,6 @@
-﻿namespace HuaJiBot.NET.Plugin.RepairTeam;
+﻿using Newtonsoft.Json;
+
+namespace HuaJiBot.NET.Plugin.RepairTeam;
 
 public class PluginMain : PluginBase
 {
@@ -11,6 +13,12 @@ public class PluginMain : PluginBase
 
     private void Events_OnGroupMessageReceived(object? sender, Events.GroupMessageEventArgs e)
     {
+        if (e.TextMessage.StartsWith("test000"))
+        {
+            Console.WriteLine(JsonConvert.SerializeObject(e));
+            e.Feedback("test");
+        }
+
         Service.Log($"[{e.GroupName}] <{e.SenderMemberCard}> {e.TextMessage}");
     }
 

@@ -1,4 +1,5 @@
-﻿using HuaJiBot.NET.Plugin.Calendar;
+﻿using System.Text;
+using HuaJiBot.NET.Plugin.Calendar;
 using Newtonsoft.Json;
 
 namespace HuaJiBot.NET.Plugin.RepairTeam;
@@ -45,10 +46,31 @@ public class PluginMain : PluginBase
 
     private void Events_OnGroupMessageReceived(object? sender, Events.GroupMessageEventArgs e)
     {
-        if (e.TextMessage.StartsWith("test000"))
+        if (e.TextMessage.StartsWith("日程"))
         {
-            Console.WriteLine(JsonConvert.SerializeObject(e));
-            e.Feedback("test");
+            var week = 1;
+            var content = e.TextMessage[2..].Trim();
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                if (!int.TryParse(content, out week))
+                {
+                    e.Feedback("参数错误");
+                    return;
+                }
+            }
+            var now = DateTime.Now;
+            var end = now.AddDays(7 * week);
+            StringBuilder sb = new();
+            foreach (
+                var (period, ev) in from x in ical.GetEvents(now, end)
+                orderby x.period.StartTime ascending
+                select x
+            )
+            {
+                sb.AppendLine($"{period.StartTime:yyyy-MM-dd HH:mm} {ev.Summary}");
+            }
+            e.Feedback($"近{week}周的日程：\n{sb}");
+            Service.LogDebug(JsonConvert.SerializeObject(e));
         }
         //Service.Log($"[{e.GroupName}] <{e.SenderMemberCard}> {e.TextMessage}");
     }

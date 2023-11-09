@@ -37,16 +37,15 @@ public class RedProtocolAdapter : BotServiceBase
     public void SendGroupMessageInternal(
         string targetGroup,
         string message,
-        string atNtUid = "",
-        string atUid = ""
+        string atNtUid = ""
+    //, string atUid = ""
     )
     {
-        _ = _connector.Send(
-            new MessageBuilder()
-                .SetTarget(targetGroup, ChatTypes.GroupMessage)
-                .AddText("test")
-                .Build()
-        );
+        var msg = new MessageBuilder().SetTarget(targetGroup, ChatTypes.GroupMessage);
+        if (!string.IsNullOrWhiteSpace(atNtUid))
+            msg.AddAt(atNtUid);
+        msg.AddText(message);
+        _ = _connector.Send(msg.Build());
 
         /*
       {
