@@ -18,6 +18,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HuaJiBot.NET.CLI", "src\Hua
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HuaJiBot.NET.Plugin.Calendar", "src\HuaJiBot.NET.Plugin.Calendar\HuaJiBot.NET.Plugin.Calendar.csproj", "{B1AC8288-59AC-42C9-8669-C61C8781C3C4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuaJiBot.NET.UnitTest", "src\HuaJiBot.NET.UnitTest\HuaJiBot.NET.UnitTest.csproj", "{BC9FCAAE-C06C-41DA-87A1-A96143A0E337}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +46,10 @@ Global
 		{B1AC8288-59AC-42C9-8669-C61C8781C3C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B1AC8288-59AC-42C9-8669-C61C8781C3C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B1AC8288-59AC-42C9-8669-C61C8781C3C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC9FCAAE-C06C-41DA-87A1-A96143A0E337}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC9FCAAE-C06C-41DA-87A1-A96143A0E337}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC9FCAAE-C06C-41DA-87A1-A96143A0E337}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC9FCAAE-C06C-41DA-87A1-A96143A0E337}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
