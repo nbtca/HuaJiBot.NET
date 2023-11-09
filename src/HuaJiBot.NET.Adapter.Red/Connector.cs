@@ -102,7 +102,7 @@ internal partial class Connector(BotServiceBase api, string url, string authoriz
                     foreach (var msg in data.Data.ToObject<MessageRecv[]>()!)
                     {
                         Events.Events.CallOnGroupMessageReceived(
-                            new GroupMessageEventArgs
+                            new GroupMessageEventArgs(() => new RedCommandReader(api, msg))
                             {
                                 Service = api,
                                 GroupId = msg.PeerUin!,
@@ -116,13 +116,13 @@ internal partial class Connector(BotServiceBase api, string url, string authoriz
                                     var sb = new StringBuilder();
                                     foreach (var element in msg.Elements)
                                     {
-                                        if (element.textElement is { } text)
+                                        if (element.TextElement is { } text)
                                         {
-                                            sb.Append(text.content);
+                                            sb.Append(text.Content);
                                         }
                                         else
                                         {
-                                            sb.Append($"[消息类型：{element.elementType}]");
+                                            sb.Append($"[未解析消息|类型：{element.elementType}]");
                                         }
                                     }
                                     return sb.ToString();

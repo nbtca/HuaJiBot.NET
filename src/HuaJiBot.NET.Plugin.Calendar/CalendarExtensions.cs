@@ -3,7 +3,7 @@ using Ical.Net.DataTypes;
 
 namespace HuaJiBot.NET.Plugin.Calendar;
 
-internal static class CalendarHelper
+internal static class CalendarExtensions
 {
     public static IEnumerable<(Period period, CalendarEvent e)> GetEvents(
         this Ical.Net.Calendar @this,

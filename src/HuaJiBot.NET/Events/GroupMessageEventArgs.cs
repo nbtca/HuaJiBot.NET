@@ -1,5 +1,6 @@
 ﻿using System;
 using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Commands;
 
 namespace HuaJiBot.NET.Events;
 
@@ -23,7 +24,7 @@ public class BotLoginEventArgs : BotEventArgs
 /// <summary>
 /// 群消息事件
 /// </summary>
-public class GroupMessageEventArgs : BotEventArgs
+public class GroupMessageEventArgs(Func<CommandReader> createCommandReader) : BotEventArgs
 {
     /// <summary>群ID</summary>
     public required string GroupId { get; init; }
@@ -38,6 +39,7 @@ public class GroupMessageEventArgs : BotEventArgs
     public required string SenderMemberCard { get; init; }
     public required Lazy<string> TextMessageLazy { get; init; }
     public string TextMessage => TextMessageLazy.Value;
+    public CommandReader CommandReader => createCommandReader();
 
     /// <summary>
     /// 返回消息给发送者（at发送者）

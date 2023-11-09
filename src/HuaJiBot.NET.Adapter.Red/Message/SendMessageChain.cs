@@ -31,14 +31,14 @@ internal static class SendMessageChain
                         new Elements
                         {
                             elementType = 1,
-                            textElement = new TextElement { atType = 2, atNtUin = data.target }
+                            TextElement = new TextElement { AtType = 2, AtNtUid = data.target }
                         }
                     );
                     payload.elements.Add(
                         new Elements
                         {
                             elementType = 1,
-                            textElement = new TextElement { content = " " }
+                            TextElement = new TextElement { Content = " " }
                         }
                     );
                     break;
@@ -64,7 +64,7 @@ internal static class SendMessageChain
                         new Elements
                         {
                             elementType = 1,
-                            textElement = new TextElement { content = data.content }
+                            TextElement = new TextElement { Content = data.content }
                         }
                     );
                     break;

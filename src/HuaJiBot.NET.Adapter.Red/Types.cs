@@ -189,7 +189,9 @@ public class Elements
     public string? elementId { get; set; }
     public string? extBufForUI { get; set; }
     public PicElement? picElement { get; set; }
-    public TextElement? textElement { get; set; }
+
+    [JsonProperty("textElement")]
+    public TextElement? TextElement { get; set; }
     public object? arkElement { get; set; }
     public object? avRecordElement { get; set; }
     public object? calendarElement { get; set; }
@@ -324,18 +326,47 @@ public class EmojiZplan
 
 public class TextElement
 {
-    public string? content { get; set; }
-    public int? atType { get; set; }
-    public string? atUid { get; set; }
-    public string? atTinyId { get; set; }
-    public string? atNtUid { get; set; }
-    public string? atNtUin { get; set; } //被at对象qq号
-    public string? subElementType { get; set; }
-    public string? atChannelId { get; set; }
-    public string? atRoleId { get; set; }
-    public int? atRoleColor { get; set; }
-    public string? atRoleName { get; set; }
-    public int? needNotify { get; set; }
+    [JsonProperty("content")]
+    public string? Content { get; set; }
+
+    /// <summary>
+    /// 0为无at 1为at全体 2为at某人
+    /// content = "@xxx"
+    /// </summary>
+
+    [JsonProperty("atType")]
+    public int AtType { get; set; }
+
+    [JsonProperty("atUid")]
+    public string? AtUid { get; set; }
+
+    [JsonProperty("atTinyId")]
+    public string? AtTinyId { get; set; }
+
+    /// <summary>
+    ///  被at对象qq号
+    /// </summary>
+
+    [JsonProperty("atNtUid")]
+    public string? AtNtUid { get; set; }
+
+    [JsonProperty("subElementType")]
+    public int SubElementType { get; set; }
+
+    [JsonProperty("atChannelId")]
+    public string? AtChannelId { get; set; }
+
+    [JsonProperty("atRoleId")]
+    public string? AtRoleId { get; set; }
+
+    [JsonProperty("atRoleColor")]
+    public int AtRoleColor { get; set; }
+
+    [JsonProperty("atRoleName")]
+    public string? AtRoleName { get; set; }
+
+    [JsonProperty("needNotify")]
+    public int NeedNotify { get; set; }
 }
 
 public class XmlElement

@@ -8,6 +8,7 @@ public class PluginMain : PluginBase
 {
     protected override Task Initialize()
     {
+        //订阅群消息事件
         Service.Events.OnGroupMessageReceived += Events_OnGroupMessageReceived;
         Service.Log("[日程] 启动成功！");
         LoadCalendar();

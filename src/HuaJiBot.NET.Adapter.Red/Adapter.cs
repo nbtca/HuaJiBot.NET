@@ -56,7 +56,7 @@ public class RedProtocolAdapter : BotServiceBase
       {
         "elementId": "",
         "elementType": 1,
-        "textElement": {
+        "TextElement": {
           "content": "。",
           "atUid": "",
           "atNtUid": "",
@@ -78,7 +78,7 @@ public class RedProtocolAdapter : BotServiceBase
         //        {
         //            ["elementId"] = "",
         //            ["elementType"] = 1,
-        //            ["textElement"] = new JObject
+        //            ["TextElement"] = new JObject
         //            {
         //                ["content"] = "@atUid",
         //                ["atUid"] = atUid,
@@ -94,7 +94,7 @@ public class RedProtocolAdapter : BotServiceBase
         //    {
         //        ["elementId"] = "",
         //        ["elementType"] = 1,
-        //        ["textElement"] = new JObject
+        //        ["TextElement"] = new JObject
         //        {
         //            ["content"] = (hasAt ? " " : "") + message,
         //            ["atUid"] = "",
