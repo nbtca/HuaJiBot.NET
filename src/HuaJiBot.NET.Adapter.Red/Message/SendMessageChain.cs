@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
 using RedProtocolSharp.Message;
-using System.Runtime.InteropServices.JavaScript;
 
 namespace HuaJiBot.NET.Adapter.Red.Message;
 

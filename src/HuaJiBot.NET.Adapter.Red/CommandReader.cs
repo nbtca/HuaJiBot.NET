@@ -4,6 +4,9 @@ using HuaJiBot.NET.Commands;
 
 namespace HuaJiBot.NET.Adapter.Red;
 
+/// <summary>
+/// 指令读取
+/// </summary>
 internal class RedCommandReader : CommandReader
 {
     private string[]? _currentExpected = null;

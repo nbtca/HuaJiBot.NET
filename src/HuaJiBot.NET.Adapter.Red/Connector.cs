@@ -106,7 +106,7 @@ internal partial class Connector(BotServiceBase api, string url, string authoriz
                             {
                                 Service = api,
                                 GroupId = msg.PeerUin!,
-                                SenderId = msg.senderUid!,
+                                SenderId = msg.SenderId!,
                                 GroupName = msg.peerName!,
                                 SenderMemberCard = string.IsNullOrWhiteSpace(msg.sendMemberName)
                                     ? msg.sendNickName!
