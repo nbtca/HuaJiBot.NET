@@ -30,11 +30,16 @@ public abstract class EntryPointBase : Attribute
 /// <typeparam name="T">入口点类，必须继承自<see cref="PluginBase"/></typeparam>
 /// <param name="pluginName">插件名</param>
 /// <param name="description">插件描述</param>
-[AttributeUsage(AttributeTargets.Module, AllowMultiple = true)]
+[AttributeUsage(AttributeTargets.Assembly)]
 public class PluginEntryPointAttribute<T>(string pluginName, string description) : EntryPointBase
     where T : PluginBase, new()
 {
     public override string Name { get; } = pluginName;
     public override string Description { get; } = description;
-    protected override Lazy<PluginBase> InstanceLazy { get; } = new(() => new T());
+    protected override Lazy<PluginBase> InstanceLazy { get; } = new(() =>
+    {
+        var instance = new T();
+        instance.Name = pluginName;
+        return instance;
+    });
 }

@@ -95,8 +95,8 @@ public class PluginMain : PluginBase
             StringBuilder sb = new();
             foreach (
                 var (period, ev) in from x in ical.GetEvents(start, end) //选择
-                orderby x.period.StartTime ascending //按照开始时间排序
-                select x //映射
+                                    orderby x.period.StartTime ascending //按照开始时间排序
+                                    select x //映射
             ) //循环
             {
                 sb.AppendLine($"{period.StartTime:yyyy-MM-dd HH:mm} {ev.Summary}"); //输出

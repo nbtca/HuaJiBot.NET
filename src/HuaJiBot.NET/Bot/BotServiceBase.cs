@@ -10,13 +10,18 @@ public enum MemberType
     Owner = 3
 }
 
+public struct SendImageInfo
+{
+    public string ImagePath { get; set; }
+}
 public abstract class BotServiceBase
 {
     public abstract Task SetupService();
-
+    public Config.ConfigWrapper Config { get; internal set; } = null!;
     public Events.Events Events { get; } = new();
     public abstract string[] GetAllRobots();
     public abstract void SendGroupMessage(string? robotId, string targetGroup, string message);
+    public abstract void SendGroupMessage(string? robotId, string targetGroup, SendImageInfo message);
     public abstract void FeedbackAt(
         string? robotId,
         string targetGroup,

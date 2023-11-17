@@ -29,6 +29,13 @@ public class RedProtocolAdapter : BotServiceBase
         SendGroupMessageInternal(targetGroup, message);
     }
 
+    public override void SendGroupMessage(string? robotId, string targetGroup, SendImageInfo message)
+    {
+        var msg = new MessageBuilder().SetTarget(targetGroup, ChatTypes.GroupMessage);
+        msg.AddPic(message.ImagePath);
+        _ = _connector.Send(msg.Build());
+    }
+
     public override void FeedbackAt(string? robotId, string targetGroup, string userId, string text)
     {
         SendGroupMessageInternal(targetGroup, text, userId);

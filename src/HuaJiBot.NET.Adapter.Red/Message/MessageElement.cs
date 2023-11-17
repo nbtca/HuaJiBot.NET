@@ -51,7 +51,7 @@ public class SendVoiceElement : ISendMessageElement
 
     public string ToSummary()
     {
-        return $@"[Message:Voice,Name=""{name}""]";
+        return $@"[Message:Voice,ConfigKey=""{name}""]";
     }
 }
 

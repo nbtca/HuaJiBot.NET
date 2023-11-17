@@ -1,19 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Config;
 
 namespace HuaJiBot.NET;
 
 public static class Internal
 {
-    public static async Task SetupService<T>(T service)
+    public static async Task SetupService<T>(T service, Config.Config config)
         where T : BotServiceBase
     {
+        service.Config = new ConfigWrapper(config);
         await service.SetupService();
         Global.ServiceInstance = service;
     }
@@ -26,6 +30,7 @@ public static class Internal
     /// <summary>
     /// 启动并加载插件
     /// </summary>
+    /// <param name="api">接口实例</param>
     /// <param name="pluginDirectory">插件目录</param>
     public static async Task Setup(BotServiceBase api, string pluginDirectory = "plugins")
     {
@@ -37,6 +42,42 @@ public static class Internal
             api.Log("创建目录");
         }
         LoadAllPlugins(api, directoryInfo); //加载所有插件，并添加到Plugins列表
+        //注入读取到的配置文件到对应结构
+        foreach (var (_, plugin) in Plugins)
+        { //遍历所有插件
+            [MethodImpl(MethodImplOptions.Synchronized)]
+            bool TryGetPluginConfig([NotNullWhen(true)] out ConfigBase? config)
+            {
+                foreach (var it in plugin.GetType().GetInterfaces())
+                {
+                    foreach (var m in it.GetProperties())
+                    {
+                        if (m.PropertyType.IsAssignableTo(typeof(ConfigBase)))
+                        {
+                            config = m.GetValue(plugin) as ConfigBase;
+
+                            if (config is null)
+                            {
+#if DEBUG 
+                                api.Log(plugin.GetType() + "config = m.GetValue(plugin) as ITranslationMainLoader == null");
+#endif
+                                return false;
+                            }
+                            return true;
+                        }
+                    }
+                }
+                config = null;
+                return false;
+            }
+
+            if (TryGetPluginConfig(out var config))
+            { //取出ConfigKey和ConfigObject，将对应的配置注入到ConfigObject
+                api.Config.Populate(plugin.Name, config);
+            }
+        }
+        //保存配置
+        api.Config.Save();
         //触发启动事件
         Events.Events.CallOnStartup();
         foreach (var (entryPoint, plugin) in Plugins) //调用所有插件的初始化方法
@@ -79,21 +120,18 @@ public static class Internal
         foreach (
             var file in directoryInfo
                 .EnumerateFiles("*.dll", SearchOption.AllDirectories) //遍历所有dll文件
-                //SearchOption.AllDirectories 包括所有子目录
+                                                                      //SearchOption.AllDirectories 包括所有子目录
                 .SkipWhile(x => libs.Contains(x.FullName)) //跳过libs目录下的dll
         )
         {
             api.Log("加载动态链接库：" + Path.GetRelativePath(Environment.CurrentDirectory, file.FullName));
             var assembly = Assembly.LoadFrom(file.FullName); //加载程序集
-            foreach (var module in assembly.Modules)
+            foreach (var entryPoint in assembly.GetCustomAttributes<EntryPointBase>()) //遍历所有EntryPoint注解
             {
-                foreach (var entryPoint in module.GetCustomAttributes<EntryPointBase>()) //遍历所有EntryPoint注解
-                {
-                    Plugins.Add((entryPoint, entryPoint.Instance));
-                    api.Log(
-                        $"路径 {Path.GetRelativePath(Environment.CurrentDirectory, file.FullName)} 获取到插件 {entryPoint.Name}."
-                    );
-                }
+                Plugins.Add((entryPoint, entryPoint.Instance));
+                api.Log(
+                    $"路径 {Path.GetRelativePath(Environment.CurrentDirectory, file.FullName)} 获取到插件 {entryPoint.Name}."
+                );
             }
         }
         //foreach (var directory in directoryInfo.EnumerateDirectories())

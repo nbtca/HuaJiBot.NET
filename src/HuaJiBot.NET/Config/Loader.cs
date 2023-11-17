@@ -1,8 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿using System.IO;
+using Newtonsoft.Json;
 
-namespace HuaJiBot.NET.CLI.Config;
+namespace HuaJiBot.NET.Config;
 
-internal partial class Config
+public partial class Config
 {
     /// <summary>
     /// 配置文件名
@@ -13,7 +14,7 @@ internal partial class Config
     /// 加载配置文件并反序列化
     /// </summary>
     /// <returns>配置对象</returns>
-    internal static Config Load()
+    public static Config Load()
     {
         if (!File.Exists(ConfigFileName))
         {
@@ -26,7 +27,7 @@ internal partial class Config
     /// <summary>
     /// 序列号json并保存配置文件
     /// </summary>
-    internal void Save()
+    public void Save()
     {
         File.WriteAllText(ConfigFileName, JsonConvert.SerializeObject(this, Formatting.Indented));
     }

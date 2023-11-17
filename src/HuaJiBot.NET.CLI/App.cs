@@ -1,10 +1,10 @@
 ﻿using HuaJiBot.NET;
 using HuaJiBot.NET.Adapter.Red;
-using HuaJiBot.NET.CLI.Config;
+using HuaJiBot.NET.Config;
 
 Console.WriteLine("运行路径：" + Environment.CurrentDirectory);
 var config = Config.Load(); //配置文件
-config.Save();
+config.Save(); 
 var token = File.ReadAllText(
     Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -14,7 +14,7 @@ var token = File.ReadAllText(
     )
 ); //读取密钥
 var api = new RedProtocolAdapter("localhost:16530", token); //链接协议适配器
-await Internal.SetupService(api); //协议适配器
+await Internal.SetupService(api, config); //协议适配器
 var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>
 {
