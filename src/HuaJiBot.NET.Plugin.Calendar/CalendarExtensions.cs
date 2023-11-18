@@ -9,18 +9,15 @@ internal static class CalendarExtensions
         this Ical.Net.Calendar @this,
         DateTime start,
         DateTime end
-    )
-    {
-        foreach (var occurrence in @this.GetOccurrences(start, end))
-        {
-            yield return occurrence.Source switch
-            {
-                CalendarEvent calendarEvent => (occurrence.Period, calendarEvent),
-                _
-                    => throw new ArgumentOutOfRangeException(
-                        "not impl " + occurrence.Source.GetType()
-                    )
-            };
-        }
-    }
+    ) =>
+       from occurrence in @this.GetOccurrences(start, end)
+       select
+           occurrence.Source switch
+           {
+               CalendarEvent calendarEvent => (occurrence.Period, calendarEvent),
+               _
+                   => throw new ArgumentOutOfRangeException(
+                       "not impl " + occurrence.Source.GetType()
+                   )
+           };
 }
