@@ -98,11 +98,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 start = end.AddDays(7 * week); //week是负的，所以开始时间等于现在减去..
             }
             StringBuilder sb = new();
-            foreach (
-                var (period, ev) in from x in ical.GetEvents(start, end) //选择
-                                    orderby x.period.StartTime ascending //按照开始时间排序
-                                    select x //映射
-            ) //循环
+            foreach (var (period, ev) in ical.GetEvents(start, end))  //遍历每一个事件
             {
                 sb.AppendLine($"{period.StartTime:yyyy-MM-dd HH:mm} {ev.Summary}"); //输出
             }

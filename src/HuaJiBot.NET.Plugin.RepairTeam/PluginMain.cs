@@ -10,7 +10,6 @@ public class PluginMain : PluginBase
         Service.Log("[1] 启动成功！");
         return Task.CompletedTask;
     }
-
     private void Events_OnGroupMessageReceived(object? sender, Events.GroupMessageEventArgs e)
     {
         if (e.TextMessage.StartsWith("test000"))
@@ -21,6 +20,5 @@ public class PluginMain : PluginBase
 
         Service.Log($"[{e.GroupName}] <{e.SenderMemberCard}> {e.TextMessage}");
     }
-
     protected override void Unload() { }
 }
