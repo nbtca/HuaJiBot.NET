@@ -27,7 +27,7 @@ internal partial class Connector
         }
         catch (Exception e)
         {
-            api.LogError(e, "Http请求出错!请求失败/请求超时");
+            api.LogError("Http请求出错!请求失败/请求超时", e);
         }
         return null;
     }
@@ -52,7 +52,7 @@ internal partial class Connector
         }
         catch (Exception e)
         {
-            api.LogError(e, "HttpPost请求出错!请求失败/请求超时");
+            api.LogError("HttpPost请求出错!请求失败/请求超时", e);
         }
         return null;
     }
@@ -79,7 +79,7 @@ internal partial class Connector
         }
         catch (Exception e)
         {
-            api.LogError(e, "HttpUpload请求出错!请求失败/请求超时");
+            api.LogError("HttpUpload请求出错!请求失败/请求超时", e);
         }
         return null;
     }

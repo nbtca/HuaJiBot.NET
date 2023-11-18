@@ -3,8 +3,14 @@ using HuaJiBot.NET.Plugin.Calendar;
 
 namespace HuaJiBot.NET.Plugin.RepairTeam;
 
-public class PluginMain : PluginBase
+public class PluginConfig : ConfigBase
 {
+    public int MinRange = -128;
+    public int MaxRange = 48;
+}
+public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
+{
+    public PluginConfig Config { get; } = new();
     protected override Task Initialize()
     {
         //订阅群消息事件
@@ -73,11 +79,10 @@ public class PluginMain : PluginBase
                     return;
                 }
             }
-            const int minRange = -128;
-            const int maxRange = 48;
-            if (week is > maxRange or < minRange or 0) //进行一个输入范围合法性检查
+
+            if (week < Config.MinRange || week > Config.MaxRange) //进行一个输入范围合法性检查
             {
-                e.Feedback($"超出范围 [{minRange},{maxRange}] ");
+                e.Feedback($"超出范围 [{Config.MinRange},{Config.MaxRange}] ");
                 return;
             }
             DateTime start,
