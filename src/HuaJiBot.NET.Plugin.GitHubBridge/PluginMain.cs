@@ -1,4 +1,5 @@
 ﻿using System.Net.WebSockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.PushEventBody;
@@ -11,7 +12,9 @@ namespace HuaJiBot.NET.Plugin.GitHubBridge;
 public class PluginConfig : ConfigBase
 {
     public string Address { get; set; } = "ws://localhost:8080";
-    public string[] BroadcastGroupId { get; set; } = Array.Empty<string>();
+    public Dictionary<string, string> BroadcastMap { get; set; } = new();
+    public Dictionary<string, string[]> BroadcastGroup { get; set; } =
+        new() { ["default"] = new[] { "123456789" } }; //默认的广播目标
 }
 
 public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
@@ -19,29 +22,79 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     //配置
     public PluginConfig Config { get; } = new();
 
+    private IEnumerable<string> GetBroadcastTargets(string fullName)
+    {
+        if (!Config.BroadcastMap.TryGetValue(fullName, out var group))
+        {
+            group = "default";
+            Config.BroadcastMap.Add(fullName, group);
+            Service.Config.Save();
+        }
+        if (!Config.BroadcastGroup.TryGetValue(group, out var targets))
+        {
+            targets = Array.Empty<string>();
+            Config.BroadcastGroup.Add(group, targets);
+            Service.Config.Save();
+        }
+        return targets;
+    }
+
     //处理消息
     private void ProcessMessage(string msg)
     {
         var e = JsonConvert.DeserializeObject<Event>(msg)!;
         {
+            const int maxChangeCount = 3;
             if (e.Body is PushEventBody body)
             {
                 var sb = new StringBuilder();
-                var repo = body.Repository.FullName;
-                //var mainBranch = body.Repository.MasterBranch;
-                var branch = body.Ref.Split('/').Last();
-                //if (branch != mainBranch)
-                sb.AppendLine($"{body.Commits.Length} new commit to {repo}:{branch}");
+                var repositoryFullName = body.Repository.FullName;
+                {
+                    var branch = body.Ref.Split('/').Last();
+                    var mainBranch = body.Repository.MasterBranch;
+                    var repoInfo = body.Repository.Name;
+                    if (branch != mainBranch) //如果不是主分支，加上分支名
+                        repoInfo += ":" + branch;
+                    var commitCount = body.Commits.Length;
+                    if (commitCount > 1)
+                        sb.AppendLine($"仓库 {repoInfo} 有 {commitCount} 个新的提交： ");
+                    else
+                        sb.AppendLine($"仓库 {repoInfo} 有新的提交：");
+                }
                 foreach (var commit in body.Commits)
                 {
                     var name = commit.Author.Name;
                     var message = commit.Message;
                     var url = commit.Url;
-                    sb.AppendLine($"{message} by {name}");
+                    sb.AppendLine($"{message} by @{name}");
+                    if (commit.Added.Length > 0)
+                    {
+                        sb.AppendLine($"- {commit.Added.Length} 个文件新增");
+                        foreach (var added in commit.Added.Take(maxChangeCount))
+                            sb.AppendLine($"  {added}");
+                        if (commit.Added.Length > maxChangeCount)
+                            sb.AppendLine("  ...");
+                    }
+                    if (commit.Removed.Length > 0)
+                    {
+                        sb.AppendLine($"- {commit.Removed.Length} 个文件移除");
+                        foreach (var removed in commit.Removed.Take(maxChangeCount))
+                            sb.AppendLine($"  {removed}");
+                        if (commit.Removed.Length > maxChangeCount)
+                            sb.AppendLine("  ...");
+                    }
+                    if (commit.Modified.Length > 0)
+                    {
+                        sb.AppendLine($"- {commit.Modified.Length} 个文件修改");
+                        foreach (var modified in commit.Modified.Take(maxChangeCount))
+                            sb.AppendLine($"  {modified}");
+                        if (commit.Modified.Length > maxChangeCount)
+                            sb.AppendLine("  ...");
+                    }
                     sb.AppendLine($"{url}");
                 }
                 var m = sb.ToString();
-                foreach (var group in Config.BroadcastGroupId)
+                foreach (var group in GetBroadcastTargets(repositoryFullName))
                 {
                     Service.SendGroupMessage(null, group, m);
                 }

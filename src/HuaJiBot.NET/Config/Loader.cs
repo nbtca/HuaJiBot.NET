@@ -27,8 +27,10 @@ public partial class Config
     /// <summary>
     /// 序列号json并保存配置文件
     /// </summary>
-    public void Save()
+    public string Save()
     {
-        File.WriteAllText(ConfigFileName, JsonConvert.SerializeObject(this, Formatting.Indented));
+        var str = JsonConvert.SerializeObject(this, Formatting.Indented);
+        File.WriteAllText(ConfigFileName, str);
+        return str;
     }
 }

@@ -4,7 +4,7 @@ using HuaJiBot.NET.Config;
 
 Console.WriteLine("运行路径：" + Environment.CurrentDirectory);
 var config = Config.Load(); //配置文件
-config.Save(); 
+config.Save();
 var token = File.ReadAllText(
     Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -58,6 +58,10 @@ while (true)
         switch (cmds)
         {
             case ["quit" or "q"]:
+                break;
+            case ["save"]:
+                var result = api.Config.Save();
+                api.Log("配置文件保存成功：" + result);
                 break;
             case ["send", var targetGroup, var message]:
                 api.SendGroupMessage(accountId, targetGroup, message);

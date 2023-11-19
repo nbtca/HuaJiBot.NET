@@ -5,8 +5,14 @@ namespace HuaJiBot.NET.Plugin.GitHubBridge.Types.PushEventBody;
 
 internal class Commit
 {
+    [JsonProperty("modified")]
+    public string[] Modified { get; set; }
+
+    [JsonProperty("removed")]
+    public string[] Removed { get; set; }
+
     [JsonProperty("added")]
-    public object[] Added { get; set; }
+    public string[] Added { get; set; }
 
     [JsonProperty("author")]
     public Author Author { get; set; }
@@ -22,12 +28,6 @@ internal class Commit
 
     [JsonProperty("message")]
     public string Message { get; set; }
-
-    [JsonProperty("modified")]
-    public string[] Modified { get; set; }
-
-    [JsonProperty("removed")]
-    public object[] Removed { get; set; }
 
     [JsonProperty("timestamp")]
     public DateTimeOffset Timestamp { get; set; }
