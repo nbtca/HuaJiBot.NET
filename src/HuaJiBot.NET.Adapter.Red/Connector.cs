@@ -88,6 +88,7 @@ internal partial class Connector(BotServiceBase api, string url, string authoriz
                     //}
                     var connect = data.Data.ToObject<ConnectRecv>()!;
                     Events.Events.CallOnBotLogin(
+                        api,
                         new BotLoginEventArgs
                         {
                             AccountId = connect.AuthData!.Account!,
@@ -102,6 +103,7 @@ internal partial class Connector(BotServiceBase api, string url, string authoriz
                     foreach (var msg in data.Data.ToObject<MessageRecv[]>()!)
                     {
                         Events.Events.CallOnGroupMessageReceived(
+                            api,
                             new GroupMessageEventArgs(() => new RedCommandReader(api, msg))
                             {
                                 Service = api,

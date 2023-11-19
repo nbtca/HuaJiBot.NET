@@ -1,4 +1,5 @@
 ﻿using System;
+using HuaJiBot.NET.Bot;
 
 namespace HuaJiBot.NET;
 
@@ -17,8 +18,7 @@ public abstract class EntryPointBase : Attribute
     /// <summary>
     /// 插件实例/对象
     /// </summary>
-    protected abstract Lazy<PluginBase> InstanceLazy { get; }
-    public PluginBase Instance => InstanceLazy.Value;
+    public abstract PluginBase CreateInstance(BotServiceBase api);
 }
 
 //[AttributeUsage(AttributeTargets.Module)]
@@ -36,10 +36,7 @@ public class PluginEntryPointAttribute<T>(string pluginName, string description)
 {
     public override string Name { get; } = pluginName;
     public override string Description { get; } = description;
-    protected override Lazy<PluginBase> InstanceLazy { get; } = new(() =>
-    {
-        var instance = new T();
-        instance.Name = pluginName;
-        return instance;
-    });
+
+    public override PluginBase CreateInstance(BotServiceBase api) =>
+        new T { Name = pluginName, Service = api };
 }

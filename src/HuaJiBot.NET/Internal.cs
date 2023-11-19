@@ -19,7 +19,7 @@ public static class Internal
     {
         service.Config = new ConfigWrapper(config);
         await service.SetupService();
-        Global.ServiceInstance = service;
+        //Global.ServiceInstance = service;
     }
 
     /// <summary>
@@ -58,8 +58,11 @@ public static class Internal
 
                             if (config is null)
                             {
-#if DEBUG 
-                                api.Log(plugin.GetType() + "config = m.GetValue(plugin) as ITranslationMainLoader == null");
+#if DEBUG
+                                api.Log(
+                                    plugin.GetType()
+                                        + "config = m.GetValue(plugin) as ITranslationMainLoader == null"
+                                );
 #endif
                                 return false;
                             }
@@ -79,7 +82,7 @@ public static class Internal
         //保存配置
         api.Config.Save();
         //触发启动事件
-        Events.Events.CallOnStartup();
+        Events.Events.CallOnStartup(api);
         foreach (var (entryPoint, plugin) in Plugins) //调用所有插件的初始化方法
         {
             api.Log($"开始加载插件 {entryPoint.Name} 描述：{entryPoint.Description}");
@@ -89,16 +92,16 @@ public static class Internal
             api.Log($"加载插件 {entryPoint.Name} 完成，耗时 {sw.ElapsedMilliseconds} ms");
         }
         //触发插件初始化完成事件
-        Events.Events.CallOnInitialized();
+        Events.Events.CallOnInitialized(api);
     }
 
     /// <summary>
     /// 卸载所有插件
     /// </summary>
-    public static void Shutdown()
+    public static void Shutdown(BotServiceBase api)
     {
         //响应关闭事件
-        Events.Events.CallOnShutdown();
+        Events.Events.CallOnShutdown(api);
         foreach (var (_, plugin) in Plugins) //调用所有插件的卸载方法
         {
             plugin.Unload();
@@ -120,7 +123,7 @@ public static class Internal
         foreach (
             var file in directoryInfo
                 .EnumerateFiles("*.dll", SearchOption.AllDirectories) //遍历所有dll文件
-                                                                      //SearchOption.AllDirectories 包括所有子目录
+                //SearchOption.AllDirectories 包括所有子目录
                 .SkipWhile(x => libs.Contains(x.FullName)) //跳过libs目录下的dll
         )
         {
@@ -128,7 +131,7 @@ public static class Internal
             var assembly = Assembly.LoadFrom(file.FullName); //加载程序集
             foreach (var entryPoint in assembly.GetCustomAttributes<EntryPointBase>()) //遍历所有EntryPoint注解
             {
-                Plugins.Add((entryPoint, entryPoint.Instance));
+                Plugins.Add((entryPoint, entryPoint.CreateInstance(api)));
                 api.Log(
                     $"路径 {Path.GetRelativePath(Environment.CurrentDirectory, file.FullName)} 获取到插件 {entryPoint.Name}."
                 );

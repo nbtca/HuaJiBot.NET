@@ -1,4 +1,5 @@
 ﻿using System;
+using HuaJiBot.NET.Bot;
 
 namespace HuaJiBot.NET.Events;
 
@@ -12,9 +13,9 @@ public class Events
     /// </summary>
     public event EventHandler? OnStartup;
 
-    internal static void CallOnStartup()
+    internal static void CallOnStartup(BotServiceBase service)
     {
-        Global.Service.Events.OnStartup?.Invoke(Global.Service, EventArgs.Empty);
+        service.Events.OnStartup?.Invoke(service, EventArgs.Empty);
     }
 
     /// <summary>
@@ -22,9 +23,9 @@ public class Events
     /// </summary>
     public event EventHandler? OnShutdown;
 
-    internal static void CallOnShutdown()
+    internal static void CallOnShutdown(BotServiceBase service)
     {
-        Global.Service.Events.OnShutdown?.Invoke(Global.Service, EventArgs.Empty);
+        service.Events.OnShutdown?.Invoke(service, EventArgs.Empty);
     }
 
     /// <summary>
@@ -32,22 +33,22 @@ public class Events
     /// </summary>
     public event EventHandler? OnInitialized;
 
-    internal static void CallOnInitialized()
+    internal static void CallOnInitialized(BotServiceBase service)
     {
-        Global.Service.Events.OnInitialized?.Invoke(Global.Service, EventArgs.Empty);
+        service.Events.OnInitialized?.Invoke(service, EventArgs.Empty);
     }
 
     public event EventHandler<BotLoginEventArgs>? OnBotLogin;
 
-    public static void CallOnBotLogin(BotLoginEventArgs e)
+    public static void CallOnBotLogin(BotServiceBase service, BotLoginEventArgs e)
     {
-        Global.Service.Events.OnBotLogin?.Invoke(Global.Service, e);
+        service.Events.OnBotLogin?.Invoke(service, e);
     }
 
     public event EventHandler<GroupMessageEventArgs>? OnGroupMessageReceived;
 
-    public static void CallOnGroupMessageReceived(GroupMessageEventArgs e)
+    public static void CallOnGroupMessageReceived(BotServiceBase service, GroupMessageEventArgs e)
     {
-        Global.Service.Events.OnGroupMessageReceived?.Invoke(Global.Service, e);
+        service.Events.OnGroupMessageReceived?.Invoke(service, e);
     }
 }
