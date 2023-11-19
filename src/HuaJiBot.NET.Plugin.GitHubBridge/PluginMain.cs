@@ -115,7 +115,14 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     protected override async Task Initialize()
     {
         WebsocketClient client =
-            new(new Uri(Config.Address))
+            new(
+                new Uri(Config.Address),
+                () =>
+                    new ClientWebSocket
+                    {
+                        Options = { KeepAliveInterval = TimeSpan.FromSeconds(5) }
+                    }
+            )
             {
                 IsReconnectionEnabled = true,
                 ReconnectTimeout = TimeSpan.FromSeconds(30),
