@@ -19,6 +19,7 @@ internal partial class Connector(BotServiceBase api, string url, string authoriz
         )
         {
             IsReconnectionEnabled = true,
+            ReconnectTimeout = null,
         };
 
     //private Timer? _keepAliveTimer = new(1_0000);
