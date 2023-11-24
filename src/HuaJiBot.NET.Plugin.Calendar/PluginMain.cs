@@ -1,7 +1,7 @@
 ﻿using System.Text;
-using HuaJiBot.NET.Plugin.Calendar;
+using Ical.Net.DataTypes;
 
-namespace HuaJiBot.NET.Plugin.RepairTeam;
+namespace HuaJiBot.NET.Plugin.Calendar;
 
 public class PluginConfig : ConfigBase
 {
@@ -13,52 +13,22 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
     public PluginConfig Config { get; } = new();
 
+    public PluginMain()
+    {
+        _sync = new(() => new(Service));
+    }
+
+    private readonly Lazy<RemoteSync> _sync;
+    private RemoteSync sync => _sync.Value;
+    private Ical.Net.Calendar ical => _sync.Value.Calendar;
+
     protected override Task Initialize()
     {
         //订阅群消息事件
         Service.Events.OnGroupMessageReceived += Events_OnGroupMessageReceived;
         Service.Log("[日程] 启动成功！");
-        LoadCalendar();
+        sync.LoadCalendar();
         return Task.CompletedTask;
-    }
-
-    private const string icalUrl = "https://i.nbtca.space/panel/ical";
-
-    private Ical.Net.Calendar ical;
-    private DateTime lastLoadTime = DateTime.MinValue;
-
-    private Task LoadCalendar()
-    {
-        lock (this)
-        {
-            if (DateTime.Now - lastLoadTime < TimeSpan.FromMinutes(15)) //如果距离上次加载小于15分钟
-            {
-                return Task.CompletedTask; //直接返回
-            }
-            //否则重新加载
-            lastLoadTime = DateTime.Now;
-        }
-        return Task.Run(async () =>
-        {
-            try
-            {
-                HttpClient client = new();
-                var resp = await client.GetAsync(icalUrl); //从Url获取
-                resp.EnsureSuccessStatusCode();
-                ical = Ical.Net.Calendar.Load(await resp.Content.ReadAsStringAsync());
-                var now = DateTime.Now;
-                var end = now.AddDays(7);
-                foreach (var (period, e) in ical.GetEvents(now, end))
-                {
-                    Service.Log(period.StartTime);
-                    Service.Log(e.Summary);
-                }
-            }
-            catch (Exception ex)
-            {
-                Service.LogError(nameof(LoadCalendar), ex);
-            }
-        });
     }
 
     private readonly Dictionary<string, DateTime> _cache = new();
@@ -69,7 +39,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             if (e.TextMessage.StartsWith("日程"))
             {
-                await LoadCalendar();
+                await sync.LoadCalendar();
                 const int coldDown = 10_000; //冷却时间
                 var now = DateTime.Now; //当前时间
                 if (_cache.TryGetValue(e.SenderId, out var lastTime)) //如果缓存中有上次发送的时间
@@ -114,7 +84,49 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 StringBuilder sb = new();
                 foreach (var (period, ev) in ical.GetEvents(start, end)) //遍历每一个事件
                 {
-                    sb.AppendLine($"{period.StartTime:yyyy-MM-dd HH:mm} {ev.Summary}"); //输出
+                    string FormatTimeWeek(IDateTime date)
+                    {
+                        var week = date.DayOfWeek switch
+                        {
+                            DayOfWeek.Monday => "一",
+                            DayOfWeek.Tuesday => "二",
+                            DayOfWeek.Wednesday => "三",
+                            DayOfWeek.Thursday => "四",
+                            DayOfWeek.Friday => "五",
+                            DayOfWeek.Saturday => "六",
+                            DayOfWeek.Sunday => "日",
+                            _ => throw new ArgumentOutOfRangeException()
+                        };
+                        var dateOffset = date.AsDateTimeOffset;
+                        if (dateOffset.Date == now.Date)
+                            return $"{dateOffset:MM-dd} 今天 周{week} {dateOffset:HH:mm}";
+                        if (dateOffset.Date == now.Date.AddDays(1))
+                            return $"{dateOffset:MM-dd} 明天 周{week} {dateOffset:HH:mm}";
+                        if (dateOffset.Date == now.Date.AddDays(2))
+                            return $"{dateOffset:MM-dd} 后天 周{week} {dateOffset:HH:mm}";
+                        if (dateOffset.Year == now.Year) //same year
+                            return $"{dateOffset:MM-dd} 周{week} {dateOffset:HH:mm}";
+                        return $"{dateOffset:yyyy-MM-dd} 周{week} {dateOffset:HH:mm}";
+                    }
+                    //判断是同一天
+                    if (period.StartTime.Date != period.EndTime.Date)
+                    {
+                        sb.AppendLine(
+                            $"{FormatTimeWeek(period.StartTime)} ~ {FormatTimeWeek(period.EndTime)}"
+                        ); //输出
+                    }
+                    else
+                    {
+                        sb.AppendLine(
+                            $"{FormatTimeWeek(period.StartTime)} ~ {period.EndTime.AsDateTimeOffset:HH:mm}"
+                        ); //输出
+                    }
+                    if (!string.IsNullOrWhiteSpace(ev.Summary))
+                        sb.AppendLine($"    概要：{ev.Summary}");
+                    if (!string.IsNullOrWhiteSpace(ev.Location))
+                        sb.AppendLine($"    地点：{ev.Location}");
+                    if (!string.IsNullOrWhiteSpace(ev.Description))
+                        sb.AppendLine($"    描述：{ev.Description}");
                 }
                 e.Feedback($"近{week}周的日程：\n{sb}");
                 //Service.LogDebug(JsonConvert.SerializeObject(e));
