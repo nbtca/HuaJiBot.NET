@@ -1,5 +1,4 @@
 ﻿using System.Net.WebSockets;
-using System.Runtime.InteropServices;
 using System.Text;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.PushEventBody;
