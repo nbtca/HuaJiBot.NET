@@ -7,6 +7,7 @@ public class PluginConfig : ConfigBase
 {
     public int MinRange = -128;
     public int MaxRange = 48;
+    public string[] ReminderGroupIds = Array.Empty<string>();
 }
 
 public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
@@ -19,15 +20,25 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     }
 
     private readonly Lazy<RemoteSync> _sync;
-    private RemoteSync sync => _sync.Value;
-    private Ical.Net.Calendar ical => _sync.Value.Calendar;
+    private RemoteSync Sync => _sync.Value;
+    private Ical.Net.Calendar Calendar => _sync.Value.Calendar;
+    private ReminderTask? _reminderTask;
 
     protected override Task Initialize()
     {
         //订阅群消息事件
         Service.Events.OnGroupMessageReceived += Events_OnGroupMessageReceived;
         Service.Log("[日程] 启动成功！");
-        sync.LoadCalendar();
+        Sync.UpdateCalendar();
+        _reminderTask = new(
+            Service,
+            Config,
+            () =>
+            {
+                Sync.UpdateCalendar();
+                return Calendar;
+            }
+        );
         return Task.CompletedTask;
     }
 
@@ -39,7 +50,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             if (e.TextMessage.StartsWith("日程"))
             {
-                await sync.LoadCalendar();
+                await Sync.UpdateCalendar();
                 const int coldDown = 10_000; //冷却时间
                 var now = DateTime.Now; //当前时间
                 if (_cache.TryGetValue(e.SenderId, out var lastTime)) //如果缓存中有上次发送的时间
@@ -81,54 +92,8 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     end = now; //结束时间
                     start = end.AddDays(7 * week); //week是负的，所以开始时间等于现在减去..
                 }
-                StringBuilder sb = new();
-                foreach (var (period, ev) in ical.GetEvents(start, end)) //遍历每一个事件
-                {
-                    string FormatTimeWeek(IDateTime date)
-                    {
-                        var week = date.DayOfWeek switch
-                        {
-                            DayOfWeek.Monday => "一",
-                            DayOfWeek.Tuesday => "二",
-                            DayOfWeek.Wednesday => "三",
-                            DayOfWeek.Thursday => "四",
-                            DayOfWeek.Friday => "五",
-                            DayOfWeek.Saturday => "六",
-                            DayOfWeek.Sunday => "日",
-                            _ => throw new ArgumentOutOfRangeException()
-                        };
-                        var dateOffset = date.AsDateTimeOffset;
-                        if (dateOffset.Date == now.Date)
-                            return $"{dateOffset:MM-dd} 今天 周{week} {dateOffset:HH:mm}";
-                        if (dateOffset.Date == now.Date.AddDays(1))
-                            return $"{dateOffset:MM-dd} 明天 周{week} {dateOffset:HH:mm}";
-                        if (dateOffset.Date == now.Date.AddDays(2))
-                            return $"{dateOffset:MM-dd} 后天 周{week} {dateOffset:HH:mm}";
-                        if (dateOffset.Year == now.Year) //same year
-                            return $"{dateOffset:MM-dd} 周{week} {dateOffset:HH:mm}";
-                        return $"{dateOffset:yyyy-MM-dd} 周{week} {dateOffset:HH:mm}";
-                    }
-                    //判断是同一天
-                    if (period.StartTime.Date != period.EndTime.Date)
-                    {
-                        sb.AppendLine(
-                            $"{FormatTimeWeek(period.StartTime)} ~ {FormatTimeWeek(period.EndTime)}"
-                        ); //输出
-                    }
-                    else
-                    {
-                        sb.AppendLine(
-                            $"{FormatTimeWeek(period.StartTime)} ~ {period.EndTime.AsDateTimeOffset:HH:mm}"
-                        ); //输出
-                    }
-                    if (!string.IsNullOrWhiteSpace(ev.Summary))
-                        sb.AppendLine($"    概要：{ev.Summary}");
-                    if (!string.IsNullOrWhiteSpace(ev.Location))
-                        sb.AppendLine($"    地点：{ev.Location}");
-                    if (!string.IsNullOrWhiteSpace(ev.Description))
-                        sb.AppendLine($"    描述：{ev.Description}");
-                }
-                e.Feedback($"近{week}周的日程：\n{sb}");
+                var output = Calendar.GetEvents(start, end).BuildTextOutput(now);
+                e.Feedback($"近{week}周的日程：\n{output}");
                 //Service.LogDebug(JsonConvert.SerializeObject(e));
             }
         });

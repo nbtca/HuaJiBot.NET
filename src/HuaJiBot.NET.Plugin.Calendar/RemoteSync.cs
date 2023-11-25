@@ -6,17 +6,18 @@ namespace HuaJiBot.NET.Plugin.Calendar;
 
 internal class RemoteSync(
     BotServiceBase service,
+    int updateDurationInMinutes = 15,
     string icalUrl = "https://i.nbtca.space/panel/ical"
 )
 {
     private DateTime _lastLoadTime = DateTime.MinValue;
     public Ical.Net.Calendar Calendar { get; private set; } = null!;
 
-    public Task LoadCalendar()
+    public Task UpdateCalendar()
     {
         lock (this) //锁定，防止同时多次更新日历
         {
-            if (DateTime.Now - _lastLoadTime < TimeSpan.FromMinutes(15)) //如果距离上次加载小于15分钟
+            if (DateTime.Now - _lastLoadTime < TimeSpan.FromMinutes(updateDurationInMinutes)) //如果距离上次加载小于指定时长
             {
                 return Task.CompletedTask; //直接返回
             }
@@ -42,7 +43,7 @@ internal class RemoteSync(
             }
             catch (Exception ex)
             {
-                service.LogError(nameof(LoadCalendar), ex);
+                service.LogError(nameof(UpdateCalendar), ex);
             }
         });
     }
