@@ -60,37 +60,50 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     else
                         sb.AppendLine($"仓库 {repoInfo} 有新的提交：");
                 }
+                bool showFiles = body.Commits.Length == 1; //如果只有一个提交，显示文件变更
                 foreach (var commit in body.Commits)
                 {
                     var name = commit.Author.Name;
                     var message = commit.Message;
                     var url = commit.Url;
                     sb.AppendLine($"{message} by @{name}");
-                    if (commit.Added.Length > 0)
+                    if (showFiles)
                     {
-                        sb.AppendLine($"- {commit.Added.Length} 个文件新增");
-                        foreach (var added in commit.Added.Take(maxChangeCount))
-                            sb.AppendLine($"  {added}");
-                        if (commit.Added.Length > maxChangeCount)
-                            sb.AppendLine("  ...");
+                        if (commit.Added.Length > 0)
+                        {
+                            sb.AppendLine($"- {commit.Added.Length} 个文件新增");
+                            foreach (var added in commit.Added.Take(maxChangeCount))
+                                sb.AppendLine($"  {added}");
+                            if (commit.Added.Length > maxChangeCount)
+                                sb.AppendLine("  ...");
+                        }
+
+                        if (commit.Removed.Length > 0)
+                        {
+                            sb.AppendLine($"- {commit.Removed.Length} 个文件移除");
+                            foreach (var removed in commit.Removed.Take(maxChangeCount))
+                                sb.AppendLine($"  {removed}");
+                            if (commit.Removed.Length > maxChangeCount)
+                                sb.AppendLine("  ...");
+                        }
+
+                        if (commit.Modified.Length > 0)
+                        {
+                            sb.AppendLine($"- {commit.Modified.Length} 个文件修改");
+                            foreach (var modified in commit.Modified.Take(maxChangeCount))
+                                sb.AppendLine($"  {modified}");
+                            if (commit.Modified.Length > maxChangeCount)
+                                sb.AppendLine("  ...");
+                        }
+                        sb.AppendLine($"{url}");
                     }
-                    if (commit.Removed.Length > 0)
+                    else
                     {
-                        sb.AppendLine($"- {commit.Removed.Length} 个文件移除");
-                        foreach (var removed in commit.Removed.Take(maxChangeCount))
-                            sb.AppendLine($"  {removed}");
-                        if (commit.Removed.Length > maxChangeCount)
-                            sb.AppendLine("  ...");
+                        //如果有多个提交，简要显示文件变更
+                        sb.AppendLine(
+                            $"- {commit.Added.Length} 增，{commit.Removed.Length} 减，{commit.Modified.Length} 改"
+                        );
                     }
-                    if (commit.Modified.Length > 0)
-                    {
-                        sb.AppendLine($"- {commit.Modified.Length} 个文件修改");
-                        foreach (var modified in commit.Modified.Take(maxChangeCount))
-                            sb.AppendLine($"  {modified}");
-                        if (commit.Modified.Length > maxChangeCount)
-                            sb.AppendLine("  ...");
-                    }
-                    sb.AppendLine($"{url}");
                 }
                 var m = sb.ToString();
                 foreach (var group in GetBroadcastTargets(repositoryFullName))
