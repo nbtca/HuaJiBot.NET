@@ -7,7 +7,7 @@
 ## 如何参与开发
 
 - 安装 [Visual Studio 2022](https://visualstudio.microsoft.com/zh-hant/vs/community/)
-- 安装 [微软 .NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
+- 安装 [微软 .NET 8 SDK](https://dotnet.microsoft.com/zh-cn/download)
 - clone 本仓库源码
 - 使用`Visual Studio 2022`打开 `HuaJiBot.NET.sln` 解决方案
 - then just coding ...
