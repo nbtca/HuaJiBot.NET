@@ -1,4 +1,7 @@
-﻿using Newtonsoft.Json;
+﻿using System.ComponentModel;
+using System.Text.RegularExpressions;
+using HuaJiBot.NET.Commands;
+using Newtonsoft.Json;
 
 namespace HuaJiBot.NET.Plugin.RepairTeam;
 
@@ -6,12 +9,25 @@ public class PluginMain : PluginBase
 {
     protected override Task Initialize()
     {
-        Service.Events.OnGroupMessageReceived += Events_OnGroupMessageReceived;
         Service.Log("[1] 启动成功！");
         return Task.CompletedTask;
     }
 
-    private void Events_OnGroupMessageReceived(object? sender, Events.GroupMessageEventArgs e) { }
+    [CommandEnum("test")]
+    enum TEST
+    {
+        [CommandEnumItem("")]
+        s,
+
+        [CommandEnumItem("")]
+        a
+    }
+
+    [Commands.Command("test")]
+    private void TestCommand(
+        [CommandArgumentString("test")] string a,
+        [CommandArgumentEnum<TEST>("test")] TEST b
+    ) { }
 
     protected override void Unload() { }
 }
