@@ -60,10 +60,20 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     else
                         sb.AppendLine($"仓库 {repoInfo} 有新的提交：");
                 }
+                if (body.Commits.Length == 0)
+                {
+                    sb.AppendLine("但是没有文件变更。");
+                    return;
+                }
                 bool showFiles = body.Commits.Length == 1; //如果只有一个提交，显示文件变更
                 foreach (var commit in body.Commits)
                 {
-                    var name = commit.Author.Name;
+                    var name = commit.Author.Username;
+                    if (name == "dependabot[bot]")
+                    {
+                        sb.AppendLine($"- 依赖更新[Bot]：{commit.Message}");
+                        continue;
+                    }
                     var message = commit.Message;
                     var url = commit.Url;
                     sb.AppendLine($"{message} by @{name}");
