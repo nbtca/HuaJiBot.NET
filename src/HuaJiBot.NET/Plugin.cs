@@ -1,5 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Commands;
 using Newtonsoft.Json;
 
 namespace HuaJiBot.NET;
@@ -34,4 +36,49 @@ public abstract class PluginBase
     /// 插件卸载
     /// </summary>
     protected internal abstract void Unload();
+
+    public record CommandInfo(
+        string Name,
+        string Description,
+        Action<object?[]?> Method,
+        CommandArgumentInfo[] Arguments
+    );
+
+    public record CommandArgumentInfo(
+        CommandArgumentAttribute Attribute,
+        Type Type,
+        bool IsOptional,
+        object? DefaultValue
+    );
+
+    public IEnumerable<CommandInfo> GetAllCommands()
+    {
+        var methods = GetType()
+            .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        foreach (var method in methods)
+        {
+            if (method.GetCustomAttribute<CommandAttribute>() is { } overload)
+            {
+                var arguments = (
+                    from x in method.GetParameters()
+                    select new CommandArgumentInfo(
+                        x.GetCustomAttribute<CommandArgumentAttribute>()
+                            ?? new CommandArgumentStringAttribute(x.Name!),
+                        x.ParameterType,
+                        x.IsOptional,
+                        x.HasDefaultValue ? x.DefaultValue : null
+                    )
+                ).ToArray();
+                yield return new CommandInfo(
+                    overload.Key,
+                    overload.Description,
+                    args =>
+                    {
+                        method.Invoke(this, args);
+                    },
+                    arguments
+                );
+            }
+        }
+    }
 }

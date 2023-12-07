@@ -21,7 +21,11 @@ internal class TestAdapter : BotServiceBase
         throw new NotImplementedException();
     }
 
-    public override void SendGroupMessage(string? robotId, string targetGroup, SendImageInfo message)
+    public override void SendGroupMessage(
+        string? robotId,
+        string targetGroup,
+        SendImageInfo message
+    )
     {
         throw new NotImplementedException();
     }
@@ -102,7 +106,8 @@ public class Tests
     [Test]
     public void Test1()
     {
-        var raw = """
+        string inputCommand = "test aaaa '测试  内容' testa";
+        var raw = $$"""
                   {
                     "msgId": "7299839010006944912",
                     "msgRandom": "636421449",
@@ -169,7 +174,7 @@ public class Tests
                         "elementId": "7299010044912983905",
                         "extBufForUI": "0x",
                         "textElement": {
-                          "content": " test aaaa \"测试  内容\"",
+                          "content": "{{inputCommand}}",
                           "atType": 0,
                           "atUid": "0",
                           "atTinyId": "0",
@@ -271,6 +276,11 @@ public class Tests
         }
         {
             var result = redCommandReader.Input(out var test);
+            Console.WriteLine(result);
+            Console.WriteLine(test);
+        }
+        {
+            var result = redCommandReader.Match(new[] { "test", }, x => x, out var test);
             Console.WriteLine(result);
             Console.WriteLine(test);
         }

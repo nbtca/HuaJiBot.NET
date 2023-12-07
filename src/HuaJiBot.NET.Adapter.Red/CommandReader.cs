@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 
@@ -9,11 +10,12 @@ namespace HuaJiBot.NET.Adapter.Red;
 /// </summary>
 internal class RedCommandReader : CommandReader
 {
-    private string[]? _currentExpected = null;
+    private IEnumerable<string>? _currentExpected = null;
     private readonly MessageRecv _msg;
 
     private readonly BotServiceBase _service;
     private IEnumerator<string> _seq = null!;
+    private bool _lastOne = false;
 
     public void Reset()
     {
@@ -28,14 +30,20 @@ internal class RedCommandReader : CommandReader
                         text = text.TrimStart();
                         while (text.Length > 0)
                         {
-                            if (
+                            if (_lastOne) //如果是最后一个参数
+                            {
+                                yield return text; //返回整个文本
+                                //todo 处理剩下的element
+                                yield break; //结束
+                            }
+                            else if (
                                 //当前有期望的文本，如匹配枚举
                                 _currentExpected?.FirstOrDefault(text.StartsWith) is
                                 { } matchedExpected //当前文本以某个期望的文本开头
                             )
                             {
                                 yield return matchedExpected; //返回匹配的文本
-                                text = text[_currentExpected.Length..].TrimStart();
+                                text = text[matchedExpected.Length..].TrimStart();
                             }
                             else
                             {
@@ -96,8 +104,13 @@ internal class RedCommandReader : CommandReader
         Reset();
     }
 
-    public override bool Match(string[] expected, [NotNullWhen(true)] out string? matched)
+    public override bool Match(
+        IEnumerable<string> expected,
+        [NotNullWhen(true)] out string? matched,
+        bool lastOne = false
+    )
     {
+        _lastOne = lastOne;
         _currentExpected = expected; //设置期望的参数
         var result = _seq.MoveNext(); //匹配下一个参数
         _currentExpected = null; //清空期望的参数
@@ -110,8 +123,9 @@ internal class RedCommandReader : CommandReader
         return false;
     }
 
-    public override bool Input([NotNullWhen(true)] out string? text)
+    public override bool Input([NotNullWhen(true)] out string? text, bool lastOne = false)
     {
+        _lastOne = lastOne;
         if (_seq.MoveNext()) //向下匹配一个参数
         {
             text = _seq.Current;

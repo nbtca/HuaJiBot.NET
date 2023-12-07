@@ -16,14 +16,14 @@ public class PluginMain : PluginBase
     [CommandEnum("test")]
     enum TEST
     {
-        [CommandEnumItem("")]
+        [CommandEnumItem("ss", "")]
         s,
 
-        [CommandEnumItem("")]
+        [CommandEnumItem("aa", "")]
         a
     }
 
-    [Commands.Command("test")]
+    [Command("test", "")]
     private void TestCommand(
         [CommandArgumentString("test")] string a,
         [CommandArgumentEnum<TEST>("test")] TEST b

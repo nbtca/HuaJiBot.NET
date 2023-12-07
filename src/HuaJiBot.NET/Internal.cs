@@ -87,6 +87,7 @@ public static class Internal
         {
             api.Log($"开始加载插件 {entryPoint.Name} 描述：{entryPoint.Description}");
             var sw = Stopwatch.StartNew(); //计时
+            api.LoadAddCommand(plugin); //加载命令
             await plugin.Initialize(); //异步初始化
             sw.Stop(); //停止计时
             api.Log($"加载插件 {entryPoint.Name} 完成，耗时 {sw.ElapsedMilliseconds} ms");
