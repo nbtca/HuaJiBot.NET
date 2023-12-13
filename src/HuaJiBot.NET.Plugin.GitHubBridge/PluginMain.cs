@@ -162,8 +162,8 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                                     select (IEnumerable<TextRun>)
                                         new TextRun[]
                                         {
-                                            new($"[{x.Id[..7]}] {x.Message}"),
-                                            new($" by @{x.Author.Username}", Color.Gray),
+                                            new(x.Message),
+                                            new($" by @{x.Author.Name}", Color.Gray),
                                             Environment.NewLine
                                         }
                                 ).Aggregate((a, b) => a.Concat(b).ToArray()),
