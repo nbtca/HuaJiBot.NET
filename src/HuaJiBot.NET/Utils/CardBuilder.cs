@@ -10,14 +10,6 @@ using Path = System.IO.Path;
 
 namespace HuaJiBot.NET.Utils;
 
-public record TextRun(string Text, Color Color)
-{
-    public TextRun(string text)
-        : this(text, Color.White) { }
-
-    public static implicit operator TextRun(string text) => new(text, Color.White);
-}
-
 public class CardBuilder
 {
     public required string Title;

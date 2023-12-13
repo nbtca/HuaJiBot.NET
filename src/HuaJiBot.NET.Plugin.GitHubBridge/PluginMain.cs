@@ -226,7 +226,19 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 {
                     try
                     {
-                        ProcessMessage(msg.Text ?? throw new NullReferenceException("msg.Text"));
+                        ProcessMessage(msg.Text ?? throw new NullReferenceException("msg.Text"))
+                            .ContinueWith(
+                                task =>
+                                {
+                                    var ex = task.Exception;
+                                    if (ex is not null)
+                                        Service.LogError(
+                                            "[GitHub Bridge] ProcessMessage 处理消息时出现异常：",
+                                            ex
+                                        );
+                                },
+                                TaskContinuationOptions.OnlyOnFaulted
+                            );
                     }
                     catch (Exception e)
                     {
