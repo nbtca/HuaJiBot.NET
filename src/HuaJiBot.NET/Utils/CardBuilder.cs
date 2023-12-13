@@ -150,9 +150,7 @@ public class CardBuilder
                     IconPlaceholder,
                     secondaryBrush
                 );
-
             #region Build
-
             (string text, IReadOnlyList<RichTextRun> runs) BuildTextRuns(IEnumerable<TextRun> runs)
             {
                 var sb = new StringBuilder();
@@ -169,7 +167,6 @@ public class CardBuilder
                     );
                     sb.Append(text);
                 }
-
                 return (sb.ToString(), list);
             }
             #endregion
@@ -229,7 +226,7 @@ public class CardBuilder
                     x.Resize(25, 25, KnownResamplers.Bicubic); //缩放
                 });
                 ctx.DrawText(Footer, yaHeiFont, secondaryBrush, new PointF(iconWidth + 30, 160))
-                    .DrawImage(footerIcon, new Point(iconWidth, 160), 1);
+                    .DrawImage(footerIcon, new Point(iconWidth, 159), 1);
             }
             else
             {
