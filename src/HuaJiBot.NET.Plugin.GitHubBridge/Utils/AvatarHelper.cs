@@ -1,6 +1,6 @@
 ﻿namespace HuaJiBot.NET.Plugin.GitHubBridge.Utils;
 
-internal static class AvatarHelper
+public static class AvatarHelper
 {
     public static async Task<byte[]> Get(string avatarUrl)
     {
