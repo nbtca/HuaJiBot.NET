@@ -16,15 +16,10 @@ internal class TestAdapter : BotServiceBase
         throw new NotImplementedException();
     }
 
-    public override void SendGroupMessage(string? robotId, string targetGroup, string message)
-    {
-        throw new NotImplementedException();
-    }
-
     public override void SendGroupMessage(
         string? robotId,
         string targetGroup,
-        SendImageInfo message
+        params SendingMessageBase[] messages
     )
     {
         throw new NotImplementedException();

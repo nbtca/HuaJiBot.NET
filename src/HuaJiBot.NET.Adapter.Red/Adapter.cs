@@ -24,15 +24,31 @@ public class RedProtocolAdapter : BotServiceBase
         throw new NotImplementedException();
     }
 
-    public override void SendGroupMessage(string? robotId, string targetGroup, string message)
-    {
-        SendGroupMessageInternal(targetGroup, message);
-    }
-
-    public override void SendGroupMessage(string? robotId, string targetGroup, SendImageInfo message)
+    public override void SendGroupMessage(
+        string? robotId,
+        string targetGroup,
+        params SendingMessageBase[] message
+    )
     {
         var msg = new MessageBuilder().SetTarget(targetGroup, ChatTypes.GroupMessage);
-        msg.AddPic(message.ImagePath);
+        foreach (var item in message)
+        {
+            switch (item)
+            {
+                case TextMessage text:
+                    msg.AddText(text.Text);
+                    break;
+                case ImageMessage image:
+                    msg.AddPic(image.ImagePath);
+                    break;
+                case AtMessage at:
+                    msg.AddAt(at.Target);
+                    break;
+                case ReplyMessage reply:
+                    msg.AddReply(reply.ReplayMsgSeq, reply.ReplyMsgId, reply.Target);
+                    break;
+            }
+        }
         _ = _connector.Send(msg.Build());
     }
 

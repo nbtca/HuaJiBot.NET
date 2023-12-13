@@ -13,10 +13,17 @@ public enum MemberType
     Owner = 3
 }
 
-public struct SendImageInfo
+
+
+public abstract record SendingMessageBase
 {
-    public string ImagePath { get; set; }
-}
+    public static implicit operator SendingMessageBase(string text) => new TextMessage(text);
+};
+
+public sealed record TextMessage(string Text) : SendingMessageBase;
+public sealed record ImageMessage(string ImagePath) : SendingMessageBase;
+public sealed record AtMessage(string Target) : SendingMessageBase;
+public sealed record ReplyMessage(string ReplayMsgSeq, string ReplyMsgId, string Target) : SendingMessageBase;
 
 public abstract class BotServiceBase
 {
@@ -24,12 +31,7 @@ public abstract class BotServiceBase
     public Config.ConfigWrapper Config { get; internal set; } = null!;
     public Events.Events Events { get; } = new();
     public abstract string[] GetAllRobots();
-    public abstract void SendGroupMessage(string? robotId, string targetGroup, string message);
-    public abstract void SendGroupMessage(
-        string? robotId,
-        string targetGroup,
-        SendImageInfo message
-    );
+    public abstract void SendGroupMessage(string? robotId, string targetGroup, params SendingMessageBase[] messages);
     public abstract void FeedbackAt(
         string? robotId,
         string targetGroup,
@@ -43,7 +45,6 @@ public abstract class BotServiceBase
     public abstract void LogDebug(object message);
     public abstract void LogError(object message, object detail);
     public abstract string GetPluginDataPath();
-
     private bool ProcessHelp(GroupMessageEventArgs e)
     {
         var reader = e.CommandReader;
@@ -71,9 +72,9 @@ public abstract class BotServiceBase
                         });
                         if (!arg.IsOptional)
                         {
-                            sb.Append("*");
+                            sb.Append('*');
                         }
-                        sb.Append(" ");
+                        sb.Append(' ');
                     }
                 }
                 sb.AppendLine();
