@@ -13,17 +13,19 @@ public enum MemberType
     Owner = 3
 }
 
-
-
 public abstract record SendingMessageBase
 {
     public static implicit operator SendingMessageBase(string text) => new TextMessage(text);
 };
 
 public sealed record TextMessage(string Text) : SendingMessageBase;
+
 public sealed record ImageMessage(string ImagePath) : SendingMessageBase;
+
 public sealed record AtMessage(string Target) : SendingMessageBase;
-public sealed record ReplyMessage(string ReplayMsgSeq, string ReplyMsgId, string Target) : SendingMessageBase;
+
+public sealed record ReplyMessage(string ReplayMsgSeq, string ReplyMsgId, string Target)
+    : SendingMessageBase;
 
 public abstract class BotServiceBase
 {
@@ -31,7 +33,11 @@ public abstract class BotServiceBase
     public Config.ConfigWrapper Config { get; internal set; } = null!;
     public Events.Events Events { get; } = new();
     public abstract string[] GetAllRobots();
-    public abstract void SendGroupMessage(string? robotId, string targetGroup, params SendingMessageBase[] messages);
+    public abstract void SendGroupMessage(
+        string? robotId,
+        string targetGroup,
+        params SendingMessageBase[] messages
+    );
     public abstract void FeedbackAt(
         string? robotId,
         string targetGroup,
@@ -45,13 +51,11 @@ public abstract class BotServiceBase
     public abstract void LogDebug(object message);
     public abstract void LogError(object message, object detail);
     public abstract string GetPluginDataPath();
+
     private bool ProcessHelp(GroupMessageEventArgs e)
     {
         var reader = e.CommandReader;
-        if (reader.Match([
-                "help",
-            "帮助"
-            ], x => x, out _))
+        if (reader.Match(["help", "帮助"], x => x, out _))
         {
             var sb = new StringBuilder();
             sb.AppendLine("可用命令：");
@@ -63,13 +67,15 @@ public abstract class BotServiceBase
                     sb.Append(" ");
                     foreach (var arg in info)
                     {
-                        sb.Append(arg.Attribute.ArgumentType switch
-                        {
-                            CommandArgumentType.String => "<string>",
-                            CommandArgumentType.RegexString => "<regex>",
-                            CommandArgumentType.Enum => "<enum>",
-                            _ => throw new ArgumentOutOfRangeException()
-                        });
+                        sb.Append(
+                            arg.Attribute.ArgumentType switch
+                            {
+                                CommandArgumentType.String => "<string>",
+                                CommandArgumentType.RegexString => "<regex>",
+                                CommandArgumentType.Enum => "<enum>",
+                                _ => throw new ArgumentOutOfRangeException()
+                            }
+                        );
                         if (!arg.IsOptional)
                         {
                             sb.Append('*');
@@ -85,6 +91,7 @@ public abstract class BotServiceBase
         }
         return false;
     }
+
     private void ProcessCommand(GroupMessageEventArgs e)
     {
         if (ProcessHelp(e))
@@ -92,14 +99,17 @@ public abstract class BotServiceBase
             return;
         }
         var reader = e.CommandReader;
-        if (reader.Match(_commands.Keys, out var matched))
+        if (
+            reader.Match(_commands.Keys, out var matched)
+            && _commands.TryGetValue(matched, out var matchedItem)
+        )
         {
-            var (description, method, info) = _commands[matched];
+            var (description, method, info) = matchedItem;
             object?[]? args = null;
             if (info.Any())
             {
                 args = new object?[info.Length];
-                for (int i = 0; i < info.Length; i++)
+                for (var i = 0; i < info.Length; i++)
                 {
                     var arg = info[i];
                     object? value = null;
@@ -128,20 +138,21 @@ public abstract class BotServiceBase
 
                             {
                                 var enumAttr = (CommandArgumentEnumAttributeBase)arg.Attribute;
-                                if (!reader.Match(
+                                if (
+                                    !reader.Match(
                                         enumAttr.EnumItems,
-                                        x => [
-                                            x.Key,
-                                            x.Alias
-                                        ],
+                                        x => [x.Key, x.Alias],
                                         out var item
-                                    ))
+                                    )
+                                )
                                 {
                                     continue;
                                 }
                                 value = item.Value;
                             }
                             break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
                     }
                     args[i] = value;
                 }

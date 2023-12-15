@@ -218,7 +218,7 @@ public class CardBuilder
                     x.Resize(25, 25, KnownResamplers.Bicubic); //缩放
                 });
                 ctx.DrawText(Footer, yaHeiFont, secondaryBrush, new PointF(iconWidth + 30, 160))
-                    .DrawImage(footerIcon, new Point(iconWidth, 159), 1);
+                    .DrawImage(footerIcon, new Point(iconWidth, 158), 1);
             }
             else
             {

@@ -32,14 +32,15 @@ internal class RemoteSync(
                 var resp = await client.GetAsync(icalUrl); //从Url获取
                 resp.EnsureSuccessStatusCode();
                 Calendar = Ical.Net.Calendar.Load(await resp.Content.ReadAsStringAsync());
-                var now = DateTime.Now;
-                var end = now.AddDays(14);
-                foreach (var (period, e) in Calendar.GetEvents(now, end))
-                {
-                    service.Log(period.StartTime);
-                    service.Log(e.Summary);
-                    service.Log(e.Description);
-                }
+                service.Log("日历更新成功");
+                //var now = DateTime.Now;
+                //var end = now.AddDays(14);
+                //foreach (var (period, e) in Calendar.GetEvents(now, end))
+                //{
+                //    service.Log(period.StartTime);
+                //    service.Log(e.Summary);
+                //    service.Log(e.Description);
+                //}
             }
             catch (Exception ex)
             {

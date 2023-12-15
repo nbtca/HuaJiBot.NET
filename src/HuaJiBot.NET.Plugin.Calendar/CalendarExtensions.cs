@@ -1,6 +1,6 @@
-﻿using Ical.Net.CalendarComponents;
+﻿using System.Text;
+using Ical.Net.CalendarComponents;
 using Ical.Net.DataTypes;
-using System.Text;
 
 namespace HuaJiBot.NET.Plugin.Calendar;
 

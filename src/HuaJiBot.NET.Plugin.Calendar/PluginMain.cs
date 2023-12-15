@@ -39,6 +39,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 return Calendar;
             }
         );
+        _reminderTask.Start();
         return Task.CompletedTask;
     }
 
