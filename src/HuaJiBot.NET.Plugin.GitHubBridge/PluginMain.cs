@@ -157,6 +157,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             new()
                             {
                                 Title = repoInfo,
+                                Subtitle = new TextRun[] { },
                                 Content = (
                                     from x in body.Commits
                                     select (IEnumerable<TextRun>)

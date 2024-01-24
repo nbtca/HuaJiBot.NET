@@ -10,23 +10,42 @@ using Path = System.IO.Path;
 
 namespace HuaJiBot.NET.Utils;
 
-public class CardBuilder
+public abstract class ImageBuilder
 {
-    public required string Title;
-    public required IEnumerable<TextRun> Content;
-    public required string IconPlaceholder;
-
-    //public required string TopRightContent;
-    public IEnumerable<TextRun>? TopRightContent;
-    public required string Footer;
-    public byte[]? FooterIcon;
-    public required byte[] Icon;
-
+    #region TextRuns
+    /// <summary>
+    /// 将富文本转换为ImageSharp的RichTextRun
+    /// </summary>
+    /// <param name="runs"></param>
+    /// <returns></returns>
+    protected (string text, IReadOnlyList<RichTextRun> runs) BuildTextRuns(
+        IEnumerable<TextRun> runs
+    )
+    {
+        var sb = new StringBuilder();
+        var list = new List<RichTextRun>();
+        foreach (var (text, color) in runs)
+        {
+            list.Add(
+                new RichTextRun
+                {
+                    Brush = new SolidBrush(color),
+                    Start = sb.Length,
+                    End = sb.Length + text.Length,
+                }
+            );
+            sb.Append(text);
+        }
+        return (sb.ToString(), list);
+    }
+    #endregion
     #region ProcessAvatarWithRoundedCorner
+
+    //用于图片圆角生成
     //ref from https://github.com/SixLabors/Samples/blob/main/ImageSharp/AvatarWithRoundedCorner/Program.cs#L52
     // This method can be seen as an inline implementation of an `IImageProcessor`:
     // (The combination of `IImageOperations.Apply()` + this could be replaced with an `IImageProcessor`)
-    private static IImageProcessingContext ApplyRoundedCorners(
+    protected static IImageProcessingContext ApplyRoundedCorners(
         IImageProcessingContext context,
         float cornerRadius
     )
@@ -76,22 +95,36 @@ public class CardBuilder
     }
     #endregion
 
-    public class AutoDeleteFile(string file) : IDisposable
+    /// <summary>
+    /// 用于出作用域自动删除文件
+    /// </summary>
+    public class AutoDeleteFile : IDisposable
     {
-        public void Dispose()
+        private readonly string _file;
+
+        internal AutoDeleteFile(string file)
+        {
+            _file = file;
+        }
+
+        public void Dispose() //销毁
         { //delete after 30s
             Task.Delay(30_000)
                 .ContinueWith(_ =>
                 {
-                    File.Delete(file);
+                    File.Delete(_file); //删除文件
                 });
         }
 
         public static implicit operator string(AutoDeleteFile file) => file.FileName;
 
-        public string FileName => file;
+        public string FileName => _file;
     }
 
+    /// <summary>
+    /// 保存到临时文件
+    /// </summary>
+    /// <returns>自动删除文件</returns>
     public AutoDeleteFile SaveTempAutoDelete()
     {
         var tempName = Path.GetTempFileName();
@@ -99,17 +132,43 @@ public class CardBuilder
         if (!Directory.Exists(tempDir))
             Directory.CreateDirectory(tempDir);
         var tempFile = Path.Combine(tempDir, tempName);
-        Save(tempFile);
+        Generate(tempFile);
         return new AutoDeleteFile(tempFile);
     }
 
-    public void Save(string file)
+    /// <summary>
+    /// 生成图像
+    /// 并直接保存到文件
+    /// </summary>
+    /// <param name="file">文件路径</param>
+    public void Generate(string file)
     {
         using var stream = File.OpenWrite(file);
-        Save(stream);
+        Generate(stream);
     }
 
-    public void Save(Stream stream)
+    public abstract void Generate(Stream stream);
+}
+
+public class CardBuilder : ImageBuilder
+{
+    public required string Title;
+    public required IEnumerable<TextRun> Subtitle;
+    public required IEnumerable<TextRun> Content;
+    public required string IconPlaceholder;
+
+    //public required string TopRightContent;
+    public IEnumerable<TextRun>? TopRightContent;
+    public required string Footer;
+    public byte[]? FooterIcon;
+    public required byte[] Icon;
+
+    /// <summary>
+    /// 生成图像
+    /// 并输出到 <see cref="Stream"/> 中
+    /// </summary>
+    /// <param name="stream">输出流</param>
+    public override void Generate(Stream stream)
     {
         const int width = 500;
         const int height = 200;
@@ -125,43 +184,38 @@ public class CardBuilder
         var icon = Image.Load(iconStream);
         icon.Mutate(x => x.Resize(30, 30, KnownResamplers.Bicubic).Invert());
         var footerIcon = FooterIcon is not null ? Image.Load(new MemoryStream(FooterIcon)) : null;
-        image.Mutate(ctx =>
+        image.Mutate(ctx => //变换
         {
             ctx.BackgroundColor(background)
                 // 绘制图标
                 .DrawImage(icon, new Point(15, 15), 1)
                 // 绘制标题文本
-                .DrawText(Title, yaHeiFont, secondaryBrush, new PointF(iconWidth, 10))
-                //图标下方的文字
-                .DrawText(
-                    new RichTextOptions(new Font(font.Family, 10))
+                .DrawText(Title, yaHeiFont, secondaryBrush, new PointF(iconWidth, 10));
+            // 绘制副标题文本
+            {
+                var (text, runs) = BuildTextRuns(Subtitle);
+                ctx.DrawText(
+                    new RichTextOptions(font)
                     {
-                        Origin = new Vector2(30, 45),
-                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Origin = new Vector2(iconWidth, 35),
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        FallbackFontFamilies = new[] { yaHeiFont.Family },
+                        TextRuns = runs
                     },
-                    IconPlaceholder,
+                    text,
                     secondaryBrush
                 );
-            #region Build
-            (string text, IReadOnlyList<RichTextRun> runs) BuildTextRuns(IEnumerable<TextRun> runs)
-            {
-                var sb = new StringBuilder();
-                var list = new List<RichTextRun>();
-                foreach (var (text, color) in runs)
-                {
-                    list.Add(
-                        new RichTextRun
-                        {
-                            Brush = new SolidBrush(color),
-                            Start = sb.Length,
-                            End = sb.Length + text.Length
-                        }
-                    );
-                    sb.Append(text);
-                }
-                return (sb.ToString(), list);
             }
-            #endregion
+            //图标下方的文字
+            ctx.DrawText(
+                new RichTextOptions(new Font(font.Family, 10))
+                {
+                    Origin = new Vector2(30, 45),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                },
+                IconPlaceholder,
+                secondaryBrush
+            );
             //右上角的内容
             {
                 if (TopRightContent is not null)
@@ -180,14 +234,14 @@ public class CardBuilder
                     );
                 }
             }
-            // 绘制内容
+            // 绘制主题内容
             {
                 var (text, runs) = BuildTextRuns(Content);
                 ctx.DrawText(
                     new RichTextOptions(font)
                     {
                         WrappingLength = width - iconWidth - 20,
-                        Origin = new PointF(iconWidth, 40),
+                        Origin = new PointF(iconWidth, 60),
                         FallbackFontFamilies = new[] { yaHeiFont.Family },
                         LineSpacing = 1.1f,
                         TextRuns = runs

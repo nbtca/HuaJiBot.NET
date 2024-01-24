@@ -1,6 +1,12 @@
 ﻿using System.Text;
+using HuaJiBot.NET.Utils;
 using Ical.Net.CalendarComponents;
 using Ical.Net.DataTypes;
+using SixLabors.Fonts;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace HuaJiBot.NET.Plugin.Calendar;
 
@@ -30,6 +36,14 @@ internal static class CalendarExtensions
         } into tuple
         orderby tuple.Period.StartTime ascending //按照开始时间排序
         select tuple; //映射
+
+    //todo: 生成图片
+    //public static CardBuilder.AutoDeleteFile BuildCardOutput(
+    //    this IEnumerable<(Period period, CalendarEvent e)> @this,
+    //    DateTime now
+    //)
+    //{
+    //}
 
     /// <summary>
     /// 输出日程的文本

@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\HuaJiBot.NET.Adapter.Red\HuaJiBot.NET.Adapter.Red.csproj" />
+    <ProjectReference Include="..\HuaJiBot.NET.Plugin.Calendar\HuaJiBot.NET.Plugin.Calendar.csproj" />
     <ProjectReference Include="..\HuaJiBot.NET.Plugin.GitHubBridge\HuaJiBot.NET.Plugin.GitHubBridge.csproj" />
     <ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />
   </ItemGroup>

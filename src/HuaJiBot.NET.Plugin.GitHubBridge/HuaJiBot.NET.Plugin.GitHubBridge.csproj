@@ -15,4 +15,23 @@
     <ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Utils\Assets\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Utils\Assets.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Assets.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Utils\Assets.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Assets.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>

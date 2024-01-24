@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using HuaJiBot.NET.Plugin.Calendar;
 using HuaJiBot.NET.Plugin.GitHubBridge.Utils;
 using HuaJiBot.NET.Utils;
 using SixLabors.ImageSharp;
@@ -32,12 +33,12 @@ internal class BuildImageTest
     {
         var avatarUrl = "https://avatars.githubusercontent.com/u/91080742?v=4";
         var avatar = await AvatarHelper.Get(avatarUrl);
-
         CardBuilder card =
             new()
             {
                 Title = "nbtca / blogs : article",
-                Content = new TextRun[] { "迁移文章 by ", "测试", "te\nst", "s" },
+                Subtitle = new TextRun[] { new("\u25cf\u25cf•测试", Color.Red) },
+                Content = new TextRun[] { "迁移文章 by ", "测试", "test", "s" },
                 Footer = "@nbtca pushed 1 commit.",
                 FooterIcon = avatar,
                 Icon = _commitIcon,
@@ -52,8 +53,19 @@ internal class BuildImageTest
         // 保存图像到文件
         var file = Path.GetFullPath("output.png");
         Console.WriteLine(file);
-        card.Save(file);
+        card.Generate(file);
         Process.Start("cmd", ["/C", file]);
         Console.WriteLine("图片已生成。");
+    }
+
+    [Test]
+    public async Task BuildCalendar()
+    {
+        //// 保存图像到文件
+        //var file = Path.GetFullPath("output2.png");
+        //Console.WriteLine(file);
+        //card.Generate(file);
+        //Process.Start("cmd", ["/C", file]);
+        //Console.WriteLine("图片已生成。");
     }
 }

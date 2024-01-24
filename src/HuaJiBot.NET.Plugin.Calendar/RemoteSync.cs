@@ -1,6 +1,4 @@
 ﻿using HuaJiBot.NET.Bot;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Plugin.Calendar;
 
