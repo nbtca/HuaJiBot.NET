@@ -24,7 +24,7 @@ public abstract class ImageBuilder
     {
         var sb = new StringBuilder();
         var list = new List<RichTextRun>();
-        foreach (var (text, color) in runs)
+        foreach (var (text, color, font) in runs)
         {
             list.Add(
                 new RichTextRun
@@ -32,6 +32,7 @@ public abstract class ImageBuilder
                     Brush = new SolidBrush(color),
                     Start = sb.Length,
                     End = sb.Length + text.Length,
+                    Font = font,
                 }
             );
             sb.Append(text);
@@ -197,8 +198,9 @@ public class CardBuilder : ImageBuilder
                 ctx.DrawText(
                     new RichTextOptions(font)
                     {
-                        Origin = new Vector2(iconWidth, 35),
+                        Origin = new Vector2(iconWidth, 45),
                         HorizontalAlignment = HorizontalAlignment.Left,
+                        VerticalAlignment = VerticalAlignment.Center,
                         FallbackFontFamilies = new[] { yaHeiFont.Family },
                         TextRuns = runs
                     },

@@ -33,11 +33,46 @@ internal class BuildImageTest
     {
         var avatarUrl = "https://avatars.githubusercontent.com/u/91080742?v=4";
         var avatar = await AvatarHelper.Get(avatarUrl);
+
         CardBuilder card =
             new()
             {
                 Title = "nbtca / blogs : article",
-                Subtitle = new TextRun[] { new("\u25cf\u25cf•测试", Color.Red) },
+                Subtitle = new Func<IEnumerable<TextRun>>(() =>
+                {
+                    var font = IconFonts.IcoMoonFont(19);
+                    var lang = "Go";
+                    var starCount = "1";
+                    var forksCount = "2";
+                    var pullsCount = "3";
+                    var subtitleColor = Color.FromRgb(139, 148, 158);
+                    var list = new List<TextRun>
+                    {
+                        new(
+                            IconFonts.IconCircle,
+                            LangColorsHelper.GetColor(lang, out var color)
+                            && color is { r: var r, g: var g, b: var b }
+                                ? Color.FromRgb(r, g, b)
+                                : subtitleColor,
+                            font
+                        ),
+                        " ",
+                        new(lang, subtitleColor)
+                    };
+                    void add(char icon, string text)
+                    {
+                        list.Add("  ");
+                        list.Add(new(icon, subtitleColor, font));
+                        list.Add(" ");
+                        list.Add(new(text, subtitleColor));
+                    }
+                    add(IconFonts.IconStars, starCount);
+                    add(IconFonts.IconForks, forksCount);
+                    add(IconFonts.IconPulls, pullsCount);
+                    add(IconFonts.IconLaw, "MIT");
+
+                    return list;
+                }).Invoke(),
                 Content = new TextRun[] { "迁移文章 by ", "测试", "test", "s" },
                 Footer = "@nbtca pushed 1 commit.",
                 FooterIcon = avatar,

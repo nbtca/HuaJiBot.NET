@@ -1,4 +1,6 @@
 ﻿#nullable disable
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.PushEventBody;
 using Newtonsoft.Json;
 
@@ -151,6 +153,7 @@ internal class Repository
     public Uri LanguagesUrl { get; set; }
 
     [JsonProperty("license")]
+    [MaybeNull]
     public License License { get; set; }
 
     [JsonProperty("master_branch")]

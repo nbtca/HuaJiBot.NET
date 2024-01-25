@@ -4,6 +4,7 @@ using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.PushEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.WorkflowRunEventBody;
+using HuaJiBot.NET.Plugin.GitHubBridge.Utils;
 using HuaJiBot.NET.Utils;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
@@ -157,7 +158,41 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             new()
                             {
                                 Title = repoInfo,
-                                Subtitle = new TextRun[] { },
+                                Subtitle = new Func<IEnumerable<TextRun>>(() =>
+                                {
+                                    var font = IconFonts.IcoMoonFont(19);
+                                    var lang = body.Repository.Language;
+                                    var subtitleColor = Color.FromRgb(139, 148, 158);
+                                    var list = new List<TextRun>
+                                    {
+                                        new(
+                                            IconFonts.IconCircle,
+                                            LangColorsHelper.GetColor(lang, out var color)
+                                            && color is { r: var r, g: var g, b: var b }
+                                                ? Color.FromRgb(r, g, b)
+                                                : subtitleColor,
+                                            font
+                                        ),
+                                        " ",
+                                        new(lang, subtitleColor)
+                                    };
+                                    void add(char icon, string text)
+                                    {
+                                        list.Add("  ");
+                                        list.Add(new(icon, subtitleColor, font));
+                                        list.Add(" ");
+                                        list.Add(new(text, subtitleColor));
+                                    }
+                                    if (body.Repository.StargazersCount is > 0 and var stars)
+                                        add(IconFonts.IconStars, stars.ToString());
+                                    if (body.Repository.ForksCount is > 0 and var forks)
+                                        add(IconFonts.IconForks, forks.ToString());
+                                    if (body.Repository.OpenIssuesCount is > 0 and var issues)
+                                        add(IconFonts.IconIssues, issues.ToString());
+                                    if (body.Repository.License is { SpdxId: var license })
+                                        add(IconFonts.IconLaw, license);
+                                    return list;
+                                }).Invoke(),
                                 Content = (
                                     from x in body.Commits
                                     select (IEnumerable<TextRun>)
