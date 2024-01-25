@@ -14,7 +14,7 @@ var token = File.ReadAllText(
     )
 ); //读取密钥
 var api = new RedProtocolAdapter("localhost:16530", token); //链接协议适配器
-await Internal.SetupService(api, config); //协议适配器
+await Internal.SetupServiceAsync(api, config); //协议适配器
 var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>
 {
@@ -49,7 +49,7 @@ if (config.ExtraPlugins is { Length: > 0 })
     }
 }
 #endregion
-await Internal.Setup(api, pluginDir); //启动
+await Internal.SetupAsync(api, pluginDir); //启动
 while (true)
 {
     if (Console.ReadLine() is { } line)

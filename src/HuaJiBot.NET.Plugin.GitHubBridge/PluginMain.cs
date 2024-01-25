@@ -1,4 +1,5 @@
-﻿using System.Net.WebSockets;
+﻿using System.Collections.ObjectModel;
+using System.Net.WebSockets;
 using System.Text;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types;
@@ -15,9 +16,10 @@ namespace HuaJiBot.NET.Plugin.GitHubBridge;
 public class PluginConfig : ConfigBase
 {
     public string Address { get; set; } = "ws://localhost:8080";
+    public string AuthBearer { get; set; } = "";
     public Dictionary<string, string> BroadcastMap { get; set; } = new();
     public Dictionary<string, string[]> BroadcastGroup { get; set; } =
-        new() { ["default"] = new[] { "123456789" } }; //默认的广播目标
+        new() { ["default"] = ["123456789"] }; //默认的广播目标
 }
 
 public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
@@ -43,7 +45,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     }
 
     //处理消息
-    private async Task ProcessMessage(string msg)
+    private async Task ProcessMessageAsync(string msg)
     {
         var e = JsonConvert.DeserializeObject<Event>(msg)!;
         {
@@ -176,7 +178,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                                         " ",
                                         new(lang, subtitleColor)
                                     };
-                                    void add(char icon, string text)
+                                    void Add(char icon, string text)
                                     {
                                         list.Add("  ");
                                         list.Add(new(icon, subtitleColor, font));
@@ -184,13 +186,13 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                                         list.Add(new(text, subtitleColor));
                                     }
                                     if (body.Repository.StargazersCount is var stars)
-                                        add(IconFonts.IconStars, stars.ToString());
+                                        Add(IconFonts.IconStars, stars.ToString());
                                     if (body.Repository.ForksCount is var forks)
-                                        add(IconFonts.IconForks, forks.ToString());
+                                        Add(IconFonts.IconForks, forks.ToString());
                                     if (body.Repository.OpenIssuesCount is var issues)
-                                        add(IconFonts.IconIssues, issues.ToString());
+                                        Add(IconFonts.IconIssues, issues.ToString());
                                     if (body.Repository.License is { SpdxId: var license })
-                                        add(IconFonts.IconLaw, license);
+                                        Add(IconFonts.IconLaw, license);
                                     return list;
                                 }).Invoke(),
                                 Content = (
@@ -237,7 +239,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     }
 
     //初始化
-    protected override async Task Initialize()
+    protected override async Task InitializeAsync()
     {
         WebsocketClient client =
             new(
@@ -245,14 +247,18 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 () =>
                     new ClientWebSocket
                     {
-                        Options = { KeepAliveInterval = TimeSpan.FromSeconds(5) }
+                        Options = { KeepAliveInterval = TimeSpan.FromSeconds(5) },
+                        HttpResponseHeaders = new Dictionary<string, IEnumerable<string>>()
+                        {
+                            ["Authorization"] = new[] { $"Bearer {Config.AuthBearer}" }
+                        }
                     }
             )
             {
                 IsReconnectionEnabled = true,
                 ReconnectTimeout = null,
                 MessageEncoding = Encoding.UTF8,
-                IsTextMessageConversionEnabled = true
+                IsTextMessageConversionEnabled = true,
             };
         client
             .MessageReceived
@@ -262,7 +268,9 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 {
                     try
                     {
-                        ProcessMessage(msg.Text ?? throw new NullReferenceException("msg.Text"))
+                        ProcessMessageAsync(
+                                msg.Text ?? throw new NullReferenceException("msg.Text")
+                            )
                             .ContinueWith(
                                 task =>
                                 {

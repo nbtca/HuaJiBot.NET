@@ -14,9 +14,9 @@ public class RedProtocolAdapter : BotServiceBase
 
     readonly Connector _connector;
 
-    public override async Task SetupService()
+    public override Task SetupServiceAsync()
     {
-        await _connector.Connect();
+        return _connector.Connect();
     }
 
     public override string[] GetAllRobots()

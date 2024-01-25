@@ -14,11 +14,11 @@ namespace HuaJiBot.NET;
 
 public static class Internal
 {
-    public static async Task SetupService<T>(T service, Config.Config config)
+    public static Task SetupServiceAsync<T>(T service, Config.Config config)
         where T : BotServiceBase
     {
         service.Config = new ConfigWrapper(config);
-        await service.SetupService();
+        return service.SetupServiceAsync();
         //Global.ServiceInstance = service;
     }
 
@@ -32,7 +32,7 @@ public static class Internal
     /// </summary>
     /// <param name="api">接口实例</param>
     /// <param name="pluginDirectory">插件目录</param>
-    public static async Task Setup(BotServiceBase api, string pluginDirectory = "plugins")
+    public static async Task SetupAsync(BotServiceBase api, string pluginDirectory = "plugins")
     {
         //插件目录
         DirectoryInfo directoryInfo = new(pluginDirectory);
@@ -88,7 +88,9 @@ public static class Internal
             api.Log($"开始加载插件 {entryPoint.Name} 描述：{entryPoint.Description}");
             var sw = Stopwatch.StartNew(); //计时
             api.LoadAddCommand(plugin); //加载命令
-            await plugin.Initialize(); //异步初始化
+            // ReSharper disable once MethodHasAsyncOverload
+            plugin.Initialize(); //同步初始化
+            await plugin.InitializeAsync(); //异步初始化
             sw.Stop(); //停止计时
             api.Log($"加载插件 {entryPoint.Name} 完成，耗时 {sw.ElapsedMilliseconds} ms");
         }

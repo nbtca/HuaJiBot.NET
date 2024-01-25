@@ -11,7 +11,7 @@ public class PluginMain : PluginBase
         void Log(string message);
     }
 
-    protected override Task Initialize()
+    protected override void Initialize()
     {
         var libnodePath = Path.Combine(
             Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!,
@@ -24,7 +24,6 @@ public class PluginMain : PluginBase
             console.CallMethod("log", "Hello from JS!");
         });
         Info("启动成功！");
-        return Task.CompletedTask;
     }
 
     protected override void Unload() { }

@@ -24,7 +24,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private Ical.Net.Calendar Calendar => _sync.Value.Calendar;
     private ReminderTask? _reminderTask;
 
-    protected override Task Initialize()
+    protected override void Initialize()
     {
         //订阅群消息事件
         Service.Events.OnGroupMessageReceived += Events_OnGroupMessageReceived;
@@ -40,7 +40,6 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             }
         );
         _reminderTask.Start();
-        return Task.CompletedTask;
     }
 
     private readonly Dictionary<string, DateTime> _cache = new();

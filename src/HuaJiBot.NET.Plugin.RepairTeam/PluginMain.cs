@@ -1,16 +1,12 @@
-﻿using System.ComponentModel;
-using System.Text.RegularExpressions;
-using HuaJiBot.NET.Commands;
-using Newtonsoft.Json;
+﻿using HuaJiBot.NET.Commands;
 
 namespace HuaJiBot.NET.Plugin.RepairTeam;
 
 public class PluginMain : PluginBase
 {
-    protected override Task Initialize()
+    protected override void Initialize()
     {
         Service.Log("[1] 启动成功！");
-        return Task.CompletedTask;
     }
 
     [CommandEnum("test")]

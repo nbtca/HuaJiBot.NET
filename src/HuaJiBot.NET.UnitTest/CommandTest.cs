@@ -6,7 +6,7 @@ namespace HuaJiBot.NET.UnitTest;
 
 internal class TestAdapter : BotServiceBase
 {
-    public override Task SetupService()
+    public override Task SetupServiceAsync()
     {
         return Task.CompletedTask;
     }

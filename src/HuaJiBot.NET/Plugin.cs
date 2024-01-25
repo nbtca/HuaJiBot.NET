@@ -28,9 +28,14 @@ public abstract class PluginBase
     public void Error(object msg, object detail) => Service.LogError($"[{Name}] {msg}", detail);
 
     /// <summary>
+    /// 插件初始化(异步)
+    /// </summary>
+    protected internal virtual Task InitializeAsync() => Task.CompletedTask;
+
+    /// <summary>
     /// 插件初始化
     /// </summary>
-    protected internal abstract Task Initialize();
+    protected internal virtual void Initialize() { }
 
     /// <summary>
     /// 插件卸载

@@ -23,7 +23,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private List<(PluginConfig.ClientInfo info, WebsocketClient client)> _clients = new();
 
     //初始化
-    protected override async Task Initialize()
+    protected override async Task InitializeAsync()
     {
         foreach (var clientInfo in Config.Clients)
         {
@@ -42,33 +42,35 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     MessageEncoding = Encoding.UTF8,
                     IsTextMessageConversionEnabled = true
                 };
-            client.MessageReceived.Subscribe(msg =>
-            {
-                if (msg.MessageType == WebSocketMessageType.Text)
+            client
+                .MessageReceived
+                .Subscribe(msg =>
                 {
-                    try
+                    if (msg.MessageType == WebSocketMessageType.Text)
                     {
-                        ProcessMessage(
-                            msg.Text ?? throw new NullReferenceException("msg.Text"),
-                            clientInfo
-                        );
+                        try
+                        {
+                            ProcessMessage(
+                                msg.Text ?? throw new NullReferenceException("msg.Text"),
+                                clientInfo
+                            );
+                        }
+                        catch (Exception e)
+                        {
+                            Error("处理消息时出现异常：", e);
+                        }
                     }
-                    catch (Exception e)
+                    else
                     {
-                        Error("处理消息时出现异常：", e);
+                        Info("收到非文本消息！");
                     }
-                }
-                else
-                {
-                    Info("收到非文本消息！");
-                }
-            });
-            client.DisconnectionHappened.Subscribe(
-                info => Info("Disconnection Happened " + info.Type)
-            );
-            client.ReconnectionHappened.Subscribe(
-                info => Info("Reconnection Happened " + info.Type)
-            );
+                });
+            client
+                .DisconnectionHappened
+                .Subscribe(info => Info("Disconnection Happened " + info.Type));
+            client
+                .ReconnectionHappened
+                .Subscribe(info => Info("Reconnection Happened " + info.Type));
             await client.Start();
             _clients.Add((clientInfo, client));
         }
