@@ -183,11 +183,11 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                                         list.Add(" ");
                                         list.Add(new(text, subtitleColor));
                                     }
-                                    if (body.Repository.StargazersCount is > 0 and var stars)
+                                    if (body.Repository.StargazersCount is var stars)
                                         add(IconFonts.IconStars, stars.ToString());
-                                    if (body.Repository.ForksCount is > 0 and var forks)
+                                    if (body.Repository.ForksCount is var forks)
                                         add(IconFonts.IconForks, forks.ToString());
-                                    if (body.Repository.OpenIssuesCount is > 0 and var issues)
+                                    if (body.Repository.OpenIssuesCount is var issues)
                                         add(IconFonts.IconIssues, issues.ToString());
                                     if (body.Repository.License is { SpdxId: var license })
                                         add(IconFonts.IconLaw, license);
