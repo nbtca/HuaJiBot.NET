@@ -245,14 +245,18 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             new(
                 new Uri(Config.Address),
                 () =>
-                    new ClientWebSocket
+                {
+                    var client = new ClientWebSocket
                     {
-                        Options = { KeepAliveInterval = TimeSpan.FromSeconds(5) },
-                        HttpResponseHeaders = new Dictionary<string, IEnumerable<string>>()
+                        Options =
                         {
-                            ["Authorization"] = new[] { $"Bearer {Config.AuthBearer}" }
+                            KeepAliveInterval = TimeSpan.FromSeconds(5),
+                            CollectHttpResponseDetails = true,
                         }
-                    }
+                    };
+                    client.Options.SetRequestHeader("Authorization", $"Bearer {Config.AuthBearer}");
+                    return client;
+                }
             )
             {
                 IsReconnectionEnabled = true,
@@ -296,7 +300,15 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             });
         client
             .DisconnectionHappened
-            .Subscribe(info => Service.Log("[GitHub Bridge] Disconnection Happened " + info.Type));
+            .Subscribe(
+                info =>
+                    Service.Log(
+                        "[GitHub Bridge] Disconnection Happened. Type:"
+                            + info.Type
+                            + " Description:"
+                            + info.CloseStatusDescription
+                    )
+            );
         client
             .ReconnectionHappened
             .Subscribe(info => Service.Log("[GitHub Bridge] Reconnection Happened " + info.Type));
