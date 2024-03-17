@@ -2,12 +2,21 @@
 
 namespace HuaJiBot.NET.Adapter.OneBot;
 
-public class OneBotAdapter(string ws, string token) : BotServiceBase
+public class OneBotAdapter : BotServiceBase
 {
-    public override Task SetupServiceAsync()
+    private ForwardWebSocketClient client;
+
+    public OneBotAdapter(string ws, string? token)
     {
-        throw new NotImplementedException();
+        client = new ForwardWebSocketClient(this, ws, token);
     }
+
+    public override void Reconnect()
+    {
+        client.ConnectAsync();
+    }
+
+    public override Task SetupServiceAsync() => client.ConnectAsync();
 
     public override string[] GetAllRobots()
     {
@@ -38,28 +47,57 @@ public class OneBotAdapter(string ws, string token) : BotServiceBase
         throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// 日志
+    /// </summary>
+    /// <param name="message">日志内容</param>
     public override void Log(object message)
     {
-        throw new NotImplementedException();
+        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [INFO] {message}");
     }
 
+    /// <summary>
+    /// 警告日志
+    /// </summary>
+    /// <param name="message"></param>
     public override void Warn(object message)
     {
-        throw new NotImplementedException();
+        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [WARN] {message}");
     }
 
+    /// <summary>
+    /// 调试日志
+    /// </summary>
+    /// <param name="message">调试日志内容</param>
     public override void LogDebug(object message)
     {
-        throw new NotImplementedException();
+        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [DEBUG] {message}");
     }
 
+    /// <summary>
+    /// 错误日志
+    /// </summary>
+    /// <param name="message">消息</param>
+    /// <param name="detail">错误信息</param>
     public override void LogError(object message, object detail)
     {
-        throw new NotImplementedException();
+        Console.WriteLine(
+            $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [ERROR] {message}"
+                + $"{Environment.NewLine}---{Environment.NewLine}"
+                + $"{detail}"
+                + $"{Environment.NewLine}---"
+        );
     }
 
+    /// <summary>
+    /// 取插件数据目录
+    /// </summary>
+    /// <returns></returns>
     public override string GetPluginDataPath()
     {
-        throw new NotImplementedException();
+        var path = Path.GetFullPath(Path.Combine("plugins", "data")); //插件数据目录，当前目录下的plugins/data
+        if (!Directory.Exists(path))
+            Directory.CreateDirectory(path); //自动创建目录
+        return path;
     }
 }

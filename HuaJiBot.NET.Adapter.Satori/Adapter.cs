@@ -6,6 +6,11 @@ public class Adapter : BotServiceBase
 {
     public Adapter(string token) { }
 
+    public override void Reconnect()
+    {
+        throw new NotImplementedException();
+    }
+
     public override Task SetupServiceAsync()
     {
         throw new NotImplementedException();

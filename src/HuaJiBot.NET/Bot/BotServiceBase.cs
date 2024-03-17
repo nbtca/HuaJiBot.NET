@@ -29,6 +29,7 @@ public sealed record ReplyMessage(string ReplayMsgSeq, string ReplyMsgId, string
 
 public abstract class BotServiceBase
 {
+    public abstract void Reconnect();
     public abstract Task SetupServiceAsync();
     public Config.ConfigWrapper Config { get; internal set; } = null!;
     public Events.Events Events { get; } = new();

@@ -260,7 +260,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             )
             {
                 IsReconnectionEnabled = true,
-                ReconnectTimeout = null,
+                ReconnectTimeout = TimeSpan.FromSeconds(1),
                 MessageEncoding = Encoding.UTF8,
                 IsTextMessageConversionEnabled = true,
             };

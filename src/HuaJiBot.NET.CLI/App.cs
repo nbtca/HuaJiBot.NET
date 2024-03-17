@@ -18,15 +18,15 @@ using HuaJiBot.NET.Config;
 //    return api;
 //}
 
-BotServiceBase CreateOneBotService()
+BotServiceBase CreateOneBotService(Config config)
 {
-    var api = new OneBotAdapter("ws://192.168.6.1:3200", "token"); //链接协议适配器
+    var api = new OneBotAdapter("ws://192.168.6.1:3200", config.Token); //链接协议适配器
     return api;
 }
 Console.WriteLine("运行路径：" + Environment.CurrentDirectory);
 var config = Config.Load(); //配置文件
 config.Save();
-var api = CreateOneBotService(); //创建协议适配器
+var api = CreateOneBotService(config); //创建协议适配器
 await Internal.SetupServiceAsync(api, config); //协议适配器
 var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>
@@ -71,6 +71,9 @@ while (true)
         switch (cmds)
         {
             case ["quit" or "q"]:
+                break;
+            case ["r" or "rc"]:
+                api.Reconnect();
                 break;
             case ["save"]:
                 var result = api.Config.Save();
