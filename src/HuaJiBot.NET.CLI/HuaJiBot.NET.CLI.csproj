@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\HuaJiBot.NET.Adapter.Red\HuaJiBot.NET.Adapter.Red.csproj" />
+    <ProjectReference Include="..\HuaJiBot.NET.Adapter.OneBot\HuaJiBot.NET.Adapter.OneBot.csproj" />
   </ItemGroup>
 
 </Project>

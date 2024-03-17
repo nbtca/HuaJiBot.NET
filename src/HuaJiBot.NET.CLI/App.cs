@@ -1,19 +1,32 @@
 ﻿using HuaJiBot.NET;
-using HuaJiBot.NET.Adapter.Red;
+using HuaJiBot.NET.Adapter.OneBot;
+using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Config;
 
+//using HuaJiBot.NET.Adapter.Red;
+//BotServiceBase CreateRedProtocolService()
+//{
+//    var token = File.ReadAllText(
+//        Path.Combine(
+//            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+//            "BetterUniverse",
+//            "QQNT",
+//            "RED_PROTOCOL_TOKEN"
+//        )
+//    ); //读取密钥
+//    var api = new RedProtocolAdapter("localhost:16530", token); //链接协议适配器
+//    return api;
+//}
+
+BotServiceBase CreateOneBotService()
+{
+    var api = new OneBotAdapter("ws://192.168.6.1:3200", "token"); //链接协议适配器
+    return api;
+}
 Console.WriteLine("运行路径：" + Environment.CurrentDirectory);
 var config = Config.Load(); //配置文件
 config.Save();
-var token = File.ReadAllText(
-    Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "BetterUniverse",
-        "QQNT",
-        "RED_PROTOCOL_TOKEN"
-    )
-); //读取密钥
-var api = new RedProtocolAdapter("localhost:16530", token); //链接协议适配器
+var api = CreateOneBotService(); //创建协议适配器
 await Internal.SetupServiceAsync(api, config); //协议适配器
 var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>
