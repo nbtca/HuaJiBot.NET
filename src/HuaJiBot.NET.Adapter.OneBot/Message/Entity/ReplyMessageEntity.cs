@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.OneBot.Message.Entity;
 
@@ -9,4 +10,6 @@ internal class ReplyMessageEntity(uint messageId) : MessageEntity
 
     [JsonProperty("id")]
     public string MessageId { get; set; } = messageId.ToString();
+
+    public override JObject ToJson() => new() { ["id"] = MessageId };
 }

@@ -1,11 +1,15 @@
-﻿using HuaJiBot.NET.Adapter.OneBot.Message.Entity;
+﻿using System.Runtime.Serialization;
+using HuaJiBot.NET.Adapter.OneBot.Message.Entity;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.OneBot.Message;
 
 [JsonConverter(typeof(MessageEntityConverter))]
-internal class MessageEntity { }
+internal abstract class MessageEntity
+{
+    public abstract JObject ToJson();
+}
 
 internal class MessageEntityConverter : JsonConverter<MessageEntity>
 {
@@ -39,7 +43,8 @@ internal class MessageEntityConverter : JsonConverter<MessageEntity>
             }
         );
         writer.WritePropertyName("data");
-        serializer.Serialize(writer, value);
+        //serializer.Serialize(writer, value, value.GetType());
+        value?.ToJson().WriteTo(writer);
         writer.WriteEndObject();
     }
 

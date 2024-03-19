@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.OneBot.Message.Entity;
 
@@ -12,4 +13,6 @@ internal class VideoMessageEntity(string url) : MessageEntity
 
     [JsonProperty("url")]
     public string Url { get; set; } = url;
+
+    public override JObject ToJson() => new() { ["file"] = File };
 }

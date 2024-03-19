@@ -5,7 +5,7 @@ namespace HuaJiBot.NET.Plugin.Calendar;
 internal class RemoteSync(
     BotServiceBase service,
     int updateDurationInMinutes = 15,
-    string icalUrl = "https://i.nbtca.space/panel/ical"
+    string icalUrl = "https://cloud.nbtca.space/panel/ical"
 )
 {
     private DateTime _lastLoadTime = DateTime.MinValue;

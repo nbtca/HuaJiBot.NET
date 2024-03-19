@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.OneBot.Message.Entity;
 
@@ -81,5 +82,10 @@ internal class KeyboardMessageEntity(KeyboardMessageEntity.KeyboardData content)
 
         [JsonProperty("style")]
         public int Style { get; set; }
+    }
+
+    public override JObject ToJson()
+    {
+        throw new NotImplementedException();
     }
 }

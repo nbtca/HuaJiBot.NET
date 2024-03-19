@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.OneBot.Message.Entity;
 
@@ -12,4 +13,6 @@ internal class AtMessageEntity(uint at) : MessageEntity
 
     [JsonIgnore]
     public bool IsAll => At == "all";
+
+    public override JObject ToJson() => new() { ["qq"] = At };
 }

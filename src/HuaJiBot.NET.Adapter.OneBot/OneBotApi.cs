@@ -35,6 +35,10 @@ internal class OneBotApi(BotServiceBase service, Action<string> send)
         var id = Guid.NewGuid().ToString("N");
         var req = new ActionRequest<T>(action, data, id);
         var str = JsonConvert.SerializeObject(req);
+
+        #region MyRegion
+        Console.WriteLine("Sending: " + str);
+        #endregion
         var tcs = new TaskCompletionSource<JToken>();
         _pendingRequests[id] = tcs;
         try

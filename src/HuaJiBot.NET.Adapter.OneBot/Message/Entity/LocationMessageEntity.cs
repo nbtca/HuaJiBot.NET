@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.OneBot.Message.Entity;
 
@@ -18,4 +19,9 @@ internal class LocationMessageEntity(float latitude, float longitude) : MessageE
 
     [JsonProperty("content")]
     public string Content { get; set; } = string.Empty;
+
+    public override JObject ToJson()
+    {
+        throw new NotImplementedException();
+    }
 }

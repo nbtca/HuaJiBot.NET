@@ -6,6 +6,11 @@ namespace HuaJiBot.NET.UnitTest;
 
 internal class TestAdapter : BotServiceBase
 {
+    public override void Reconnect()
+    {
+        throw new NotImplementedException();
+    }
+
     public override Task SetupServiceAsync()
     {
         return Task.CompletedTask;
