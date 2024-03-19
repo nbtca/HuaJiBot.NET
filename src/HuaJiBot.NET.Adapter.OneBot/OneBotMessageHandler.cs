@@ -7,11 +7,10 @@ using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.OneBot;
 
-internal class OneBotMessageHandler(BotServiceBase service, Action<string> send)
+internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service, Action<string> send)
 {
     private string? _qq = null;
     public string? QQ => _qq;
-    private readonly OneBotApi _api = new(service, send);
 
     public async Task ProcessMessageAsync(string data)
     {
@@ -20,7 +19,7 @@ internal class OneBotMessageHandler(BotServiceBase service, Action<string> send)
             var json = JObject.Parse(data);
             if (json.ContainsKey("echo"))
             {
-                await _api.ProcessMessageAsync(json);
+                await api.ProcessMessageAsync(json);
                 return;
             }
             var postType = json.Value<string>("post_type");
@@ -69,7 +68,7 @@ internal class OneBotMessageHandler(BotServiceBase service, Action<string> send)
                                     //    "protocol_version": "v11",
                                     //    "nt_protocol": "Linux | 3.1.2-13107"
                                     //},
-                                    var info = await _api.GetVersionInfoAsync();
+                                    var info = await api.GetVersionInfoAsync();
 #if DEBUG
                                     service.Log(
                                         "GetVersionInfoAsync:" + JsonConvert.SerializeObject(info)
@@ -198,7 +197,7 @@ internal class OneBotMessageHandler(BotServiceBase service, Action<string> send)
                                             service,
                                             new GroupMessageEventArgs(
                                                 () => new OneBotCommandReader(service, message),
-                                                async () => await _api.GetGroupNameAsync(groupId)
+                                                async () => await api.GetGroupNameAsync(groupId)
                                             )
                                             {
                                                 Service = service,

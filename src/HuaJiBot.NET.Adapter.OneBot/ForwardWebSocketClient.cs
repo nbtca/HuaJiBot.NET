@@ -12,12 +12,15 @@ internal class ForwardWebSocketClient
     private readonly OneBotMessageHandler _handler;
     public string? QQ => _handler.QQ;
     private readonly WebsocketClient _client;
+    internal readonly OneBotApi Api;
 
     public Task ConnectAsync() => _client.Start();
 
     public ForwardWebSocketClient(BotServiceBase service, string wsUrl, string? token)
     {
-        _handler = new OneBotMessageHandler(service, text => _client!.Send(text));
+        void Send(string text) => _client!.Send(text);
+        Api = new OneBotApi(service, Send);
+        _handler = new OneBotMessageHandler(Api, service, Send);
         _client = new WebsocketClient(
             new Uri(wsUrl),
             () =>
@@ -84,6 +87,7 @@ internal class ForwardWebSocketClient
         _client
             .ReconnectionHappened
             .Subscribe(info => service.Log("[OneBotWsClient] Reconnection Happened " + info.Type));
+
         //var timer = new System.Timers.Timer(500);
         //timer.Elapsed += (sender, args) =>
         //{ //send ping

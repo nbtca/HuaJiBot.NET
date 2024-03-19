@@ -29,4 +29,9 @@ public static class CommonResolver
             _ => null,
         };
     }
+
+    public static string EncodingBase64Async(string path)
+    {
+        return "base64://" + Convert.ToBase64String(File.ReadAllBytes(path));
+    }
 }

@@ -1,27 +1,29 @@
-﻿using HuaJiBot.NET.Bot;
+﻿using HuaJiBot.NET.Adapter.OneBot.Message;
+using HuaJiBot.NET.Adapter.OneBot.Message.Entity;
+using HuaJiBot.NET.Bot;
 
 namespace HuaJiBot.NET.Adapter.OneBot;
 
 public class OneBotAdapter : BotServiceBase
 {
-    private ForwardWebSocketClient client;
+    private readonly ForwardWebSocketClient _client;
 
     public OneBotAdapter(string ws, string? token)
     {
-        client = new ForwardWebSocketClient(this, ws, token);
+        _client = new ForwardWebSocketClient(this, ws, token);
     }
 
     public override void Reconnect()
     {
-        client.ConnectAsync();
+        _client.ConnectAsync();
     }
 
-    public override Task SetupServiceAsync() => client.ConnectAsync();
+    public override Task SetupServiceAsync() => _client.ConnectAsync();
 
     public override string[] GetAllRobots()
     {
-        if (client.QQ is not null)
-            return [client.QQ];
+        if (_client.QQ is not null)
+            return [_client.QQ];
         return [];
     }
 
@@ -31,7 +33,35 @@ public class OneBotAdapter : BotServiceBase
         params SendingMessageBase[] messages
     )
     {
-        throw new NotImplementedException();
+        _ = _client
+            .Api
+            .SendGroupMessageAsync(
+                targetGroup,
+                messages
+                    .Select<SendingMessageBase, MessageEntity>(
+                        x =>
+                            x switch
+                            {
+                                TextMessage { Text: var text } => new TextMessageEntity(text),
+                                ImageMessage { ImagePath: var path }
+                                    => new ImageMessageEntity
+                                    {
+                                        File = CommonResolver.EncodingBase64Async(path)
+                                    },
+                                AtMessage { Target: var target }
+                                    => new AtMessageEntity(uint.Parse(target)),
+                                ReplyMessage
+                                {
+                                    ReplayMsgSeq: var seq,
+                                    ReplyMsgId: var id,
+                                    Target: var target
+                                }
+                                    => new ReplyMessageEntity(uint.Parse(id)),
+                                _ => throw new NotSupportedException()
+                            }
+                    )
+                    .ToArray()
+            );
     }
 
     public override MemberType GetMemberType(string robotId, string targetGroup, string userId)
@@ -41,7 +71,7 @@ public class OneBotAdapter : BotServiceBase
 
     public override void FeedbackAt(string? robotId, string targetGroup, string userId, string text)
     {
-        throw new NotImplementedException();
+        SendGroupMessage(robotId, targetGroup, new AtMessage(userId), new TextMessage(text));
     }
 
     public override string GetNick(string robotId, string userId)

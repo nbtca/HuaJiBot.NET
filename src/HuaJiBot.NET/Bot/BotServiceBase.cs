@@ -24,7 +24,7 @@ public sealed record ImageMessage(string ImagePath) : SendingMessageBase;
 
 public sealed record AtMessage(string Target) : SendingMessageBase;
 
-public sealed record ReplyMessage(string ReplayMsgSeq, string ReplyMsgId, string Target)
+public sealed record ReplyMessage(string? ReplayMsgSeq, string ReplyMsgId, string? Target)
     : SendingMessageBase;
 
 public abstract class BotServiceBase

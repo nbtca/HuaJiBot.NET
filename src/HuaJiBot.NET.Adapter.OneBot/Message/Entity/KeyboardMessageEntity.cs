@@ -37,37 +37,37 @@ internal class KeyboardMessageEntity(KeyboardMessageEntity.KeyboardData content)
 
     public class Action
     {
-        [JsonPropertyName("type")]
+        [JsonProperty("type")]
         public int Type { get; set; }
 
-        [JsonPropertyName("permission")]
+        [JsonProperty("permission")]
         public Permission Permission { get; set; } = new();
 
-        // [JsonPropertyName("click_limit")]
+        // [JsonProperty("click_limit")]
         // public long ClickLimit { get; set; }
 
-        [JsonPropertyName("unsupport_tips")]
+        [JsonProperty("unsupport_tips")]
         public string UnsupportTips { get; set; } = string.Empty;
 
-        [JsonPropertyName("data")]
+        [JsonProperty("data")]
         public string Data { get; set; } = string.Empty;
 
-        [JsonPropertyName("reply")]
+        [JsonProperty("reply")]
         public bool? Reply { get; set; }
 
-        [JsonPropertyName("enter")]
+        [JsonProperty("enter")]
         public bool? Enter { get; set; }
     }
 
     public class Permission
     {
-        [JsonPropertyName("type")]
+        [JsonProperty("type")]
         public int Type { get; set; }
 
-        [JsonPropertyName("specify_role_ids")]
+        [JsonProperty("specify_role_ids")]
         public List<string> SpecifyRoleIds { get; set; } = new();
 
-        [JsonPropertyName("specify_user_ids")]
+        [JsonProperty("specify_user_ids")]
         public List<string> SpecifyUserIds { get; set; } = new();
     }
 

@@ -1,7 +1,5 @@
 ﻿using HuaJiBot.NET.Adapter.Red.Message;
 using HuaJiBot.NET.Bot;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.Red;
 
@@ -74,7 +72,6 @@ public class RedProtocolAdapter : BotServiceBase
             msg.AddAt(atNtUid);
         msg.AddText(message);
         _ = _connector.Send(msg.Build());
-
         /*
       {
   "type": "message::send",

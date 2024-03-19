@@ -1,5 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
+using HuaJiBot.NET.Adapter.OneBot.Message;
+using HuaJiBot.NET.Adapter.OneBot.Message.Entity;
 using HuaJiBot.NET.Bot;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -110,5 +112,71 @@ internal class OneBotApi(BotServiceBase service, Action<string> send)
             new OneBotGetGroupInfo { GroupId = uint.Parse(groupId), NoCache = false }
         );
         return result.GroupName;
+    }
+
+    public class OneBotGroupMessageBase
+    {
+        [JsonProperty("group_id")]
+        public uint GroupId { get; set; }
+
+        [JsonProperty("auto_escape")]
+        public bool? AutoEscape { get; set; }
+    }
+
+    public class OneBotMessageResponse
+    {
+        [JsonProperty("message_id")]
+        public required int MessageId { get; set; }
+    }
+
+    public class OneBotMessage : OneBotGroupMessageBase
+    {
+        [JsonProperty("message")]
+        public MessageEntity[] Messages { get; set; } = [];
+    }
+
+    public class OneBotMessageSimple(MessageEntity entity) : OneBotGroupMessageBase
+    {
+        [JsonProperty("message")]
+        public MessageEntity Messages { get; set; } = entity;
+    }
+
+    public class OneBotMessageText : OneBotGroupMessageBase
+    {
+        [JsonProperty("message")]
+        public string Messages { get; set; } = "";
+    }
+
+    public Task<OneBotMessageResponse> SendGroupMessageAsync(string targetGroup, string message)
+    {
+        return SendAsync<OneBotMessageText, OneBotMessageResponse>(
+            "send_group_msg",
+            new OneBotMessageText
+            {
+                AutoEscape = true,
+                GroupId = uint.Parse(targetGroup),
+                Messages = message
+            }
+        );
+    }
+
+    public async Task<OneBotMessageResponse> SendGroupMessageAsync(
+        string targetGroup,
+        params MessageEntity[] messages
+    )
+    {
+        if (messages is [var entity])
+        {
+            var msg = new OneBotMessageSimple(entity) { GroupId = uint.Parse(targetGroup) };
+            return await SendAsync<OneBotMessageSimple, OneBotMessageResponse>(
+                "send_group_msg",
+                msg
+            );
+        }
+        else
+        {
+            var msg = new OneBotMessage { GroupId = uint.Parse(targetGroup), Messages = messages };
+            return await SendAsync<OneBotMessage, OneBotMessageResponse>("send_group_msg", msg);
+        }
     }
 }
