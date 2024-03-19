@@ -28,9 +28,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HuaJiBot.NET.Plugin.Message
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HuaJiBot.NET.Plugin.Scripting", "src\HuaJiBot.NET.Plugin.Scripting\HuaJiBot.NET.Plugin.Scripting.csproj", "{23A36543-1BCD-4342-91BC-607A5D881637}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuaJiBot.NET.Adapter.Satori", "HuaJiBot.NET.Adapter.Satori\HuaJiBot.NET.Adapter.Satori.csproj", "{8EDFA1FA-BBC7-40EF-A1EF-47AB459264B2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuaJiBot.NET.Adapter.Satori", "src\HuaJiBot.NET.Adapter.Satori\HuaJiBot.NET.Adapter.Satori.csproj", "{8EDFA1FA-BBC7-40EF-A1EF-47AB459264B2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuaJiBot.NET.Adapter.Lagrange", "HuaJiBot.NET.Adapter.Lagrange\HuaJiBot.NET.Adapter.Lagrange.csproj", "{E678F9C3-5643-47D1-BFAE-ABC4181CE4A9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuaJiBot.NET.Adapter.Lagrange", "src\HuaJiBot.NET.Adapter.Lagrange\HuaJiBot.NET.Adapter.Lagrange.csproj", "{E678F9C3-5643-47D1-BFAE-ABC4181CE4A9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

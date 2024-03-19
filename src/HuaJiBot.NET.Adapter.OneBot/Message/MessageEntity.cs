@@ -44,7 +44,7 @@ internal class MessageEntityConverter : JsonConverter<MessageEntity>
         );
         writer.WritePropertyName("data");
         //serializer.Serialize(writer, value, value.GetType());
-        value?.ToJson().WriteTo(writer);
+        value.ToJson().WriteTo(writer);
         writer.WriteEndObject();
     }
 
