@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.WebSockets;
+using System.Reactive.Linq;
 using System.Text;
 using HuaJiBot.NET.Bot;
 using Websocket.Client;
@@ -42,37 +43,30 @@ internal class ForwardWebSocketClient
         };
         _client
             .MessageReceived
+            .Where(m => m.MessageType == WebSocketMessageType.Text)
+            .Select(m => m.Text)
             .Subscribe(msg =>
             {
-                if (msg.MessageType == WebSocketMessageType.Text)
+                try
                 {
-                    try
-                    {
-                        _handler
-                            .ProcessMessageAsync(
-                                msg.Text ?? throw new NullReferenceException("msg.Text")
-                            )
-                            .ContinueWith(
-                                task =>
-                                {
-                                    var ex = task.Exception;
-                                    if (ex is not null)
-                                        service.LogError(
-                                            "[OneBotWsClient] ProcessMessage 处理消息时出现异常：",
-                                            ex
-                                        );
-                                },
-                                TaskContinuationOptions.OnlyOnFaulted
-                            );
-                    }
-                    catch (Exception e)
-                    {
-                        service.LogError("[OneBotWsClient] 处理消息时出现异常：", e);
-                    }
+                    _handler
+                        .ProcessMessageAsync(msg ?? throw new NullReferenceException("msg.Text"))
+                        .ContinueWith(
+                            task =>
+                            {
+                                var ex = task.Exception;
+                                if (ex is not null)
+                                    service.LogError(
+                                        "[OneBotWsClient] ProcessMessage 处理消息时出现异常：",
+                                        ex
+                                    );
+                            },
+                            TaskContinuationOptions.OnlyOnFaulted
+                        );
                 }
-                else
+                catch (Exception e)
                 {
-                    service.Log("[OneBotWsClient] 收到非文本消息！");
+                    service.LogError("[OneBotWsClient] 处理消息时出现异常：", e);
                 }
             });
         _client
@@ -89,16 +83,11 @@ internal class ForwardWebSocketClient
         _client
             .ReconnectionHappened
             .Subscribe(info => service.Log("[OneBotWsClient] Reconnection Happened " + info.Type));
-        _client
-            .Start()
-            .ContinueWith(
-                task =>
-                {
-                    var ex = task.Exception;
-                    if (ex is not null)
-                        service.LogError("[OneBotWsClient] 启动时出现异常：", ex);
-                },
-                TaskContinuationOptions.OnlyOnFaulted
-            );
+        //var timer = new System.Timers.Timer(500);
+        //timer.Elapsed += (sender, args) =>
+        //{ //send ping
+        //    _client.Send("{}");
+        //};
+        //timer.Start();
     }
 }

@@ -14,6 +14,11 @@ public class RedProtocolAdapter : BotServiceBase
 
     readonly Connector _connector;
 
+    public override void Reconnect()
+    {
+        _ = _connector.Connect();
+    }
+
     public override Task SetupServiceAsync()
     {
         return _connector.Connect();
