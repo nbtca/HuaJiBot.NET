@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Text.Json.Serialization;
 using HuaJiBot.NET.Bot;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -60,20 +61,54 @@ internal class OneBotApi(BotServiceBase service, Action<string> send)
     private Task<TR> SendAsync<TR>(string action) =>
         SendAsync<JValue, TR>(action, JValue.CreateNull());
 
-    public async Task ProcessMessageAsync(JObject data)
+    public Task ProcessMessageAsync(JObject data)
     {
         var echo = data.Value<string>("echo");
         if (echo is null)
         {
             service.LogDebug("Invalid message: " + data);
-            return;
+            return Task.CompletedTask;
         }
         if (_pendingRequests.TryRemove(echo, out var tcs))
             tcs.TrySetResult(data);
+        return Task.CompletedTask;
     }
 
     public Task<Dictionary<string, string>> GetVersionInfoAsync()
     {
         return SendAsync<Dictionary<string, string>>("get_version_info");
+    }
+
+    public class OneBotGetGroupInfo
+    {
+        [JsonProperty("group_id")]
+        public required uint GroupId { get; set; }
+
+        [JsonProperty("no_cache")]
+        public bool NoCache { get; set; }
+    }
+
+    public class OneBotGroup
+    {
+        [JsonProperty("group_id")]
+        public required uint GroupId { get; set; }
+
+        [JsonProperty("group_name")]
+        public required string GroupName { get; set; }
+
+        [JsonProperty("member_count")]
+        public required uint MemberCount { get; set; }
+
+        [JsonProperty("max_member_count")]
+        public required uint MaxMemberCount { get; set; }
+    }
+
+    public async Task<string> GetGroupNameAsync(string groupId)
+    {
+        var result = await SendAsync<OneBotGetGroupInfo, OneBotGroup>(
+            "get_group_info",
+            new OneBotGetGroupInfo { GroupId = uint.Parse(groupId), NoCache = false }
+        );
+        return result.GroupName;
     }
 }

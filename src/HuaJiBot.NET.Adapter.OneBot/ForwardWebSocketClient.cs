@@ -10,6 +10,7 @@ namespace HuaJiBot.NET.Adapter.OneBot;
 internal class ForwardWebSocketClient
 {
     private readonly OneBotMessageHandler _handler;
+    public string? QQ => _handler.QQ;
     private readonly WebsocketClient _client;
 
     public Task ConnectAsync() => _client.Start();

@@ -24,13 +24,13 @@ public class BotLoginEventArgs : BotEventArgs
 /// <summary>
 /// 群消息事件
 /// </summary>
-public class GroupMessageEventArgs(Func<CommandReader> createCommandReader) : BotEventArgs
+public class GroupMessageEventArgs(
+    Func<CommandReader> createCommandReader,
+    Func<ValueTask<string>> getGroupName
+) : BotEventArgs
 {
     /// <summary>群ID</summary>
     public required string GroupId { get; init; }
-
-    /// <summary>群名称</summary>
-    public required string GroupName { get; init; }
 
     /// <summary>发送者ID</summary>
     public required string SenderId { get; init; }
@@ -49,4 +49,7 @@ public class GroupMessageEventArgs(Func<CommandReader> createCommandReader) : Bo
     {
         Service.FeedbackAt(null, GroupId, SenderId, message);
     }
+
+    /// <summary>群名称</summary>
+    public ValueTask<string> GetGroupNameAsync() => getGroupName();
 }

@@ -20,7 +20,9 @@ public class OneBotAdapter : BotServiceBase
 
     public override string[] GetAllRobots()
     {
-        throw new NotImplementedException();
+        if (client.QQ is not null)
+            return [client.QQ];
+        return [];
     }
 
     public override void SendGroupMessage(
@@ -32,12 +34,12 @@ public class OneBotAdapter : BotServiceBase
         throw new NotImplementedException();
     }
 
-    public override void FeedbackAt(string? robotId, string targetGroup, string userId, string text)
+    public override MemberType GetMemberType(string robotId, string targetGroup, string userId)
     {
         throw new NotImplementedException();
     }
 
-    public override MemberType GetMemberType(string robotId, string targetGroup, string userId)
+    public override void FeedbackAt(string? robotId, string targetGroup, string userId, string text)
     {
         throw new NotImplementedException();
     }

@@ -1,8 +1,8 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Text;
+﻿using System.Text;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Events;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.Red;
 
@@ -25,19 +25,25 @@ internal partial class Connector(BotServiceBase api, string url, string authoriz
     //private Timer? _keepAliveTimer = new(1_0000);
     public async Task Connect()
     {
-        _client.MessageReceived.Subscribe(msg =>
-        {
-            ProcessMessage(msg.Text);
-        });
-        _client.DisconnectionHappened.Subscribe(info =>
-        {
-            api.Warn("断开连接 原因：" + info.Type);
-        });
-        _client.ReconnectionHappened.Subscribe(info =>
-        {
-            api.Warn("建立连接：" + info.Type);
-            SendConnectMsg(authorizationToken); //重连后重新发送连接消息
-        });
+        _client
+            .MessageReceived
+            .Subscribe(msg =>
+            {
+                ProcessMessage(msg.Text);
+            });
+        _client
+            .DisconnectionHappened
+            .Subscribe(info =>
+            {
+                api.Warn("断开连接 原因：" + info.Type);
+            });
+        _client
+            .ReconnectionHappened
+            .Subscribe(info =>
+            {
+                api.Warn("建立连接：" + info.Type);
+                SendConnectMsg(authorizationToken); //重连后重新发送连接消息
+            });
         await _client.Start();
         api.Log("Websocket连接已建立。");
         //await SendConnectMsg(authorizationToken);
@@ -88,50 +94,56 @@ internal partial class Connector(BotServiceBase api, string url, string authoriz
                     //  }
                     //}
                     var connect = data.Data.ToObject<ConnectRecv>()!;
-                    Events.Events.CallOnBotLogin(
-                        api,
-                        new BotLoginEventArgs
-                        {
-                            AccountId = connect.AuthData!.Account!,
-                            ClientName = connect.Name!,
-                            ClientVersion = connect.Version!,
-                            Service = api
-                        }
-                    );
+                    Events
+                        .Events
+                        .CallOnBotLogin(
+                            api,
+                            new BotLoginEventArgs
+                            {
+                                AccountId = connect.AuthData!.Account!,
+                                ClientName = connect.Name!,
+                                ClientVersion = connect.Version!,
+                                Service = api
+                            }
+                        );
                     break;
                 case "message::recv":
                     api.LogDebug(data.Data);
                     foreach (var msg in data.Data.ToObject<MessageRecv[]>()!)
                     {
-                        Events.Events.CallOnGroupMessageReceived(
-                            api,
-                            new GroupMessageEventArgs(() => new RedCommandReader(api, msg))
-                            {
-                                Service = api,
-                                GroupId = msg.PeerUin!,
-                                SenderId = msg.SenderId!,
-                                GroupName = msg.peerName!,
-                                SenderMemberCard = string.IsNullOrWhiteSpace(msg.sendMemberName)
-                                    ? msg.sendNickName!
-                                    : msg.sendMemberName!,
-                                TextMessageLazy = new(() =>
+                        Events
+                            .Events
+                            .CallOnGroupMessageReceived(
+                                api,
+                                new GroupMessageEventArgs(
+                                    () => new RedCommandReader(api, msg),
+                                    () => ValueTask.FromResult(msg.peerName!)
+                                )
                                 {
-                                    var sb = new StringBuilder();
-                                    foreach (var element in msg.Elements)
+                                    Service = api,
+                                    GroupId = msg.PeerUin!,
+                                    SenderId = msg.SenderId!,
+                                    SenderMemberCard = string.IsNullOrWhiteSpace(msg.sendMemberName)
+                                        ? msg.sendNickName!
+                                        : msg.sendMemberName!,
+                                    TextMessageLazy = new(() =>
                                     {
-                                        if (element.TextElement is { } text)
+                                        var sb = new StringBuilder();
+                                        foreach (var element in msg.Elements)
                                         {
-                                            sb.Append(text.Content);
+                                            if (element.TextElement is { } text)
+                                            {
+                                                sb.Append(text.Content);
+                                            }
+                                            else
+                                            {
+                                                sb.Append($"[未解析消息|类型：{element.elementType}]");
+                                            }
                                         }
-                                        else
-                                        {
-                                            sb.Append($"[未解析消息|类型：{element.elementType}]");
-                                        }
-                                    }
-                                    return sb.ToString();
-                                })
-                            }
-                        );
+                                        return sb.ToString();
+                                    })
+                                }
+                            );
                     }
                     break;
             }
