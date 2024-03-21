@@ -1,7 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using System.Text.Json.Serialization;
 using HuaJiBot.NET.Adapter.OneBot.Message;
-using HuaJiBot.NET.Adapter.OneBot.Message.Entity;
 using HuaJiBot.NET.Bot;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -36,9 +34,9 @@ internal class OneBotApi(BotServiceBase service, Action<string> send)
         var req = new ActionRequest<T>(action, data, id);
         var str = JsonConvert.SerializeObject(req);
 
-        #region MyRegion
+#if DEBUGs
         Console.WriteLine("Sending: " + str);
-        #endregion
+#endif
         var tcs = new TaskCompletionSource<JToken>();
         _pendingRequests[id] = tcs;
         try
