@@ -248,11 +248,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 {
                     var client = new ClientWebSocket
                     {
-                        Options =
-                        {
-                            KeepAliveInterval = TimeSpan.FromSeconds(1),
-                            CollectHttpResponseDetails = true,
-                        }
+                        Options = { CollectHttpResponseDetails = true, }
                     };
                     client.Options.SetRequestHeader("Authorization", $"Bearer {Config.AuthBearer}");
                     return client;
@@ -260,7 +256,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             )
             {
                 IsReconnectionEnabled = true,
-                ReconnectTimeout = TimeSpan.FromSeconds(1),
+                ReconnectTimeout = null,
                 MessageEncoding = Encoding.UTF8,
                 IsTextMessageConversionEnabled = true,
             };

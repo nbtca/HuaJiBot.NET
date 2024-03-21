@@ -41,7 +41,7 @@ internal class ForwardWebSocketClient
         )
         {
             IsReconnectionEnabled = true,
-            ReconnectTimeout = TimeSpan.FromSeconds(1),
+            ReconnectTimeout = null,
             MessageEncoding = Encoding.UTF8,
             IsTextMessageConversionEnabled = true,
         };
