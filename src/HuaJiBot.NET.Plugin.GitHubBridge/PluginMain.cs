@@ -250,7 +250,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     {
                         Options =
                         {
-                            KeepAliveInterval = TimeSpan.FromSeconds(5),
+                            KeepAliveInterval = TimeSpan.FromSeconds(1),
                             CollectHttpResponseDetails = true,
                         }
                     };
