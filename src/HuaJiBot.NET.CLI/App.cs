@@ -31,7 +31,7 @@ await Internal.SetupServiceAsync(api, config); //协议适配器
 var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>
 {
-    api.Log($"已链接到 {eventArgs.ClientName}@{eventArgs.ClientVersion} 账号{eventArgs.AccountId}");
+    api.Log($"已连接到 {eventArgs.ClientName} @ {eventArgs.ClientVersion} 账号{eventArgs.AccountId}");
     accountId = eventArgs.AccountId;
 };
 var pluginDir = Path.Combine(Environment.CurrentDirectory, "plugins"); //插件目录

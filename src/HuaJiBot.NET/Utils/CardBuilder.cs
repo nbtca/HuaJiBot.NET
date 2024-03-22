@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
 using System.Text;
+using HuaJiBot.NET.Utils.Fonts;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing;
@@ -175,8 +176,8 @@ public class CardBuilder : ImageBuilder
         const int height = 200;
         using var image = new Image<Rgba32>(width, height);
         // 选择字体、颜色和布局
-        var font = SystemFonts.CreateFont("Comic Sans MS", 20);
-        var yaHeiFont = SystemFonts.CreateFont("Microsoft YaHei", 20);
+        var font = FontManager.ComicMono.CreateFont(20);
+        var yaHeiFont = FontManager.MaoKenTangYuan.CreateFont(20);
         var background = Color.Black;
         const int iconWidth = 60;
         var secondaryBrush = new SolidBrush(Color.FromRgb(167, 169, 181));

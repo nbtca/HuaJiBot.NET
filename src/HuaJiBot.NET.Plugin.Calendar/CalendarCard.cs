@@ -1,4 +1,5 @@
 ﻿using HuaJiBot.NET.Utils;
+using HuaJiBot.NET.Utils.Fonts;
 using Newtonsoft.Json;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
@@ -18,8 +19,8 @@ public class CalendarCard(string start) : ImageBuilder
         using var image = new Image<Rgba32>(width, height);
         //导入字体
         //new FontCollection()    .
-        var font = SystemFonts.CreateFont("Comic Sans MS", 20);
-        var yaHeiFont = SystemFonts.CreateFont("Microsoft YaHei", 20);
+        var font = FontManager.ComicMono.CreateFont(20);
+        var yaHeiFont = FontManager.MaoKenTangYuan.CreateFont(20);
         //生成文本
         var (text, runs) = BuildTextRuns(
             new TextRun[] { new("测试"), new("test", Color.ParseHex("#2cbe4e")), }

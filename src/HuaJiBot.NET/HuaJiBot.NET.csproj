@@ -12,4 +12,19 @@
 	  <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.2" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Compile Update="Utils\Fonts\Assets.Designer.cs">
+	    <DependentUpon>Assets.resx</DependentUpon>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Update="Utils\Fonts\Assets.resx">
+	    <LastGenOutput>Assets.Designer.cs</LastGenOutput>
+	    <Generator>ResXFileCodeGenerator</Generator>
+	  </EmbeddedResource>
+	</ItemGroup>
+
 </Project>
