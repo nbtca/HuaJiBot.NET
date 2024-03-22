@@ -47,8 +47,8 @@ internal class Repository
     [JsonProperty("contributors_url")]
     public Uri ContributorsUrl { get; set; }
 
-    [JsonProperty("created_at")]
-    public long CreatedAt { get; set; }
+    //[JsonProperty("created_at")]
+    //public String CreatedAt { get; set; }
 
     [JsonProperty("custom_properties")]
     public CustomProperties CustomProperties { get; set; }

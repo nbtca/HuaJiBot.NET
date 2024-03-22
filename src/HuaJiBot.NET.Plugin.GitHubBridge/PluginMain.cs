@@ -53,6 +53,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 if (e.Body is PushEventBody body)
                 {
                     var repositoryFullName = body.Repository.FullName;
+                    Service.Log("[GitHub Bridge] PushEvent " + repositoryFullName);
                     {
                         if (body.Sender.Login.EndsWith("[bot]"))
                             return; //github-actions[bot]
@@ -227,7 +228,10 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 }
             }
             {
-                if (e.Body is WorkflowRunEventBody body) { }
+                if (e.Body is WorkflowRunEventBody body)
+                {
+                    Service.Log("[GitHub Bridge] WorkflowRun");
+                }
             }
             {
                 if (e.Body is UnknownEventBody)
