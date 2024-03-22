@@ -17,6 +17,7 @@ public class CalendarCard(string start) : ImageBuilder
         var height = 200;
         using var image = new Image<Rgba32>(width, height);
         //导入字体
+        //new FontCollection()    .
         var font = SystemFonts.CreateFont("Comic Sans MS", 20);
         var yaHeiFont = SystemFonts.CreateFont("Microsoft YaHei", 20);
         //生成文本

@@ -9,21 +9,19 @@ public class PluginMain : PluginBase
         Service.Log("[1] 启动成功！");
     }
 
-    [CommandEnum("test")]
-    enum TEST
-    {
-        [CommandEnumItem("ss", "")]
-        s,
+    //[CommandEnum("test")]
+    //enum TEST
+    //{
+    //    [CommandEnumItem("ss", "")]
+    //    s,
 
-        [CommandEnumItem("aa", "")]
-        a
-    }
-
-    [Command("test", "")]
-    private void TestCommand(
-        [CommandArgumentString("test")] string a,
-        [CommandArgumentEnum<TEST>("test")] TEST b
-    ) { }
-
+    //    [CommandEnumItem("aa", "")]
+    //    a
+    //}
+    //[Command("test", "")]
+    //private void TestCommand(
+    //    [CommandArgumentString("test")] string a,
+    //    [CommandArgumentEnum<TEST>("test")] TEST b
+    //) { }
     protected override void Unload() { }
 }

@@ -20,7 +20,7 @@ using HuaJiBot.NET.Config;
 
 BotServiceBase CreateOneBotService(Config config)
 {
-    var api = new OneBotAdapter("ws://192.168.6.1:3200", config.Token); //链接协议适配器
+    var api = new OneBotAdapter(config.OneBot.Url, config.OneBot.Token); //链接协议适配器
     return api;
 }
 Console.WriteLine("运行路径：" + Environment.CurrentDirectory);
