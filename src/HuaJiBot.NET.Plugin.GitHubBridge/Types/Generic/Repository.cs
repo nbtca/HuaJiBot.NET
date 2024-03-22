@@ -195,8 +195,8 @@ internal class Repository
     [JsonProperty("pulls_url")]
     public string PullsUrl { get; set; }
 
-    [JsonProperty("pushed_at")]
-    public long PushedAt { get; set; }
+    //[JsonProperty("pushed_at")]
+    //public long PushedAt { get; set; }
 
     [JsonProperty("releases_url")]
     public string ReleasesUrl { get; set; }
