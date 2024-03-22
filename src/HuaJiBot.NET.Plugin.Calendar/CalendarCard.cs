@@ -19,7 +19,7 @@ public class CalendarCard(string start) : ImageBuilder
         using var image = new Image<Rgba32>(width, height);
         //导入字体
         //new FontCollection()    .
-        var font = FontManager.ComicMono.CreateFont(20);
+        var font = FontManager.ComicNeue.CreateFont(20);
         var yaHeiFont = FontManager.MaoKenTangYuan.CreateFont(20);
         //生成文本
         var (text, runs) = BuildTextRuns(

@@ -63,9 +63,9 @@ namespace HuaJiBot.NET.Utils.Fonts {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] ComicMono {
+        internal static byte[] ComicNeue_Bold {
             get {
-                object obj = ResourceManager.GetObject("ComicMono", resourceCulture);
+                object obj = ResourceManager.GetObject("ComicNeue_Bold", resourceCulture);
                 return ((byte[])(obj));
             }
         }
