@@ -253,19 +253,22 @@ public static class LangColorsHelper
             ["XC"] = (0x99, 0xda, 0x07),
         };
 
-    public static bool GetColor(string name, [NotNullWhen(true)] out RgbTuple? color)
+    public static bool GetColor(string? name, [NotNullWhen(true)] out RgbTuple? color)
     {
-        if (Colors.TryGetValue(name, out var result))
+        if (name is not null)
         {
-            color = result;
-            return true;
-        }
-        foreach (var (k, v) in Colors) //大小写不敏感
-        {
-            if (k.Equals(name, StringComparison.OrdinalIgnoreCase))
+            if (Colors.TryGetValue(name, out var result))
             {
-                color = v;
+                color = result;
                 return true;
+            }
+            foreach (var (k, v) in Colors) //大小写不敏感
+            {
+                if (k.Equals(name, StringComparison.OrdinalIgnoreCase))
+                {
+                    color = v;
+                    return true;
+                }
             }
         }
         color = null;

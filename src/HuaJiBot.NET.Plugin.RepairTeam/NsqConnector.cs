@@ -1,27 +1,29 @@
 ﻿using System.Text;
 using HuaJiBot.NET.Bot;
 using PureNSQSharp;
+using PureNSQSharp.Utils;
 
 namespace HuaJiBot.NET.Plugin.RepairTeam;
 
-internal class NsqConnector : IDisposable
+public class NsqConnector : IDisposable
 {
     private readonly Consumer _consumer;
 
-    public NsqConnector(string url, string topicName, string channelName)
+    public NsqConnector(string url, string topicName, string channelName, string authSecret)
     {
-        _consumer = new Consumer("test-topic-name", "channel-name");
-        _consumer.AddHandler(new MessageHandler());
-        _consumer.ConnectToNSQd("127.0.0.1:4161");
-        Console.WriteLine(
-            "Listening for messages. If this is the first execution, it "
-                + "could take up to 60s for topic producers to be discovered."
+        _consumer = new Consumer(
+            topicName,
+            channelName,
+            new PureNSQSharp.Config { AuthSecret = authSecret }
         );
+        _consumer.AddHandler(new MessageHandler());
+        _consumer.ConnectToNSQd(url);
+        Console.WriteLine($"Connected to {url} topic: {topicName} channel: {channelName}");
     }
 
     public void Dispose()
     {
-        _consumer.Stop();
+        _consumer.StopAsync();
     }
 
     private class MessageHandler : IHandler

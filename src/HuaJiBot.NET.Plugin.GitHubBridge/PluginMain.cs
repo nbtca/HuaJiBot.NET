@@ -15,6 +15,7 @@ namespace HuaJiBot.NET.Plugin.GitHubBridge;
 
 public class PluginConfig : ConfigBase
 {
+    public string ShortLinkToken { get; set; } = "";
     public string Address { get; set; } = "ws://localhost:8080";
     public string AuthBearer { get; set; } = "";
     public Dictionary<string, string> BroadcastMap { get; set; } = new();
@@ -26,6 +27,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
     //配置
     public PluginConfig Config { get; } = new();
+    private ShortLinkApi _shortLinkApi = null!;
 
     private IEnumerable<string> GetBroadcastTargets(string fullName)
     {
@@ -166,19 +168,23 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                                     var font = IconFonts.IcoMoonFont(19);
                                     var lang = body.Repository.Language;
                                     var subtitleColor = Color.FromRgb(139, 148, 158);
-                                    var list = new List<TextRun>
+                                    var list = new List<TextRun>();
+                                    if (lang is not null)
                                     {
-                                        new(
-                                            IconFonts.IconCircle,
-                                            LangColorsHelper.GetColor(lang, out var color)
-                                            && color is { r: var r, g: var g, b: var b }
-                                                ? Color.FromRgb(r, g, b)
-                                                : subtitleColor,
-                                            font
-                                        ),
-                                        " ",
-                                        new(lang, subtitleColor)
-                                    };
+                                        list.Add(
+                                            new(
+                                                IconFonts.IconCircle,
+                                                LangColorsHelper.GetColor(lang, out var color)
+                                                && color is { r: var r, g: var g, b: var b }
+                                                    ? Color.FromRgb(r, g, b)
+                                                    : subtitleColor,
+                                                font
+                                            )
+                                        );
+                                        list.Add(" ");
+                                        list.Add(new(lang, subtitleColor));
+                                    }
+
                                     void Add(char icon, string text)
                                     {
                                         list.Add("  ");
@@ -217,7 +223,17 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             };
                         // 保存图像到文件
                         using var tempImage = card.SaveTempAutoDelete();
-                        var text = new TextMessage(body.Compare.ToString());
+                        var compareUrl = body.Compare.ToString();
+                        try
+                        {
+                            var result = await _shortLinkApi.ShortLinkAsync(compareUrl);
+                            compareUrl = result.url;
+                        }
+                        catch (Exception ex)
+                        {
+                            Service.LogError("[GitHub Bridge] 生成短链接失败：", ex);
+                        }
+                        var text = new TextMessage(compareUrl);
                         var m = new ImageMessage(tempImage);
                         #endregion
                         foreach (var group in GetBroadcastTargets(repositoryFullName))
@@ -245,6 +261,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     //初始化
     protected override async Task InitializeAsync()
     {
+        _shortLinkApi = new ShortLinkApi(Config.ShortLinkToken);
         WebsocketClient client =
             new(
                 new Uri(Config.Address),
