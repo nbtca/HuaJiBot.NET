@@ -10,4 +10,8 @@
     <ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Websocket.Client" Version="5.1.1" />
+  </ItemGroup>
+
 </Project>

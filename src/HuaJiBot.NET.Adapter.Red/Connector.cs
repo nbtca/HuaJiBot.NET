@@ -100,7 +100,7 @@ internal partial class Connector(BotServiceBase api, string url, string authoriz
                             api,
                             new BotLoginEventArgs
                             {
-                                AccountId = connect.AuthData!.Account!,
+                                Accounts = [connect.AuthData!.Account!],
                                 ClientName = connect.Name!,
                                 ClientVersion = connect.Version!,
                                 Service = api

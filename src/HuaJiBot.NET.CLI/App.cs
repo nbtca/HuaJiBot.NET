@@ -1,7 +1,9 @@
 ﻿using HuaJiBot.NET;
 using HuaJiBot.NET.Adapter.OneBot;
+using HuaJiBot.NET.Adapter.Satori;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Config;
+using HuaJiBot.NET.Logger;
 
 //using HuaJiBot.NET.Adapter.Red;
 //BotServiceBase CreateRedProtocolService()
@@ -17,22 +19,30 @@ using HuaJiBot.NET.Config;
 //    var api = new RedProtocolAdapter("localhost:16530", token); //链接协议适配器
 //    return api;
 //}
-
+var logger = new ConsoleLogger();
 BotServiceBase CreateOneBotService(Config config)
 {
-    var api = new OneBotAdapter(config.OneBot.Url, config.OneBot.Token); //链接协议适配器
+    var api = new OneBotAdapter(config.OneBot.Url, config.OneBot.Token) { Logger = logger }; //链接协议适配器
+    return api;
+}
+
+BotServiceBase CreateSatoriService(Config config)
+{
+    var api = new SatoriAdapter(config.Satori.Url, config.Satori.Token) { Logger = logger }; //链接协议适配器
     return api;
 }
 Console.WriteLine("运行路径：" + Environment.CurrentDirectory);
 var config = Config.Load(); //配置文件
 config.Save();
-var api = CreateOneBotService(config); //创建协议适配器
+var api = CreateSatoriService(config); //创建协议适配器
 await Internal.SetupServiceAsync(api, config); //协议适配器
 var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>
 {
-    api.Log($"已连接到 {eventArgs.ClientName} @ {eventArgs.ClientVersion} 账号{eventArgs.AccountId}");
-    accountId = eventArgs.AccountId;
+    api.Log(
+        $"已连接到 {eventArgs.ClientName} @ {eventArgs.ClientVersion} 账号{string.Join(",", eventArgs.Accounts)}"
+    );
+    accountId = eventArgs.Accounts.FirstOrDefault();
 };
 var pluginDir = Path.Combine(Environment.CurrentDirectory, "plugins"); //插件目录
 #region 额外插件

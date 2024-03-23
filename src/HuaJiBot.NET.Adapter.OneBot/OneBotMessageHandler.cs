@@ -87,7 +87,7 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service, Actio
                                             service,
                                             new BotLoginEventArgs
                                             {
-                                                AccountId = _qq ?? "-1",
+                                                Accounts = _qq is null ? [] : [_qq],
                                                 ClientName = appName,
                                                 ClientVersion = appVersion,
                                                 Service = service

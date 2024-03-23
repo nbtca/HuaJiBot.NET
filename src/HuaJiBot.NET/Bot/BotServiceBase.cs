@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
+using HuaJiBot.NET.Logger;
 
 namespace HuaJiBot.NET.Bot;
 
@@ -29,6 +30,17 @@ public sealed record ReplyMessage(string? ReplayMsgSeq, string ReplyMsgId, strin
 
 public abstract class BotServiceBase
 {
+    #region Logger
+    public abstract ILogger Logger { get; init; }
+
+    public void Log(object message) => Logger.Log(message);
+
+    public void Warn(object message) => Logger.Warn(message);
+
+    public void LogDebug(object message) => Logger.LogDebug(message);
+
+    public void LogError(object message, object detail) => Logger.LogError(message, detail);
+    #endregion
     public abstract void Reconnect();
     public abstract Task SetupServiceAsync();
     public Config.ConfigWrapper Config { get; internal set; } = null!;
@@ -47,10 +59,7 @@ public abstract class BotServiceBase
     );
     public abstract MemberType GetMemberType(string robotId, string targetGroup, string userId);
     public abstract string GetNick(string robotId, string userId);
-    public abstract void Log(object message);
-    public abstract void Warn(object message);
-    public abstract void LogDebug(object message);
-    public abstract void LogError(object message, object detail);
+
     public abstract string GetPluginDataPath();
 
     private bool ProcessHelp(GroupMessageEventArgs e)

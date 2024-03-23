@@ -15,7 +15,7 @@ public class BotEventArgs : EventArgs
 public class BotLoginEventArgs : BotEventArgs
 {
     /// <summary>账户ID</summary>
-    public required string AccountId { get; init; }
+    public required string[] Accounts { get; init; }
 
     public required string ClientName { get; init; }
     public required string ClientVersion { get; init; }

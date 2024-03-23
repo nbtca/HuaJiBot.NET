@@ -1,11 +1,14 @@
 using HuaJiBot.NET.Adapter.Red;
 using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Logger;
 using Newtonsoft.Json;
 
 namespace HuaJiBot.NET.UnitTest;
 
 internal class TestAdapter : BotServiceBase
 {
+    public override ILogger Logger { get; init; } = new ConsoleLogger();
+
     public override void Reconnect()
     {
         throw new NotImplementedException();
@@ -43,44 +46,6 @@ internal class TestAdapter : BotServiceBase
     public override string GetNick(string robotId, string userId)
     {
         throw new NotImplementedException();
-    }
-
-    public override void Log(object message)
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
-    /// 警告日志
-    /// </summary>
-    /// <param name="message"></param>
-    public override void Warn(object message)
-    {
-        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [WARN] {message}");
-    }
-
-    /// <summary>
-    /// 调试日志
-    /// </summary>
-    /// <param name="message">调试日志内容</param>
-    public override void LogDebug(object message)
-    {
-        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [DEBUG] {message}");
-    }
-
-    /// <summary>
-    /// 错误日志
-    /// </summary>
-    /// <param name="message">消息</param>
-    /// <param name="detail">错误信息</param>
-    public override void LogError(object message, object detail)
-    {
-        Console.WriteLine(
-            $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [ERROR] {message}"
-                + $"{Environment.NewLine}---{Environment.NewLine}"
-                + $"{detail}"
-                + $"{Environment.NewLine}---"
-        );
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 ﻿using HuaJiBot.NET.Adapter.Red.Message;
 using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Logger;
 
 namespace HuaJiBot.NET.Adapter.Red;
 
@@ -10,6 +11,7 @@ public class RedProtocolAdapter : BotServiceBase
         _connector = new(this, url, token);
     }
 
+    public override required ILogger Logger { get; init; }
     readonly Connector _connector;
 
     public override void Reconnect()
@@ -155,48 +157,6 @@ public class RedProtocolAdapter : BotServiceBase
     public override string GetNick(string robotId, string userId)
     {
         throw new NotImplementedException();
-    }
-
-    /// <summary>
-    /// 日志
-    /// </summary>
-    /// <param name="message">日志内容</param>
-    public override void Log(object message)
-    {
-        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [INFO] {message}");
-    }
-
-    /// <summary>
-    /// 警告日志
-    /// </summary>
-    /// <param name="message"></param>
-    public override void Warn(object message)
-    {
-        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [WARN] {message}");
-    }
-
-    /// <summary>
-    /// 调试日志
-    /// </summary>
-    /// <param name="message">调试日志内容</param>
-    public override void LogDebug(object message)
-    {
-        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [DEBUG] {message}");
-    }
-
-    /// <summary>
-    /// 错误日志
-    /// </summary>
-    /// <param name="message">消息</param>
-    /// <param name="detail">错误信息</param>
-    public override void LogError(object message, object detail)
-    {
-        Console.WriteLine(
-            $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [ERROR] {message}"
-                + $"{Environment.NewLine}---{Environment.NewLine}"
-                + $"{detail}"
-                + $"{Environment.NewLine}---"
-        );
     }
 
     /// <summary>
