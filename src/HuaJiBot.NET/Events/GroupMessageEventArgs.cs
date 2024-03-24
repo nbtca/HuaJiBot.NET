@@ -18,7 +18,7 @@ public class BotLoginEventArgs : BotEventArgs
     public required string[] Accounts { get; init; }
 
     public required string ClientName { get; init; }
-    public required string ClientVersion { get; init; }
+    public required string? ClientVersion { get; init; }
 }
 
 /// <summary>

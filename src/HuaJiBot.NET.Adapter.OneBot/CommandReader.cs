@@ -136,4 +136,9 @@ internal class OneBotCommandReader : CommandReader
         text = null;
         return false;
     }
+
+    public override bool At(out string? id)
+    {
+        throw new NotImplementedException();
+    }
 }

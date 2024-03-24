@@ -27,7 +27,8 @@ internal class SatoriEventClient
         _client = new WebsocketClient(wsUrl)
         {
             IsTextMessageConversionEnabled = true,
-            MessageEncoding = Encoding.UTF8
+            MessageEncoding = Encoding.UTF8,
+            ReconnectTimeout = null
         };
         _service = service;
         _client
@@ -107,6 +108,20 @@ internal class SatoriEventClient
                             ContractResolver = new CamelCasePropertyNamesContractResolver()
                         }
                     )!;
+                    if (
+                        eventBody is
+                        {
+                            Channel: { Id: var groupId, Name: var groupName, },
+                            User: { Id: var senderId, Name: var nickName },
+                            Member: { Name: var memberName, Nick: var memberNickName }
+                        }
+                    )
+                    {
+                        var name = memberNickName ?? memberName ?? nickName;
+
+                        //NET.Events
+                        //    .Events.CallOnGroupMessageReceived(_service, new GroupMessageEventArgs(()=>new ));
+                    }
                     break;
                 case SignalOperation.Ready:
                     var readyBody = json["body"]!.ToObject<ReadySignalBody>(
@@ -126,7 +141,7 @@ internal class SatoriEventClient
                             {
                                 Accounts = _service.GetAllRobots(),
                                 ClientName = appName,
-                                ClientVersion = "unknown",
+                                ClientVersion = null,
                                 Service = _service
                             }
                         );

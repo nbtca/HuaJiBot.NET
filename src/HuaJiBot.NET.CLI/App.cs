@@ -50,7 +50,9 @@ var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>
 {
     api.Log(
-        $"已连接到 {eventArgs.ClientName} @ {eventArgs.ClientVersion} 账号{string.Join(",", eventArgs.Accounts)}"
+        string.IsNullOrWhiteSpace(eventArgs.ClientVersion)
+            ? $"已连接到 {eventArgs.ClientName} 账号 {string.Join(",", eventArgs.Accounts)}"
+            : $"已连接到 {eventArgs.ClientName} @ {eventArgs.ClientVersion} 账号 {string.Join(",", eventArgs.Accounts)}"
     );
     accountId = eventArgs.Accounts.FirstOrDefault();
 };

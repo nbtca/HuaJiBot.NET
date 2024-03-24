@@ -20,6 +20,8 @@ internal partial class Connector(BotServiceBase api, string url, string authoriz
         {
             IsReconnectionEnabled = true,
             ReconnectTimeout = null,
+            MessageEncoding = Encoding.UTF8,
+            IsTextMessageConversionEnabled = true
         };
 
     //private Timer? _keepAliveTimer = new(1_0000);

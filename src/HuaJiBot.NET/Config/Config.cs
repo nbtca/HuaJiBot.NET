@@ -13,7 +13,7 @@ public partial class Config
         Satori
     }
 
-    public ServiceType Service { get; set; } = ServiceType.OneBot;
+    public ServiceType Service = ServiceType.OneBot;
 
     public class OneBotConnectionInfo
     {

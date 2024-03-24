@@ -14,6 +14,7 @@ public class GuildMember
     /// 用户在群组中的名称
     /// </summary>
     public string? Name { get; set; }
+    public string? Nick { get; set; }
 
     /// <summary>
     /// 用户在群组中的头像

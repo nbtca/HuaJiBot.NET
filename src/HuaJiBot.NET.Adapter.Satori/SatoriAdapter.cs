@@ -34,8 +34,8 @@ public class SatoriAdapter : BotServiceBase
     {
         return (
             from x in Accounts
-            where x is { Status: Status.Online, SelfId: not null }
-            select x.SelfId
+            where x is { Status: Status.Online, User: not null }
+            select x.User!.Id
         ).ToArray();
     }
 
