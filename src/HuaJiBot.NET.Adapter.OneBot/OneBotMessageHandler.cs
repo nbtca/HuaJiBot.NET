@@ -1,5 +1,4 @@
 ﻿using HuaJiBot.NET.Adapter.OneBot.Message;
-using HuaJiBot.NET.Adapter.Red;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Events;
 using Newtonsoft.Json;

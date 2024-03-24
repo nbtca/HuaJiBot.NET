@@ -1,7 +1,5 @@
 #region
 
-using RedProtocolSharp.Message;
-
 #endregion
 
 namespace HuaJiBot.NET.Adapter.Red.Message;

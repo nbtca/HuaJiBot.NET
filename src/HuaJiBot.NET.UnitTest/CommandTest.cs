@@ -82,7 +82,7 @@ public class Tests
             yield return "test a  '测试  内容'";
             yield return " aaaa '测试  内容' testa";
         }
-        var redCommandReader = new CommonCommandReader(Read());
+        var redCommandReader = new DefaultCommandReader(Read());
         {
             var result = redCommandReader.Input(out var test);
             Console.WriteLine(result);

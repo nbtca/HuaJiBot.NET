@@ -1,4 +1,4 @@
-﻿namespace RedProtocolSharp.Message;
+﻿namespace HuaJiBot.NET.Adapter.Red.Message;
 
 public interface ISendMessageElement
 {

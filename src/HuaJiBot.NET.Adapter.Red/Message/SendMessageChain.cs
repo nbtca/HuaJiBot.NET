@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using RedProtocolSharp.Message;
 
 namespace HuaJiBot.NET.Adapter.Red.Message;
 
@@ -26,46 +25,54 @@ internal static class SendMessageChain
             {
                 case SendAtElement data:
                 {
-                    payload.elements.Add(
-                        new Elements
-                        {
-                            elementType = 1,
-                            TextElement = new TextElement { AtType = 2, AtNtUid = data.target }
-                        }
-                    );
-                    payload.elements.Add(
-                        new Elements
-                        {
-                            elementType = 1,
-                            TextElement = new TextElement { Content = " " }
-                        }
-                    );
+                    payload
+                        .elements
+                        .Add(
+                            new Elements
+                            {
+                                elementType = 1,
+                                TextElement = new TextElement { AtType = 2, AtNtUid = data.target }
+                            }
+                        );
+                    payload
+                        .elements
+                        .Add(
+                            new Elements
+                            {
+                                elementType = 1,
+                                TextElement = new TextElement { Content = " " }
+                            }
+                        );
                     break;
                 }
                 case SendReplyElement data:
                 {
-                    payload.elements.Add(
-                        new Elements
-                        {
-                            elementType = 7,
-                            replyElement = new ReplyElement
+                    payload
+                        .elements
+                        .Add(
+                            new Elements
                             {
-                                replyMsgSeq = data.replyMsgSeq,
-                                senderUinStr = data.replyTargetUin
+                                elementType = 7,
+                                replyElement = new ReplyElement
+                                {
+                                    replyMsgSeq = data.replyMsgSeq,
+                                    senderUinStr = data.replyTargetUin
+                                }
                             }
-                        }
-                    );
+                        );
                     break;
                 }
                 case SendTextElement data:
                 {
-                    payload.elements.Add(
-                        new Elements
-                        {
-                            elementType = 1,
-                            TextElement = new TextElement { Content = data.content }
-                        }
-                    );
+                    payload
+                        .elements
+                        .Add(
+                            new Elements
+                            {
+                                elementType = 1,
+                                TextElement = new TextElement { Content = data.content }
+                            }
+                        );
                     break;
                 }
                 case SendImageElement data:
@@ -78,21 +85,23 @@ internal static class SendMessageChain
                         picReply = JsonConvert.DeserializeObject<UploadData>(uploadReply);
                     else
                         return null;
-                    payload.elements.Add(
-                        new Elements
-                        {
-                            elementType = 2,
-                            picElement = new PicElement
+                    payload
+                        .elements
+                        .Add(
+                            new Elements
                             {
-                                md5HexStr = picReply.md5,
-                                fileSize = picReply.fileSize,
-                                fileName = fileName,
-                                sourcePath = picReply.ntFilePath,
-                                picHeight = picReply.imageInfo.height,
-                                picWidth = picReply.imageInfo.width
+                                elementType = 2,
+                                picElement = new PicElement
+                                {
+                                    md5HexStr = picReply.md5,
+                                    fileSize = picReply.fileSize,
+                                    fileName = fileName,
+                                    sourcePath = picReply.ntFilePath,
+                                    picHeight = picReply.imageInfo.height,
+                                    picWidth = picReply.imageInfo.width
+                                }
                             }
-                        }
-                    );
+                        );
                     break;
                 }
                 case SendVoiceElement data:
@@ -106,21 +115,23 @@ internal static class SendMessageChain
                         return null;
                     if (voiceReply == null)
                         return null;
-                    payload.elements.Add(
-                        new Elements
-                        {
-                            elementType = 4,
-                            pttElement = new PttElement
+                    payload
+                        .elements
+                        .Add(
+                            new Elements
                             {
-                                md5HexStr = voiceReply.md5,
-                                duration = data.duration,
-                                fileName = Path.GetFileName(voiceReply.ntFilePath),
-                                filePath = voiceReply.ntFilePath,
-                                fileSize = voiceReply.fileSize,
-                                waveAmplitudes = new[] { 0, 1, 3, 3, 1, 0 }
+                                elementType = 4,
+                                pttElement = new PttElement
+                                {
+                                    md5HexStr = voiceReply.md5,
+                                    duration = data.duration,
+                                    fileName = Path.GetFileName(voiceReply.ntFilePath),
+                                    filePath = voiceReply.ntFilePath,
+                                    fileSize = voiceReply.fileSize,
+                                    waveAmplitudes = new[] { 0, 1, 3, 3, 1, 0 }
+                                }
                             }
-                        }
-                    );
+                        );
                     break;
                 }
             }

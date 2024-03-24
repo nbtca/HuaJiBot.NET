@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using HuaJiBot.NET.Bot;
 using Microsoft.VisualBasic;
+using static HuaJiBot.NET.Commands.CommonCommandReader;
 
 namespace HuaJiBot.NET.Commands;
 
@@ -49,7 +50,12 @@ public abstract class CommandReader
     public abstract bool At([NotNullWhen(true)] out string? id);
 }
 
-public class CommonCommandReader : CommandReader
+public class DefaultCommandReader(IEnumerable<ReaderEntity> msg) : CommonCommandReader
+{
+    public override IEnumerable<ReaderEntity> Msg => msg;
+}
+
+public abstract class CommonCommandReader : CommandReader
 {
     public abstract record ReaderEntity
     {
@@ -73,7 +79,7 @@ public class CommonCommandReader : CommandReader
     private record MatchAt(string AtTarget, string AtText) : MatchResult;
 
     private IEnumerable<string>? _currentExpected = null;
-    private readonly IEnumerable<ReaderEntity> _msg;
+    public abstract IEnumerable<ReaderEntity> Msg { get; }
     private IEnumerator<MatchResult> _seq = null!;
     private bool _lastOne = false;
 
@@ -82,7 +88,7 @@ public class CommonCommandReader : CommandReader
         _seq = BuildReadSeq().GetEnumerator();
         IEnumerable<MatchResult> BuildReadSeq()
         {
-            foreach (var s in _msg)
+            foreach (var s in Msg)
             {
                 switch (s)
                 {
@@ -168,9 +174,8 @@ public class CommonCommandReader : CommandReader
         }
     }
 
-    public CommonCommandReader(IEnumerable<ReaderEntity> msg)
+    protected CommonCommandReader()
     {
-        _msg = msg;
         Reset();
     }
 

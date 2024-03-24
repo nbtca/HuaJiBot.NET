@@ -118,7 +118,6 @@ internal class SatoriEventClient
                     )
                     {
                         var name = memberNickName ?? memberName ?? nickName;
-
                         //NET.Events
                         //    .Events.CallOnGroupMessageReceived(_service, new GroupMessageEventArgs(()=>new ));
                     }

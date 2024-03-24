@@ -1,6 +1,4 @@
-﻿using RedProtocolSharp.Message;
-
-namespace HuaJiBot.NET.Adapter.Red.Message;
+﻿namespace HuaJiBot.NET.Adapter.Red.Message;
 
 public class MessageChain : List<ISendMessageElement>
 {
