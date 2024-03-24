@@ -16,23 +16,30 @@ public class NsqConnector : IDisposable
             channelName,
             new PureNSQSharp.Config { AuthSecret = authSecret }
         );
-        _consumer.AddHandler(new MessageHandler());
+        _consumer.AddHandler(
+            new MessageHandler(msg =>
+            {
+                MessageReceived?.Invoke(this, msg);
+            })
+        );
         _consumer.ConnectToNSQd(url);
         Console.WriteLine($"Connected to {url} topic: {topicName} channel: {channelName}");
     }
+
+    public event EventHandler<string>? MessageReceived;
 
     public void Dispose()
     {
         _consumer.StopAsync();
     }
 
-    private class MessageHandler : IHandler
+    private class MessageHandler(Action<string> onMsg) : IHandler
     {
         /// <summary>Handles a message.</summary>
         public void HandleMessage(IMessage message)
         {
-            string msg = Encoding.UTF8.GetString(message.Body);
-            Console.WriteLine(msg);
+            var msg = Encoding.UTF8.GetString(message.Body);
+            onMsg(msg);
         }
 
         /// <summary>

@@ -1,8 +1,10 @@
 ﻿using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Text;
+using HuaJiBot.NET.Adapter.Satori.Protocol.Elements;
 using HuaJiBot.NET.Adapter.Satori.Protocol.Events;
 using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -111,15 +113,73 @@ internal class SatoriEventClient
                     if (
                         eventBody is
                         {
+                            Type: SatoriEventTypes.MessageCreated,
                             Channel: { Id: var groupId, Name: var groupName, },
                             User: { Id: var senderId, Name: var nickName },
-                            Member: { Name: var memberName, Nick: var memberNickName }
+                            Member: { Name: var memberName, Nick: var memberNickName },
+                            Message: { } msg
                         }
                     )
                     {
                         var name = memberNickName ?? memberName ?? nickName;
-                        //NET.Events
-                        //    .Events.CallOnGroupMessageReceived(_service, new GroupMessageEventArgs(()=>new ));
+                        var messages = ElementSerializer.Deserialize(msg.Content);
+                        IEnumerable<CommonCommandReader.ReaderEntity> Parse()
+                        {
+                            foreach (var element in messages)
+                            {
+                                switch (element)
+                                {
+                                    case TextElement { Text: var text }:
+                                        yield return text;
+                                        break;
+                                    case AtElement { Id: var id, Name: var targetName }:
+                                        yield return new CommonCommandReader.ReaderAt(
+                                            id ?? "-1",
+                                            targetName
+                                        );
+                                        break;
+                                    default:
+                                        _service.LogDebug($"未处理的消息元素：{element}");
+                                        break;
+                                    //case SharpElement: break;
+                                    //case LinkElement: break;
+                                    //case ImageElement: break;
+                                    //case AudioElement: break;
+                                    //case VideoElement: break;
+                                    //case FileElement: break;
+                                    //case BoldElement: break;
+                                    //case ItalicElement: break;
+                                    //case UnderlineElement: break;
+                                    //case DeleteElement: break;
+                                    //case SpoilerElement: break;
+                                    //case CodeElement: break;
+                                    //case SuperscriptElement: break;
+                                    //case SubscriptElement: break;
+                                    //case BreakElement: break;
+                                    //case ParagraphElement: break;
+                                    //case MessageElement: break;
+                                    //case QuoteElement: break;
+                                    //case AuthorElement: break;
+                                }
+                            }
+                        }
+
+                        NET.Events
+                            .Events
+                            .CallOnGroupMessageReceived(
+                                _service,
+                                new GroupMessageEventArgs(
+                                    () => new DefaultCommandReader(Parse()),
+                                    () => ValueTask.FromResult(groupName ?? string.Empty)
+                                )
+                                {
+                                    GroupId = groupId,
+                                    SenderId = senderId,
+                                    SenderMemberCard = name ?? string.Empty,
+                                    TextMessageLazy = new Lazy<string>(() => msg.Content),
+                                    Service = _service
+                                }
+                            );
                     }
                     break;
                 case SignalOperation.Ready:

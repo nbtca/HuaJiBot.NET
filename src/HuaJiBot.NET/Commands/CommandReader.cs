@@ -66,7 +66,16 @@ public abstract class CommonCommandReader : CommandReader
 
     public record ReaderAt(string AtTarget) : ReaderEntity
     {
-        public string AtText => $"@{AtTarget}";
+        public ReaderAt(string atTarget, string? atText)
+            : this(atTarget)
+        {
+            if (atText is not null)
+            {
+                AtText = atText;
+            }
+        }
+
+        public string AtText { get; init; } = $"@{AtTarget}";
     }
 
     private abstract record MatchResult
