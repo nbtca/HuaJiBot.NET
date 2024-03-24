@@ -1,10 +1,20 @@
-﻿using System.Collections.Generic;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Config;
 
 public partial class Config
 {
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum ServiceType
+    {
+        OneBot,
+        Satori
+    }
+
+    public ServiceType Service { get; set; } = ServiceType.OneBot;
+
     public class OneBotConnectionInfo
     {
         public string Url = "";

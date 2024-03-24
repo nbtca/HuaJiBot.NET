@@ -31,10 +31,20 @@ BotServiceBase CreateSatoriService(Config config)
     var api = new SatoriAdapter(config.Satori.Url, config.Satori.Token) { Logger = logger }; //链接协议适配器
     return api;
 }
+
+BotServiceBase CreateService(Config config)
+{
+    return config.Service switch
+    {
+        Config.ServiceType.OneBot => CreateOneBotService(config),
+        Config.ServiceType.Satori => CreateSatoriService(config),
+        _ => throw new NotSupportedException("不支持的协议类型")
+    };
+}
 Console.WriteLine("运行路径：" + Environment.CurrentDirectory);
 var config = Config.Load(); //配置文件
 config.Save();
-var api = CreateSatoriService(config); //创建协议适配器
+var api = CreateService(config); //创建协议适配器
 await Internal.SetupServiceAsync(api, config); //协议适配器
 var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>
