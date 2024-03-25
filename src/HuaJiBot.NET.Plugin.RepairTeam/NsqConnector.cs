@@ -1,7 +1,5 @@
 ﻿using System.Text;
-using HuaJiBot.NET.Bot;
 using PureNSQSharp;
-using PureNSQSharp.Utils;
 
 namespace HuaJiBot.NET.Plugin.RepairTeam;
 

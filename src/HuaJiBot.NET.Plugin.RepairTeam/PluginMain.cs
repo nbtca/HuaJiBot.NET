@@ -51,22 +51,22 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         public string? Description { get; set; }
 
         [JsonProperty("event_id")]
-        public int EventId { get; set; }
+        public long EventId { get; set; }
 
         [JsonProperty("gmt_create")]
-        public string? GmtCreate { get; set; }
+        public DateTimeOffset GmtCreate { get; set; }
 
-        [JsonProperty("level")]
-        public string? Level { get; set; }
+        [JsonProperty("member_alias")]
+        public string? MemberAlias { get; set; }
 
         [JsonProperty("member_id")]
         public string? MemberId { get; set; }
 
-        [JsonProperty("msg")]
-        public string? Msg { get; set; }
+        [JsonProperty("model")]
+        public string? Model { get; set; }
 
-        [JsonProperty("time")]
-        public required string Time { get; set; }
+        [JsonProperty("problem")]
+        public string? Problem { get; set; }
     }
 
     private void OnMessageReceived(object? sender, string msg)
@@ -78,17 +78,26 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             var e = JsonConvert.DeserializeObject<LogEventEntity>(msg)!;
             var sb = new StringBuilder();
-            sb.AppendLine($"事件类型：{e.Action}");
-            sb.AppendLine($"事件ID：{e.EventId}");
-            sb.AppendLine($"事件等级：{e.Level}");
-            sb.AppendLine($"事件时间：{e.Time}");
+            sb.AppendLine($"---维修事件---");
+            sb.AppendLine($"ID：{e.EventId}");
+            sb.AppendLine($"类型：{e.Action}");
+            sb.AppendLine($"时间：{e.GmtCreate.ToString("f")}");
+            if (!string.IsNullOrWhiteSpace(e.MemberId))
+                sb.AppendLine($"人员：{e.MemberId}({e.MemberAlias})");
+            if (!string.IsNullOrWhiteSpace(e.Model))
+                sb.AppendLine($"机型：{e.Model}");
+            if (!string.IsNullOrWhiteSpace(e.Problem))
+                sb.AppendLine($"问题：{e.Problem}");
             if (!string.IsNullOrWhiteSpace(e.Description))
-                sb.AppendLine($"事件描述：{e.Description}");
+                sb.AppendLine($"描述：{e.Description}");
             var str = sb.ToString();
-            foreach (var group in Config.PushInfoGroup)
+            Task.Run(() =>
             {
-                Service.SendGroupMessage(null, group, str);
-            }
+                foreach (var group in Config.PushInfoGroup)
+                {
+                    Service.SendGroupMessage(null, group, str);
+                }
+            });
         }
     }
 
