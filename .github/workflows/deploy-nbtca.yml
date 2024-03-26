@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows:
       - "Docker Image CI"
+      - "Build Plugins"
     types:
       - completed
 
@@ -11,6 +12,20 @@ jobs:
   deploy:
     runs-on: self-hosted
     steps:
+      - name: download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: plugins
+          path: dist
+      - name: upload files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          port: ${{ secrets.REMOTE_PORT }}
+          key: ${{ secrets.REMOTE_SSHKEY }}
+          source: "dist/*"
+          target: "/home/nbtca/huajibot"
       - name: ssh pipelines
         uses: appleboy/ssh-action@v1.0.3
         with:
