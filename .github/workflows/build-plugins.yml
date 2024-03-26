@@ -25,4 +25,3 @@ jobs:
         with:
           name: plugins
           path: bin
-          compression-level: best
