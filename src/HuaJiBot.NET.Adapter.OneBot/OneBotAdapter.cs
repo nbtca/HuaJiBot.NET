@@ -23,12 +23,7 @@ public class OneBotAdapter : BotServiceBase
 
     public override Task SetupServiceAsync() => _client.ConnectAsync();
 
-    public override string[] GetAllRobots()
-    {
-        if (_client.QQ is not null)
-            return [_client.QQ];
-        return [];
-    }
+    public override string[] AllRobots => _client.QQ is not null ? [_client.QQ] : [];
 
     public override void SendGroupMessage(
         string? robotId,

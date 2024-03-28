@@ -45,18 +45,18 @@ public abstract class BotServiceBase
     public abstract Task SetupServiceAsync();
     public Config.ConfigWrapper Config { get; internal set; } = null!;
     public Events.Events Events { get; } = new();
-    public abstract string[] GetAllRobots();
+    public abstract string[] AllRobots { get; }
     public abstract void SendGroupMessage(
         string? robotId,
         string targetGroup,
         params SendingMessageBase[] messages
     );
-    public abstract void FeedbackAt(
-        string? robotId,
-        string targetGroup,
-        string userId,
-        string text
-    );
+
+    public virtual void FeedbackAt(string? robotId, string targetGroup, string userId, string text)
+    {
+        SendGroupMessage(robotId, targetGroup, new AtMessage(userId), new TextMessage(text));
+    }
+
     public abstract MemberType GetMemberType(string robotId, string targetGroup, string userId);
     public abstract string GetNick(string robotId, string userId);
 

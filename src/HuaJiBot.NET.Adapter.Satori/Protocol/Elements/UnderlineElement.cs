@@ -7,5 +7,5 @@ public class UnderlineElement : Element
 {
     public override string TagName => "u";
 
-    public override string[] AlternativeTagNames => new[] { "ins" };
+    public override string[] AlternativeTagNames => ["ins"];
 }

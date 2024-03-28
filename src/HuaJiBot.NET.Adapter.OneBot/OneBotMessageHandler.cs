@@ -82,9 +82,7 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service, Actio
                                     }
                                     Events
                                         .Events
-                                        .CallOnBotLogin(
-                                            service,
-                                            new BotLoginEventArgs
+                                        .CallOnBotLogin(new BotLoginEventArgs
                                             {
                                                 Accounts = _qq is null ? [] : [_qq],
                                                 ClientName = appName,
@@ -192,9 +190,7 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service, Actio
                                     var card = sender.Value<string>("card");
                                     Events
                                         .Events
-                                        .CallOnGroupMessageReceived(
-                                            service,
-                                            new GroupMessageEventArgs(
+                                        .CallOnGroupMessageReceived(new GroupMessageEventArgs(
                                                 () => new OneBotCommandReader(service, message),
                                                 async () => await api.GetGroupNameAsync(groupId)
                                             )

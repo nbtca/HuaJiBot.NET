@@ -7,5 +7,5 @@ public class DeleteElement : Element
 {
     public override string TagName => "s";
 
-    public override string[] AlternativeTagNames => new[] { "del" };
+    public override string[] AlternativeTagNames => ["del"];
 }

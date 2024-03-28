@@ -40,15 +40,17 @@ public class Events
 
     public event EventHandler<BotLoginEventArgs>? OnBotLogin;
 
-    public static void CallOnBotLogin(BotServiceBase service, BotLoginEventArgs e)
+    public static void CallOnBotLogin(BotLoginEventArgs e)
     {
+        var service = e.Service;
         service.Events.OnBotLogin?.Invoke(service, e);
     }
 
     public event EventHandler<GroupMessageEventArgs>? OnGroupMessageReceived;
 
-    public static void CallOnGroupMessageReceived(BotServiceBase service, GroupMessageEventArgs e)
+    public static void CallOnGroupMessageReceived(GroupMessageEventArgs e)
     {
+        var service = e.Service;
         service.Events.OnGroupMessageReceived?.Invoke(service, e);
     }
 }

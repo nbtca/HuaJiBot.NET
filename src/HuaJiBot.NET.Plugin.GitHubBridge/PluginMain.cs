@@ -58,7 +58,8 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     Service.Log("[GitHub Bridge] PushEvent " + repositoryFullName);
                     {
                         if (body.Sender.Login.EndsWith("[bot]"))
-                            return; //github-actions[bot]
+                            return; //github-actions[bot]\
+
                         #region 文本模式
                         //var sb = new StringBuilder();
                         //{

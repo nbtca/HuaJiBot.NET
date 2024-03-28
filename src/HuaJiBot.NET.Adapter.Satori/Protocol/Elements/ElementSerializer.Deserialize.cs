@@ -6,7 +6,7 @@ namespace HuaJiBot.NET.Adapter.Satori.Protocol.Elements;
 public static partial class ElementSerializer
 {
     private static readonly Type[] BuiltinElementTypes =
-    {
+    [
         // 基础元素
         typeof(TextElement),
         typeof(AtElement),
@@ -33,7 +33,7 @@ public static partial class ElementSerializer
         // 元信息元素
         typeof(QuoteElement),
         typeof(AuthorElement)
-    };
+    ];
 
     private static Dictionary<string, Type>? _builtinElementMap;
 

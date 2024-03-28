@@ -20,7 +20,7 @@ internal class TestAdapter : BotServiceBase
         return Task.CompletedTask;
     }
 
-    public override string[] GetAllRobots()
+    public override string[] AllRobots()
     {
         throw new NotImplementedException();
     }

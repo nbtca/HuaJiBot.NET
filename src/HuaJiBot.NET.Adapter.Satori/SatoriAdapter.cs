@@ -1,4 +1,5 @@
 ﻿using HuaJiBot.NET.Adapter.Satori.Protocol;
+using HuaJiBot.NET.Adapter.Satori.Protocol.Elements;
 using HuaJiBot.NET.Adapter.Satori.Protocol.Models;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Logger;
@@ -9,7 +10,8 @@ public class SatoriAdapter : BotServiceBase
 {
     private SatoriApiClient _apiClient;
     private SatoriEventClient _eventClient;
-    internal Login[] Accounts = Array.Empty<Login>();
+    internal string[] Accounts = [];
+    public string PlatformId = "";
     public override required ILogger Logger { get; init; }
 
     public SatoriAdapter(string url, string token)
@@ -30,13 +32,20 @@ public class SatoriAdapter : BotServiceBase
 
     public override Task SetupServiceAsync() => _eventClient.ConnectAsync();
 
-    public override string[] GetAllRobots()
+    public override string[] AllRobots => Accounts;
+
+    private string ConvertFileToBase64(string path)
     {
-        return (
-            from x in Accounts
-            where x is { Status: Status.Online, User: not null }
-            select x.User!.Id
-        ).ToArray();
+        var mineType = "image/png";
+        if (path.EndsWith(".jpg") || path.EndsWith(".jpeg"))
+            mineType = "image/jpeg";
+        else if (path.EndsWith(".gif"))
+            mineType = "image/gif";
+        else if (path.EndsWith(".bmp"))
+            mineType = "image/bmp";
+        else if (path.EndsWith(".webp"))
+            mineType = "image/webp";
+        return "data:" + mineType + ";base64," + Convert.ToBase64String(File.ReadAllBytes(path));
     }
 
     public override void SendGroupMessage(
@@ -45,12 +54,27 @@ public class SatoriAdapter : BotServiceBase
         params SendingMessageBase[] messages
     )
     {
-        throw new NotImplementedException();
-    }
-
-    public override void FeedbackAt(string? robotId, string targetGroup, string userId, string text)
-    {
-        throw new NotImplementedException();
+        var robots = robotId is null ? AllRobots : [robotId];
+        foreach (var robot in robots)
+            _ = _apiClient.SendGroupMessageAsync(
+                robot,
+                targetGroup,
+                (
+                    from x in messages
+                    select (Element)(
+                        x switch
+                        {
+                            AtMessage { Target: var target } => new AtElement { Id = target },
+                            ImageMessage { ImagePath: var path }
+                                => new ImageElement { Src = ConvertFileToBase64(path) },
+                            ReplyMessage { Target: var target, ReplyMsgId: var msgId }
+                                => new QuoteElement { Id = msgId },
+                            TextMessage { Text: var text } => new TextElement { Text = text },
+                            _ => throw new ArgumentOutOfRangeException(nameof(x)),
+                        }
+                    )
+                ).ToArray()
+            );
     }
 
     public override MemberType GetMemberType(string robotId, string targetGroup, string userId)
@@ -65,6 +89,9 @@ public class SatoriAdapter : BotServiceBase
 
     public override string GetPluginDataPath()
     {
-        throw new NotImplementedException();
+        var path = Path.GetFullPath(Path.Combine("plugins", "data")); //插件数据目录，当前目录下的plugins/data
+        if (!Directory.Exists(path))
+            Directory.CreateDirectory(path); //自动创建目录
+        return path;
     }
 }

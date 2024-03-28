@@ -7,5 +7,5 @@ public class ItalicElement : Element
 {
     public override string TagName => "i";
 
-    public override string[] AlternativeTagNames => new[] { "em" };
+    public override string[] AlternativeTagNames => ["em"];
 }

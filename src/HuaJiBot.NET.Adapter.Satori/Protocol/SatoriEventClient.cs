@@ -3,7 +3,6 @@ using System.Reactive.Linq;
 using System.Text;
 using HuaJiBot.NET.Adapter.Satori.Protocol.Elements;
 using HuaJiBot.NET.Adapter.Satori.Protocol.Events;
-using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using Newtonsoft.Json;
@@ -163,11 +162,9 @@ internal class SatoriEventClient
                                 }
                             }
                         }
-
                         NET.Events
                             .Events
                             .CallOnGroupMessageReceived(
-                                _service,
                                 new GroupMessageEventArgs(
                                     () => new DefaultCommandReader(Parse()),
                                     () => ValueTask.FromResult(groupName ?? string.Empty)
@@ -189,16 +186,16 @@ internal class SatoriEventClient
                             ContractResolver = new CamelCasePropertyNamesContractResolver()
                         }
                     )!;
-                    _service.Accounts = readyBody.Logins.ToArray();
+
+                    _service.Accounts = (from x in readyBody.Logins select x.User!.Id).ToArray();
                     var account = readyBody.Logins.First();
                     var appName = account.Platform ?? "unknown";
                     NET.Events
                         .Events
                         .CallOnBotLogin(
-                            _service,
                             new BotLoginEventArgs
                             {
-                                Accounts = _service.GetAllRobots(),
+                                Accounts = _service.AllRobots,
                                 ClientName = appName,
                                 ClientVersion = null,
                                 Service = _service

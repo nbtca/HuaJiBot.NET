@@ -7,5 +7,5 @@ public class BoldElement : Element
 {
     public override string TagName => "b";
 
-    public override string[] AlternativeTagNames => new[] { "strong" };
+    public override string[] AlternativeTagNames => ["strong"];
 }
