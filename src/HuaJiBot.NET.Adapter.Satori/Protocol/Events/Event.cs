@@ -1,5 +1,4 @@
 ﻿using HuaJiBot.NET.Adapter.Satori.Protocol.Models;
-using Newtonsoft.Json;
 
 namespace HuaJiBot.NET.Adapter.Satori.Protocol.Events;
 

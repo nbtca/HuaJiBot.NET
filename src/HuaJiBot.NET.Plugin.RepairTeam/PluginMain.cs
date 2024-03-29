@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using HuaJiBot.NET.Commands;
+using HuaJiBot.NET.Events;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -109,11 +110,17 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     //    [CommandEnumItem("aa", "")]
     //    a
     //}
-    //[Command("test", "")]
-    //private void TestCommand(
-    //    [CommandArgumentString("test")] string a,
-    //    [CommandArgumentEnum<TEST>("test")] TEST b
-    //) { }
+    [Command("test", "")]
+    private void TestCommand(
+        [CommandArgumentString("test")] string a,
+        GroupMessageEventArgs e
+    //[CommandArgumentEnum<TEST>("test")] TEST b
+    )
+    {
+        e.Feedback(a);
+        Console.WriteLine(e.TextMessage);
+    }
+
     protected override void Unload() { }
 
     public PluginConfig Config { get; } = new();

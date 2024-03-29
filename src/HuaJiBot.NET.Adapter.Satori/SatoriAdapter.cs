@@ -8,8 +8,8 @@ namespace HuaJiBot.NET.Adapter.Satori;
 
 public class SatoriAdapter : BotServiceBase
 {
-    private SatoriApiClient _apiClient;
-    private SatoriEventClient _eventClient;
+    private readonly SatoriApiClient _apiClient;
+    private readonly SatoriEventClient _eventClient;
     internal string[] Accounts = [];
     public string PlatformId = "";
     public override required ILogger Logger { get; init; }

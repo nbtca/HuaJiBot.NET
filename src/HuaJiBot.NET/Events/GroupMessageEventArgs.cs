@@ -29,6 +29,8 @@ public class GroupMessageEventArgs(
     Func<ValueTask<string>> getGroupName
 ) : BotEventArgs
 {
+    public string? RobotId { get; init; }
+
     /// <summary>群ID</summary>
     public required string GroupId { get; init; }
 
@@ -47,7 +49,7 @@ public class GroupMessageEventArgs(
     /// <param name="message"></param>
     public void Feedback(string message)
     {
-        Service.FeedbackAt(null, GroupId, SenderId, message);
+        Service.FeedbackAt(RobotId, GroupId, SenderId, message);
     }
 
     /// <summary>群名称</summary>

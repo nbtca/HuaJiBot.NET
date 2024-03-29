@@ -13,6 +13,7 @@ public class CommandAttribute(string key, string description) : Attribute
 
 public enum CommandArgumentType
 {
+    Unknown,
     Enum,
     String,
     RegexString
@@ -75,6 +76,13 @@ public class CommandArgumentStringAttribute(string description)
     : CommandArgumentAttribute(description)
 {
     public override CommandArgumentType ArgumentType => CommandArgumentType.String;
+}
+
+[AttributeUsage(AttributeTargets.Parameter)]
+public class CommandArgumentUnknownAttribute(Type type) : CommandArgumentAttribute(type.Name)
+{
+    public override CommandArgumentType ArgumentType => CommandArgumentType.Unknown;
+    public Type Type => type;
 }
 
 [AttributeUsage(AttributeTargets.Parameter)]

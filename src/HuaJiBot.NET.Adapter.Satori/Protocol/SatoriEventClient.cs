@@ -113,6 +113,7 @@ internal class SatoriEventClient
                         eventBody is
                         {
                             Type: SatoriEventTypes.MessageCreated,
+                            SelfId: var self,
                             Channel: { Id: var groupId, Name: var groupName, },
                             User: { Id: var senderId, Name: var nickName },
                             Member: { Name: var memberName, Nick: var memberNickName },
@@ -170,6 +171,7 @@ internal class SatoriEventClient
                                     () => ValueTask.FromResult(groupName ?? string.Empty)
                                 )
                                 {
+                                    RobotId = self,
                                     GroupId = groupId,
                                     SenderId = senderId,
                                     SenderMemberCard = name ?? string.Empty,

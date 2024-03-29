@@ -68,7 +68,7 @@ public abstract class PluginBase
                     from x in method.GetParameters()
                     select new CommandArgumentInfo(
                         x.GetCustomAttribute<CommandArgumentAttribute>()
-                            ?? new CommandArgumentStringAttribute(x.Name!),
+                            ?? new CommandArgumentUnknownAttribute(x.ParameterType),
                         x.ParameterType,
                         x.IsOptional,
                         x.HasDefaultValue ? x.DefaultValue : null

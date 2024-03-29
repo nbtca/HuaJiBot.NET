@@ -77,13 +77,16 @@ public abstract class BotServiceBase
                     sb.Append(" ");
                     foreach (var arg in info)
                     {
+                        if (arg.Attribute.ArgumentType == CommandArgumentType.Unknown)
+                        {
+                            continue;
+                        }
                         sb.Append(
                             arg.Attribute.ArgumentType switch
                             {
                                 CommandArgumentType.String => "<string>",
                                 CommandArgumentType.RegexString => "<regex>",
                                 CommandArgumentType.Enum => "<enum>",
-                                _ => throw new ArgumentOutOfRangeException()
                             }
                         );
                         if (!arg.IsOptional)
@@ -125,6 +128,10 @@ public abstract class BotServiceBase
                     object? value = null;
                     switch (arg.Attribute.ArgumentType)
                     {
+                        case CommandArgumentType.Unknown
+                            when arg.Type == typeof(GroupMessageEventArgs):
+                            value = e;
+                            break;
                         case CommandArgumentType.String:
 
                             {
@@ -172,7 +179,7 @@ public abstract class BotServiceBase
         }
     }
 
-    Dictionary<
+    readonly Dictionary<
         string,
         (string description, Action<object?[]?> method, PluginBase.CommandArgumentInfo[] info)
     > _commands = new();

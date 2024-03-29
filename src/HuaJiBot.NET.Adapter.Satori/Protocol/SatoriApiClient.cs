@@ -1,10 +1,10 @@
-﻿using System.Net.Http.Json;
-using System.Runtime.InteropServices;
+﻿using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using HuaJiBot.NET.Adapter.Satori.Protocol.Elements;
 using HuaJiBot.NET.Adapter.Satori.Protocol.Models;
-using HuaJiBot.NET.Bot;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.Satori.Protocol;
@@ -37,12 +37,15 @@ internal class SatoriApiClient
         );
     }
 
-    public async Task<TData> HttpPostAsync<TData>(string selfId, string endpoint, JObject? body)
+    public async Task<TData> HttpPostAsync<TData>(string selfId, string endpoint, JObject body)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
         request.Headers.Add("X-Platform", _service.PlatformId);
         request.Headers.Add("X-Self-ID", selfId);
-        request.Content = JsonContent.Create(body);
+        request.Content = new StringContent(
+            body.ToString(Formatting.None),
+            MediaTypeHeaderValue.Parse("application/json")
+        );
         var response = await _http.SendAsync(request);
         var data = await response.Content.ReadFromJsonAsync<TData>(JsonOptions);
         return data!;
