@@ -1,6 +1,7 @@
 #r "nuget: SharpCompress, 0.36.0"
 open System.IO
-let isWindows=System.OperatingSystem.IsWindows()
+let isWindows = System.OperatingSystem.IsWindows()
+let isDebugBuild = isWindows
 let run cmd args =
     printfn "Exec %s %A" cmd args
     let psi = cmd |> System.Diagnostics.ProcessStartInfo
@@ -14,6 +15,10 @@ let run cmd args =
 let cd = __SOURCE_DIRECTORY__
 let src = Path.Combine(cd, "src")
 let output = Path.Combine(cd, "bin")
+let dotnetBuild src output = 
+    let extraArgs = if isDebugBuild then ["-c"; "Debug"] else []
+    let exitCode = run "dotnet" (["build"; src; "-o"; output]@extraArgs)
+    if exitCode <> 0 then failwithf "Build failed for %s" src
 //delete output folder
 if output|>Directory.Exists then
     Directory.Delete(output,true)
@@ -22,8 +27,8 @@ let projs = Directory.GetFiles(src, "*.csproj", SearchOption.AllDirectories)
 let coreFileNameList=
     let projName = "HuaJiBot.NET"
     let outputDir = Path.Combine(output, projName)
-    let exitCode = run "dotnet" ["build"; Path.Combine("src",projName,"HuaJiBot.NET.csproj"); "-o"; outputDir]
-    if exitCode <> 0 then failwithf "Build failed for %s" projName
+    //run "dotnet" ["build"; Path.Combine("src",projName,"HuaJiBot.NET.csproj"); "-o"; outputDir]
+    dotnetBuild (Path.Combine("src",projName,"HuaJiBot.NET.csproj")) outputDir
     let fileNameList=
         outputDir
         |> Directory.GetFiles
@@ -41,8 +46,8 @@ let buidActions = [
                 let outputDir = Path.Combine(output, projName)
                 if outputDir|>Directory.Exists|>not then outputDir|>Directory.CreateDirectory|>ignore
                 printfn "Building %s" filename
-                let exitCode = run "dotnet" ["build"; proj; "-o"; outputDir]
-                if exitCode <> 0 then failwithf "Build failed for %s" filename
+                //let exitCode = run "dotnet" ["build"; proj; "-o"; outputDir]
+                dotnetBuild proj outputDir
                 //delete files which already included in executable and no need to copy as dependency
                 for file in coreFileNameList do
                     let coreFile = Path.Combine(outputDir, file)
@@ -61,7 +66,7 @@ let binDirs=
 //resort files
 let pluginDir = Path.Combine(output, "plugins")
 if pluginDir|>Directory.Exists|>not then pluginDir|>Directory.CreateDirectory|>ignore
-let libsDir = Path.Combine(output, "libs")
+let libsDir = Path.Combine(pluginDir, "libs")
 if libsDir|>Directory.Exists|>not then libsDir|>Directory.CreateDirectory|>ignore
 for dir in binDirs do
     let files = Array.concat [Directory.GetFiles(dir,"*.dll")  ;Directory.GetFiles(dir,"*.pdb")]
