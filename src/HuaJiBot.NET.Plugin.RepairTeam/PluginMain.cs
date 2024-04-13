@@ -75,7 +75,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         Service.Log(msg);
         if (!string.IsNullOrWhiteSpace(Config.PushRawGroup))
             Service.SendGroupMessage(null, Config.PushRawGroup, msg);
-        if (Config.PushInfoGroup.Any())
+        if (Config.PushInfoGroup.Length != 0)
         {
             var e = JsonConvert.DeserializeObject<LogEventEntity>(msg)!;
             var sb = new StringBuilder();
@@ -111,7 +111,8 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     //    a
     //}
     [Command("test", "")]
-    private void TestCommand(
+    // ReSharper disable once UnusedMember.Global
+    public void TestCommand(
         [CommandArgumentString("test")] string? a,
         GroupMessageEventArgs e
     //[CommandArgumentEnum<TEST>("test")] TEST b

@@ -6,12 +6,12 @@ namespace HuaJiBot.NET.Plugin.MessageBridge;
 
 public class PluginConfig : ConfigBase
 {
-    public ClientInfo[] Clients { get; set; } = Array.Empty<ClientInfo>();
+    public ClientInfo[] Clients { get; set; } = [];
 
     public class ClientInfo
     {
         public string Address { get; set; } = "ws://localhost:8080";
-        public string[] Groups { get; set; } = Array.Empty<string>();
+        public string[] Groups { get; set; } = [];
     }
 }
 
@@ -20,7 +20,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     //配置
     public PluginConfig Config { get; } = new();
 
-    private List<(PluginConfig.ClientInfo info, WebsocketClient client)> _clients = new();
+    private readonly List<(PluginConfig.ClientInfo info, WebsocketClient client)> _clients = new();
 
     //初始化
     protected override async Task InitializeAsync()

@@ -20,7 +20,7 @@ internal class ForwardWebSocketClient
     {
         void Send(string text) => _client!.Send(text);
         Api = new OneBotApi(service, Send);
-        _handler = new OneBotMessageHandler(Api, service, Send);
+        _handler = new OneBotMessageHandler(Api, service);
         _client = new WebsocketClient(
             new Uri(wsUrl),
             () =>

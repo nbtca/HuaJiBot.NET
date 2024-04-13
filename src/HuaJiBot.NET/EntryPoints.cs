@@ -38,5 +38,5 @@ public class PluginEntryPointAttribute<T>(string pluginName, string description)
     public override string Description { get; } = description;
 
     public override PluginBase CreateInstance(BotServiceBase api) =>
-        new T { Name = pluginName, Service = api };
+        new T { Name = Name, Service = api };
 }

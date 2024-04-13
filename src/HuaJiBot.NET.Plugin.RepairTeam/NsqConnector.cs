@@ -29,6 +29,7 @@ public class NsqConnector : IDisposable
     public void Dispose()
     {
         _consumer.StopAsync();
+        GC.SuppressFinalize(this);
     }
 
     private class MessageHandler(Action<string> onMsg) : IHandler

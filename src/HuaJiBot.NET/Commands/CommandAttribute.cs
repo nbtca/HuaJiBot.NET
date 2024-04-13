@@ -31,7 +31,7 @@ public abstract class CommandArgumentEnumAttributeBase(string description)
 {
     public override CommandArgumentType ArgumentType => CommandArgumentType.Enum;
     public abstract bool TryParse(string input, [NotNullWhen(true)] out object? value);
-    private EnumInfo[] _enumItems;
+    private EnumInfo[]? _enumItems;
     public EnumInfo[] EnumItems => _enumItems ??= AllEnumItems().ToArray();
 
     public record EnumInfo(string Key, string Alias, string Description, object Value);

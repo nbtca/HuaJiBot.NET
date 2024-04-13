@@ -71,7 +71,7 @@ public abstract class BotServiceBase
             foreach (var (name, (description, _, info)) in _commands)
             {
                 sb.Append(name);
-                if (info.Any())
+                if (info.Length != 0)
                 {
                     sb.Append(" ");
                     foreach (var arg in info)
@@ -196,7 +196,7 @@ public abstract class BotServiceBase
             _commands.Add(name, (description, method, info));
             Log($"读取命令 {name} ，描述：{description}");
         }
-        if (_commands.Any())
+        if (_commands.Count != 0)
         {
             //监听群消息事件，匹配命令
             void ProcessCommandInternal(object? sender, GroupMessageEventArgs e)

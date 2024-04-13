@@ -94,8 +94,9 @@ internal class BuildImageTest
     }
 
     [Test]
-    public async Task BuildCalendar()
+    public Task BuildCalendar()
     {
+        return Task.CompletedTask;
         //// 保存图像到文件
         //var file = Path.GetFullPath("output2.png");
         //Console.WriteLine(file);

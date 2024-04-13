@@ -39,7 +39,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
         if (!Config.BroadcastGroup.TryGetValue(group, out var targets))
         {
-            targets = Array.Empty<string>();
+            targets = [];
             Config.BroadcastGroup.Add(group, targets);
             Service.Config.Save();
         }
@@ -59,7 +59,6 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     {
                         if (body.Sender.Login.EndsWith("[bot]"))
                             return; //github-actions[bot]\
-
                         #region 文本模式
                         //var sb = new StringBuilder();
                         //{
@@ -228,7 +227,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         try
                         {
                             var result = await _shortLinkApi.ShortLinkAsync(compareUrl);
-                            compareUrl = result.url;
+                            compareUrl = result.Url;
                         }
                         catch (Exception ex)
                         {

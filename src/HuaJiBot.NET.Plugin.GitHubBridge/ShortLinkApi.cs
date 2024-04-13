@@ -10,10 +10,10 @@ internal class ShortLinkApi(string token)
     public record ShortLinkResult
     {
         [JsonProperty("original")]
-        public required string original { get; init; }
+        public required string Original { get; init; }
 
         [JsonProperty("url")]
-        public required string url { get; init; }
+        public required string Url { get; init; }
     }
 
     public async Task<ShortLinkResult> ShortLinkAsync(string url, string? path = null)

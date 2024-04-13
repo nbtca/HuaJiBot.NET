@@ -7,7 +7,7 @@ public class PluginConfig : ConfigBase
 {
     public int MinRange = -128;
     public int MaxRange = 48;
-    public string[] ReminderGroupIds = Array.Empty<string>();
+    public string[] ReminderGroupIds = [];
 }
 
 public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>

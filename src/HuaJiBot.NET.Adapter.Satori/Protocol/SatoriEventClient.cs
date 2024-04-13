@@ -93,7 +93,7 @@ internal class SatoriEventClient
         _pingTimer.Elapsed += (_, _) => SendSignal(new Signal { Op = SignalOperation.Ping });
     }
 
-    private async Task ProcessMessageAsync(string message)
+    private Task ProcessMessageAsync(string message)
     {
         try
         {
@@ -217,6 +217,8 @@ internal class SatoriEventClient
         {
             _service.Log(e);
         }
+
+        return Task.CompletedTask;
     }
 
     private void SendSignal<T>(T signal)

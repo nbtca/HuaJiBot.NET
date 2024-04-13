@@ -63,14 +63,12 @@ public class Tests
     [SetUp]
     public void Setup() { }
 
-    private readonly TestAdapter api = new();
+    private readonly TestAdapter _api = new();
 
     [Test]
     public void Test1()
     {
-        string inputCommand = "test aaaa '测试  内容' testa";
-
-        IEnumerable<CommonCommandReader.ReaderEntity> Read()
+        static IEnumerable<CommonCommandReader.ReaderEntity> Read()
         {
             yield return "a";
             yield return "\"测 试 ``` code ```\"";
