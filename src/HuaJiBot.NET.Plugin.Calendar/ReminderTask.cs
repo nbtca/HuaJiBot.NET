@@ -27,7 +27,12 @@ internal class ReminderTask : IDisposable
         _getCalendar = getCalendar;
         _timer = new(TimeSpan.FromMinutes(CheckDurationInMinutes)); //每15分钟检查一次
         _timer.Elapsed += (_, _) => InvokeCheck();
-        Task.Delay(15_000).ContinueWith(_ => InvokeCheck()); //10秒后检查第一次
+        Task.Delay(10_000)
+            .ContinueWith(_ =>
+            {
+                InvokeCheck();
+                InvokeCheck();
+            }); //10秒后检查第一次
         _timer.AutoReset = true;
     }
 
@@ -60,8 +65,8 @@ internal class ReminderTask : IDisposable
             #region 开始提醒
             {
                 //RemindBeforeStartMinutes 事件发生前 提前 5 分钟提醒
-                var remindStart = start.AddMinutes(-RemindBeforeStartMinutes); //计算提醒开始时间
-                var remindEnd = end.AddMinutes(-RemindBeforeStartMinutes); //计算提醒结束时间
+                var remindStart = start.AddMinutes(RemindBeforeStartMinutes); //计算提醒开始时间
+                var remindEnd = end.AddMinutes(RemindBeforeStartMinutes); //计算提醒结束时间
                 foreach (
                     var (eventStartTime, e) in from x in Calendar.GetEvents(remindStart, remindEnd) //获取所有有交集的日程
                     let eventStartTime = x.period.StartTime.AsSystemLocal
@@ -100,8 +105,8 @@ internal class ReminderTask : IDisposable
             #endregion
             #region 结束提醒
             {
-                var remindStart = start.AddMinutes(-RemindBeforeEndMinutes); //计算提醒开始时间
-                var remindEnd = end.AddMinutes(-RemindBeforeEndMinutes); //计算提醒结束时间
+                var remindStart = start.AddMinutes(RemindBeforeEndMinutes); //计算提醒开始时间
+                var remindEnd = end.AddMinutes(RemindBeforeEndMinutes); //计算提醒结束时间
                 foreach (
                     var (eventEndTime, e) in from x in Calendar.GetEvents(remindStart, remindEnd)
                     let eventEndTime = x.period.EndTime.AsSystemLocal
@@ -153,7 +158,7 @@ internal class ReminderTask : IDisposable
     {
         Task.Delay(waiting).ContinueWith(_ => SendReminder(e, start));
         Service.Log(
-            $"[日程] 计划发送提醒：{e.Summary}({e.Start.AsSystemLocal}) ({waiting.TotalMinutes}分钟后发送)"
+            $"[日程] 计划发送提醒：{e.Summary}({e.Start.AsSystemLocal}) ({waiting.TotalMinutes:F1}分钟后发送)"
         );
     }
 

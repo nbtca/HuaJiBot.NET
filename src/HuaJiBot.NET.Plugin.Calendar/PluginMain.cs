@@ -45,7 +45,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     [Command("日程", "查看近期日程")]
     // ReSharper disable once UnusedMember.Global
     public async Task CalendarCommandAsync(
-        [CommandArgumentString("时间")] string? a,
+        [CommandArgumentString("时间")] string? content,
         GroupMessageEventArgs e
     )
     {
@@ -64,7 +64,6 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         _cache[e.SenderId] = now; //更新缓存
         _ = Task.Delay(coldDown).ContinueWith(_ => _cache.Remove(e.SenderId)); //冷却时间后移除缓存
         var week = 1;
-        var content = e.TextMessage[2..].Trim(); //去除前两个字符后的文本内容
         if (!string.IsNullOrWhiteSpace(content)) //参数不为空
         {
             if (!int.TryParse(content, out week)) //尝试转换为数字表示周数
