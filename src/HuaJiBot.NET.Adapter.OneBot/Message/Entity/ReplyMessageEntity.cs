@@ -3,13 +3,13 @@ using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.OneBot.Message.Entity;
 
-internal class ReplyMessageEntity(uint messageId) : MessageEntity
+internal class ReplyMessageEntity(string messageId) : MessageEntity
 {
     public ReplyMessageEntity()
-        : this(0) { }
+        : this("") { }
 
     [JsonProperty("id")]
-    public string MessageId { get; set; } = messageId.ToString();
+    public string MessageId { get; set; } = messageId;
 
     public override JObject ToJson() => new() { ["id"] = MessageId };
 }

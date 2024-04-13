@@ -48,8 +48,7 @@ public class OneBotAdapter : BotServiceBase
                                     },
                                 AtMessage { Target: var target }
                                     => new AtMessageEntity(uint.Parse(target)),
-                                ReplyMessage { MessageId: var id, }
-                                    => new ReplyMessageEntity(uint.Parse(id)),
+                                ReplyMessage { MessageId: var id, } => new ReplyMessageEntity(id),
                                 _ => throw new NotSupportedException()
                             }
                     )
