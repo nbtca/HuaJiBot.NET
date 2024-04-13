@@ -94,7 +94,10 @@ public abstract class BotServiceBase
                                 CommandArgumentType.RegexString => Quote("regex"),
                                 CommandArgumentType.Enum => Quote("enum"),
                                 CommandArgumentType.Unknown => "unknown",
-                                _ => throw new ArgumentOutOfRangeException()
+                                _
+                                    => throw new ArgumentOutOfRangeException(
+                                        nameof(arg.Attribute.ArgumentType)
+                                    )
                             }
                         );
                         sb.Append(' ');

@@ -71,7 +71,7 @@ internal static class CalendarExtensions
                     DayOfWeek.Friday => "五",
                     DayOfWeek.Saturday => "六",
                     DayOfWeek.Sunday => "日",
-                    _ => throw new ArgumentOutOfRangeException()
+                    _ => throw new ArgumentOutOfRangeException(nameof(date.DayOfWeek))
                 };
                 var dateOffset = date.AsDateTimeOffset;
                 var weekInfo = "";
