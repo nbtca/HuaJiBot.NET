@@ -48,12 +48,7 @@ public class OneBotAdapter : BotServiceBase
                                     },
                                 AtMessage { Target: var target }
                                     => new AtMessageEntity(uint.Parse(target)),
-                                ReplyMessage
-                                {
-                                    ReplayMsgSeq: var seq,
-                                    ReplyMsgId: var id,
-                                    Target: var target
-                                }
+                                ReplyMessage { MessageId: var id, }
                                     => new ReplyMessageEntity(uint.Parse(id)),
                                 _ => throw new NotSupportedException()
                             }
@@ -67,9 +62,9 @@ public class OneBotAdapter : BotServiceBase
         throw new NotImplementedException();
     }
 
-    public override void FeedbackAt(string? robotId, string targetGroup, string userId, string text)
+    public override void FeedbackAt(string? robotId, string targetGroup, string msgId, string text)
     {
-        SendGroupMessage(robotId, targetGroup, new AtMessage(userId), new TextMessage(text));
+        SendGroupMessage(robotId, targetGroup, new ReplyMessage(msgId), new TextMessage(text));
     }
 
     public override string GetNick(string robotId, string userId)

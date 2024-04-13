@@ -1,4 +1,3 @@
-using HuaJiBot.NET.Adapter.Red;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Logger;
@@ -20,10 +19,7 @@ internal class TestAdapter : BotServiceBase
         return Task.CompletedTask;
     }
 
-    public override string[] AllRobots()
-    {
-        throw new NotImplementedException();
-    }
+    public override string[] AllRobots => throw new NotImplementedException();
 
     public override void SendGroupMessage(
         string? robotId,
@@ -34,7 +30,7 @@ internal class TestAdapter : BotServiceBase
         throw new NotImplementedException();
     }
 
-    public override void FeedbackAt(string? robotId, string targetGroup, string userId, string text)
+    public override void FeedbackAt(string? robotId, string targetGroup, string msgId, string text)
     {
         throw new NotImplementedException();
     }

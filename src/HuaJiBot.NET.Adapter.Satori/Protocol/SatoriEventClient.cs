@@ -172,6 +172,7 @@ internal class SatoriEventClient
                                 )
                                 {
                                     RobotId = self,
+                                    MessageId = msg.Id,
                                     GroupId = groupId,
                                     SenderId = senderId,
                                     SenderMemberCard = name ?? string.Empty,

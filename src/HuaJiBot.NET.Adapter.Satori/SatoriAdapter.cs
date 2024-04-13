@@ -67,8 +67,8 @@ public class SatoriAdapter : BotServiceBase
                             AtMessage { Target: var target } => new AtElement { Id = target },
                             ImageMessage { ImagePath: var path }
                                 => new ImageElement { Src = ConvertFileToBase64(path) },
-                            ReplyMessage { Target: var target, ReplyMsgId: var msgId }
-                                => new QuoteElement { Id = msgId },
+                            ReplyMessage { MessageId: var msgId }
+                                => new QuoteElement { Id = msgId, },
                             TextMessage { Text: var text } => new TextElement { Text = text },
                             _ => throw new ArgumentOutOfRangeException(nameof(x)),
                         }

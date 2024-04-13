@@ -25,8 +25,7 @@ public sealed record ImageMessage(string ImagePath) : SendingMessageBase;
 
 public sealed record AtMessage(string Target) : SendingMessageBase;
 
-public sealed record ReplyMessage(string? ReplayMsgSeq, string ReplyMsgId, string? Target)
-    : SendingMessageBase;
+public sealed record ReplyMessage(string MessageId) : SendingMessageBase;
 
 public abstract class BotServiceBase
 {
@@ -52,9 +51,9 @@ public abstract class BotServiceBase
         params SendingMessageBase[] messages
     );
 
-    public virtual void FeedbackAt(string? robotId, string targetGroup, string userId, string text)
+    public virtual void FeedbackAt(string? robotId, string targetGroup, string msgId, string text)
     {
-        SendGroupMessage(robotId, targetGroup, new AtMessage(userId), new TextMessage(text));
+        SendGroupMessage(robotId, targetGroup, new ReplyMessage(msgId), new TextMessage(text));
     }
 
     public abstract MemberType GetMemberType(string robotId, string targetGroup, string userId);
@@ -118,6 +117,7 @@ public abstract class BotServiceBase
         )
         {
             var (description, method, info) = matchedItem;
+            LogDebug($"{description} : {e.TextMessage}");
             object?[]? args = null;
             if (info.Any())
             {
@@ -194,7 +194,12 @@ public abstract class BotServiceBase
         if (_commands.Any())
         {
             //监听群消息事件，匹配命令
-            Events.OnGroupMessageReceived += (sender, e) => ProcessCommand(e);
+            void ProcessCommandInternal(object? sender, GroupMessageEventArgs e)
+            {
+                ProcessCommand(e);
+            }
+            Events.OnGroupMessageReceived -= ProcessCommandInternal;
+            Events.OnGroupMessageReceived += ProcessCommandInternal;
             Log($"从插件 {plugin.Name} 加载了 {_commands.Count} 条命令");
         }
     }

@@ -112,12 +112,15 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     //}
     [Command("test", "")]
     private void TestCommand(
-        [CommandArgumentString("test")] string a,
+        [CommandArgumentString("test")] string? a,
         GroupMessageEventArgs e
     //[CommandArgumentEnum<TEST>("test")] TEST b
     )
     {
-        e.Feedback(a);
+        if (!string.IsNullOrWhiteSpace(a))
+        {
+            e.Feedback(a);
+        }
         Console.WriteLine(e.TextMessage);
     }
 

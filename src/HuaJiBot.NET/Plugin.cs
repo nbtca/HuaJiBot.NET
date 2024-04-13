@@ -79,7 +79,20 @@ public abstract class PluginBase
                     overload.Description,
                     args =>
                     {
-                        method.Invoke(this, args);
+                        var result = method.Invoke(this, args);
+                        if (result is Task task)
+                        {
+                            task.ContinueWith(
+                                t =>
+                                {
+                                    if (t.Exception is not null)
+                                    {
+                                        Error($"执行命令 {overload.Key} 时出现异常：", t.Exception);
+                                    }
+                                },
+                                TaskContinuationOptions.OnlyOnFaulted
+                            );
+                        }
                     },
                     arguments
                 );

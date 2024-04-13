@@ -82,7 +82,8 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service, Actio
                                     }
                                     Events
                                         .Events
-                                        .CallOnBotLogin(new BotLoginEventArgs
+                                        .CallOnBotLogin(
+                                            new BotLoginEventArgs
                                             {
                                                 Accounts = _qq is null ? [] : [_qq],
                                                 ClientName = appName,
@@ -188,14 +189,17 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service, Actio
                                     var rawMessage = json.Value<string>("raw_message")!;
                                     var sender = json["sender"]!;
                                     var card = sender.Value<string>("card");
+                                    var msgId = json.Value<string>("message_id")!;
                                     Events
                                         .Events
-                                        .CallOnGroupMessageReceived(new GroupMessageEventArgs(
+                                        .CallOnGroupMessageReceived(
+                                            new GroupMessageEventArgs(
                                                 () => new OneBotCommandReader(service, message),
                                                 async () => await api.GetGroupNameAsync(groupId)
                                             )
                                             {
                                                 Service = service,
+                                                MessageId = msgId,
                                                 GroupId = groupId,
                                                 SenderId = userId,
                                                 SenderMemberCard = string.IsNullOrWhiteSpace(card)

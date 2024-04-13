@@ -31,6 +31,11 @@ public class GroupMessageEventArgs(
 {
     public string? RobotId { get; init; }
 
+    /// <summary>
+    /// 消息ID
+    /// </summary>
+    public required string MessageId { get; init; }
+
     /// <summary>群ID</summary>
     public required string GroupId { get; init; }
 
@@ -49,7 +54,7 @@ public class GroupMessageEventArgs(
     /// <param name="message"></param>
     public void Feedback(string message)
     {
-        Service.FeedbackAt(RobotId, GroupId, SenderId, message);
+        Service.FeedbackAt(RobotId, GroupId, MessageId, message);
     }
 
     /// <summary>群名称</summary>
