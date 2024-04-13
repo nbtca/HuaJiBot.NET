@@ -80,18 +80,23 @@ public abstract class BotServiceBase
                         {
                             continue;
                         }
+
+                        string Quote(string str)
+                        {
+                            if (arg.IsOptional)
+                                return $"[{str}]";
+                            return $"<{str}>";
+                        }
                         sb.Append(
                             arg.Attribute.ArgumentType switch
                             {
-                                CommandArgumentType.String => "<string>",
-                                CommandArgumentType.RegexString => "<regex>",
-                                CommandArgumentType.Enum => "<enum>",
+                                CommandArgumentType.String => Quote("string"),
+                                CommandArgumentType.RegexString => Quote("regex"),
+                                CommandArgumentType.Enum => Quote("enum"),
+                                CommandArgumentType.Unknown => "unknown",
+                                _ => throw new ArgumentOutOfRangeException()
                             }
                         );
-                        if (!arg.IsOptional)
-                        {
-                            sb.Append('*');
-                        }
                         sb.Append(' ');
                     }
                 }
