@@ -40,7 +40,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         _reminderTask.Start();
     }
 
-    private readonly Dictionary<string, DateTime> _cache = new();
+    private readonly Dictionary<string, DateTimeOffset> _cache = new();
 
     [Command("日程", "查看近期日程")]
     // ReSharper disable once UnusedMember.Global
@@ -79,7 +79,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             e.Feedback($"超出范围 [{Config.MinRange},{Config.MaxRange}] ");
             return;
         }
-        DateTime start,
+        DateTimeOffset start,
             end;
         if (week > 0) //正数表示未来
         {

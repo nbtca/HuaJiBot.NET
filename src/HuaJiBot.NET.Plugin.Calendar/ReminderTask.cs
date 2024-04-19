@@ -41,7 +41,7 @@ internal class ReminderTask : IDisposable
         _timer.Start();
     }
 
-    private DateTime _scheduledTimeEnd = Utils.NetworkTime.Now; //截止到该时间点的日程已经在Task队列中列入计划了
+    private DateTimeOffset _scheduledTimeEnd = Utils.NetworkTime.Now; //截止到该时间点的日程已经在Task队列中列入计划了
 
     private void ForEachMatchedGroup(CalendarEvent e, Action<Action<string>> callback)
     {
@@ -69,7 +69,7 @@ internal class ReminderTask : IDisposable
                 var remindEnd = end.AddMinutes(RemindBeforeStartMinutes); //计算提醒结束时间
                 foreach (
                     var (eventStartTime, e) in from x in Calendar.GetEvents(remindStart, remindEnd) //获取所有有交集的日程
-                    let eventStartTime = x.period.StartTime.AsSystemLocal
+                    let eventStartTime = x.period.StartTime
                     where eventStartTime >= remindStart && eventStartTime <= remindEnd //筛选开始时间在提醒时间段内的日程
                     select (eventStartTime, x.e)
                 )
@@ -109,7 +109,7 @@ internal class ReminderTask : IDisposable
                 var remindEnd = end.AddMinutes(RemindBeforeEndMinutes); //计算提醒结束时间
                 foreach (
                     var (eventEndTime, e) in from x in Calendar.GetEvents(remindStart, remindEnd)
-                    let eventEndTime = x.period.EndTime.AsSystemLocal
+                    let eventEndTime = x.period.EndTime
                     where eventEndTime >= remindStart && eventEndTime <= remindEnd //筛选结束时间在提醒时间段内的日程
                     select (eventEndTime, x.e)
                 )

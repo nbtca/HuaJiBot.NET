@@ -14,6 +14,8 @@ internal class UtilsTest
     public void Test1()
     {
         var time = Utils.NetworkTime.Now;
+        Console.WriteLine(time.ToString("s"));
         Console.WriteLine(time);
+        Console.WriteLine(Utils.NetworkTime.Diff);
     }
 }
