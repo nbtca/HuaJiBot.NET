@@ -78,20 +78,20 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         if (Config.PushInfoGroup.Length != 0)
         {
             var e = JsonConvert.DeserializeObject<LogEventEntity>(msg)!;
-            var sb = new StringBuilder();
-            sb.AppendLine($"---维修事件---");
-            sb.AppendLine($"ID：{e.EventId}");
-            sb.AppendLine($"类型：{e.Action}");
-            sb.AppendLine($"时间：{e.GmtCreate.ToString("f")}");
+            var s = new StringBuilder();
+            s.AppendLine($"---维修事件---");
+            s.AppendLine($"ID：{e.EventId}");
+            s.AppendLine($"类型：{e.Action}");
+            s.AppendLine($"时间：{e.GmtCreate.ToString("f")}");
             if (!string.IsNullOrWhiteSpace(e.MemberId))
-                sb.AppendLine($"人员：{e.MemberId}({e.MemberAlias})");
+                s.AppendLine($"人员：{e.MemberId}({e.MemberAlias})");
             if (!string.IsNullOrWhiteSpace(e.Model))
-                sb.AppendLine($"机型：{e.Model}");
+                s.AppendLine($"机型：{e.Model}");
             if (!string.IsNullOrWhiteSpace(e.Problem))
-                sb.AppendLine($"问题：{e.Problem}");
+                s.AppendLine($"问题：{e.Problem}");
             if (!string.IsNullOrWhiteSpace(e.Description))
-                sb.AppendLine($"描述：{e.Description}");
-            var str = sb.ToString();
+                s.AppendLine($"描述：{e.Description}");
+            var str = s.ToString();
             Task.Run(() =>
             {
                 foreach (var group in Config.PushInfoGroup)

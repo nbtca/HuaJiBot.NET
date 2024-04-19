@@ -41,7 +41,7 @@ internal class ReminderTask : IDisposable
         _timer.Start();
     }
 
-    private DateTime _scheduledTimeEnd = DateTime.Now; //截止到该时间点的日程已经在Task队列中列入计划了
+    private DateTime _scheduledTimeEnd = Utils.NetworkTime.Now; //截止到该时间点的日程已经在Task队列中列入计划了
 
     private void ForEachMatchedGroup(CalendarEvent e, Action<Action<string>> callback)
     {
@@ -57,7 +57,7 @@ internal class ReminderTask : IDisposable
         try
         {
             Service.LogDebug("Invoke Check");
-            var now = DateTime.Now; //现在
+            var now = Utils.NetworkTime.Now; //现在
             var nextEnd = now.AddMinutes(CheckDurationInMinutes); //下次检查的结束时间
             var start = _scheduledTimeEnd; //从上次结束的时间点开始检查
             var end = nextEnd; //到下次结束的时间点结束检查

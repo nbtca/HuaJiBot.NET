@@ -14,11 +14,12 @@ namespace HuaJiBot.NET;
 
 public static class Internal
 {
-    public static Task SetupServiceAsync<T>(T service, Config.Config config)
+    public static async Task SetupServiceAsync<T>(T service, Config.Config config)
         where T : BotServiceBase
     {
+        await Utils.NetworkTime.UpdateDiffAsync();
         service.Config = new ConfigWrapper(config);
-        return service.SetupServiceAsync();
+        await service.SetupServiceAsync();
         //Global.ServiceInstance = service;
     }
 

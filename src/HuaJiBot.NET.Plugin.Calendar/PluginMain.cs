@@ -27,13 +27,13 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     protected override void Initialize()
     {
         Service.Log("[日程] 启动成功！");
-        Sync.UpdateCalendar();
+        Sync.UpdateCalendarAsync();
         _reminderTask = new(
             Service,
             Config,
             () =>
             {
-                Sync.UpdateCalendar();
+                Sync.UpdateCalendarAsync();
                 return Calendar;
             }
         );
@@ -49,9 +49,10 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         GroupMessageEventArgs e
     )
     {
-        await Sync.UpdateCalendar();
+        await Sync.UpdateCalendarAsync();
         const int coldDown = 10_000; //冷却时间
-        var now = DateTime.Now; //当前时间
+        var now = Utils.NetworkTime.Now; //当前时间
+        Service.LogDebug(now.ToString("F"));
         if (_cache.TryGetValue(e.SenderId, out var lastTime)) //如果缓存中有上次发送的时间
         {
             var diff = (now - lastTime).TotalMilliseconds; //计算时间差

@@ -1,15 +1,19 @@
-﻿namespace HuaJiBot.NET.UnitTest;
+﻿using Newtonsoft.Json;
+
+namespace HuaJiBot.NET.UnitTest;
 
 internal class UtilsTest
 {
     [SetUp]
-    public void Setup() { }
+    public Task SetupAsync()
+    {
+        return Utils.NetworkTime.UpdateDiffAsync();
+    }
 
     [Test]
-    public async Task Test1()
+    public void Test1()
     {
-        var time = await Utils.NetworkTime.GetNetworkTime("ntp1.aliyun.com");
-        //var time = await Utils.NetworkTime.GetNetworkTime();
+        var time = Utils.NetworkTime.Now;
         Console.WriteLine(time);
     }
 }
