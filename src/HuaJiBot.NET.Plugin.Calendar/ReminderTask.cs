@@ -94,7 +94,7 @@ internal class ReminderTask : IDisposable
                                       日程提醒({ev.Start.AsSystemLocal})：
                                       {ev.Summary} {ev.Location}
                                       {ev.Description}
-                                      将于 {RemindBeforeEndMinutes} 分钟后开始
+                                      将于 {RemindBeforeStartMinutes} 分钟后开始
                                       """
                                     )
                             );
