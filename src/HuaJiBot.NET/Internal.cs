@@ -17,7 +17,7 @@ public static class Internal
     public static async Task SetupServiceAsync<T>(T service, Config.Config config)
         where T : BotServiceBase
     {
-        await Utils.NetworkTime.UpdateDiffAsync();
+        Utils.NetworkTime.TryUpdateTimeDiff();
         service.Config = new ConfigWrapper(config);
         await service.SetupServiceAsync();
         //Global.ServiceInstance = service;

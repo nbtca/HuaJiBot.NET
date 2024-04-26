@@ -21,6 +21,21 @@ public class NetworkTime
         }
     }
 
+    public static void TryUpdateTimeDiff()
+    {
+        UpdateDiffAsync()
+            .ContinueWith(
+                e =>
+                {
+                    if (e.IsFaulted)
+                    {
+                        Console.WriteLine(e.Exception);
+                    }
+                },
+                TaskContinuationOptions.OnlyOnFaulted
+            );
+    }
+
     public static DateTimeOffset Now =>
         (DateTimeOffset.Now + _diff).ToOffset(TimeSpan.FromHours(8));
 }
