@@ -139,7 +139,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                                 repoInfo += " : " + branch;
                             var avatar = await Utils
                                 .AvatarHelper
-                                .Get($"{body.Sender.AvatarUrl}?s=96");
+                                .GetAsync($"{body.Sender.AvatarUrl}?s=96");
                             var editInfo = new List<TextRun>();
                             var addCount = 0;
                             var removeCount = 0;
