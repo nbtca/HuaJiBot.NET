@@ -40,7 +40,7 @@ public static class AvatarHelper
         File.WriteAllBytes(path, bytes);
     }
 
-    public static async Task<byte[]> Get(string avatarUrl)
+    public static async Task<byte[]> GetAsync(string avatarUrl)
     {
         var name = GetAvatarFileName(avatarUrl);
         try

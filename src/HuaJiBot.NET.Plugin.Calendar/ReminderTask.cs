@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Text;
 using HuaJiBot.NET.Bot;
 using Ical.Net.CalendarComponents;
 using Timer = System.Timers.Timer;
@@ -50,6 +51,25 @@ internal class ReminderTask : IDisposable
             callback(str => Service.SendGroupMessage(null, groupId, str));
         }
     }
+
+    //public string formatTimeRange(DateTime start, DateTime end)
+    //{
+    //    var s = new StringBuilder();
+    //    var now = Utils.NetworkTime.Now; //现在
+    //    //same day
+    //    if (start.Date == end.Date)
+    //    {
+    //        s.Append(start.ToString("yyyy-MM-dd HH:mm"));
+    //        s.Append(" - ");
+    //        s.Append(end.ToString("HH:mm"));
+    //    }
+    //    else
+    //    {
+    //        s.Append(start.ToString("yyyy-MM-dd HH:mm"));
+    //        s.Append(" - ");
+    //        s.Append(end.ToString("yyyy-MM-dd HH:mm"));
+    //    }
+    //}
 
     [MethodImpl(MethodImplOptions.Synchronized)] //防止多线程同时更新时间节点
     private void InvokeCheck()
@@ -131,10 +151,9 @@ internal class ReminderTask : IDisposable
                                 send =>
                                     send(
                                         $"""
-                                      日程提醒({ev.Start.AsSystemLocal})：
+                                      日程提醒({ev.End.AsSystemLocal})：
                                       {ev.Summary} {ev.Location}
-                                      {ev.Description}
-                                      预计于{RemindBeforeEndMinutes} 分钟后结束
+                                      预计于 {RemindBeforeEndMinutes} 分钟后结束
                                       """
                                     )
                             );

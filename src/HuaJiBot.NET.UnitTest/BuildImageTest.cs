@@ -32,7 +32,7 @@ internal class BuildImageTest
     public async Task Build()
     {
         var avatarUrl = "https://avatars.githubusercontent.com/u/91080742?v=4";
-        var avatar = await AvatarHelper.Get(avatarUrl);
+        var avatar = await AvatarHelper.GetAsync(avatarUrl);
 
         CardBuilder card =
             new()
