@@ -1,6 +1,5 @@
 ﻿using HuaJiBot.NET.Adapter.Satori.Protocol;
 using HuaJiBot.NET.Adapter.Satori.Protocol.Elements;
-using HuaJiBot.NET.Adapter.Satori.Protocol.Models;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Logger;
 

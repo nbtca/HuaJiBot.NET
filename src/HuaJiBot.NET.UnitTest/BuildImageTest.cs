@@ -1,9 +1,7 @@
 ﻿using System.Diagnostics;
-using HuaJiBot.NET.Plugin.Calendar;
 using HuaJiBot.NET.Plugin.GitHubBridge.Utils;
 using HuaJiBot.NET.Utils;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
 using Path = System.IO.Path;
 
 namespace HuaJiBot.NET.UnitTest;

@@ -1,6 +1,5 @@
 ﻿#nullable disable
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.PushEventBody;
 using Newtonsoft.Json;
 

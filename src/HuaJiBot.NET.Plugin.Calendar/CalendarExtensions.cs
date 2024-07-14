@@ -2,13 +2,6 @@
 using HuaJiBot.NET.Utils;
 using Ical.Net.CalendarComponents;
 using Ical.Net.DataTypes;
-using NodaTime;
-using NodaTime.Extensions;
-using SixLabors.Fonts;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 
 namespace HuaJiBot.NET.Plugin.Calendar;
 

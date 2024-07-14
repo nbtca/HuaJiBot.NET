@@ -1,7 +1,6 @@
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Logger;
-using Newtonsoft.Json;
 
 namespace HuaJiBot.NET.UnitTest;
 

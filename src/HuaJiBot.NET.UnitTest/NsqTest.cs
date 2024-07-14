@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using HuaJiBot.NET.Plugin.RepairTeam;
-
-namespace HuaJiBot.NET.UnitTest
+﻿namespace HuaJiBot.NET.UnitTest
 {
     internal class NsqTest
     {

@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using Microsoft.JavaScript.NodeApi;
 using Microsoft.JavaScript.NodeApi.Runtime;
 
 namespace HuaJiBot.NET.Plugin.Scripting.NodeJS;

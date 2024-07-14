@@ -1,7 +1,4 @@
-﻿using System.Net;
-using System.Net.Sockets;
-
-namespace HuaJiBot.NET.Utils;
+﻿namespace HuaJiBot.NET.Utils;
 
 public class NetworkTime
 {

@@ -1,5 +1,4 @@
-﻿using System;
-using HuaJiBot.NET.Bot;
+﻿using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 
 namespace HuaJiBot.NET.Events;

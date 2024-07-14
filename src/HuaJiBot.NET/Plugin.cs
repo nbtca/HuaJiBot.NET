@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using Newtonsoft.Json;

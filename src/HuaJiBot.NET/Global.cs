@@ -1,7 +1,4 @@
-﻿using System;
-using HuaJiBot.NET.Bot;
-
-namespace HuaJiBot.NET;
+﻿namespace HuaJiBot.NET;
 
 public class Global
 {

@@ -1,5 +1,4 @@
-﻿using System.Collections.ObjectModel;
-using System.Net.WebSockets;
+﻿using System.Net.WebSockets;
 using System.Text;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types;

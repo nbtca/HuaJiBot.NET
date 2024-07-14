@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-
-namespace HuaJiBot.NET.UnitTest;
+﻿namespace HuaJiBot.NET.UnitTest;
 
 internal class UtilsTest
 {

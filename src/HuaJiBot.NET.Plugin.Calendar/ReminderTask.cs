@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using System.Text;
 using HuaJiBot.NET.Bot;
 using Ical.Net.CalendarComponents;
 using Timer = System.Timers.Timer;

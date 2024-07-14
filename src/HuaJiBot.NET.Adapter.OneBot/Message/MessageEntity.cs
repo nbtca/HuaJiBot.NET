@@ -1,5 +1,4 @@
-﻿using System.Runtime.Serialization;
-using HuaJiBot.NET.Adapter.OneBot.Message.Entity;
+﻿using HuaJiBot.NET.Adapter.OneBot.Message.Entity;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 

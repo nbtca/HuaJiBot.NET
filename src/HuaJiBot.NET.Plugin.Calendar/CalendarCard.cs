@@ -1,14 +1,5 @@
-﻿using HuaJiBot.NET.Utils;
-using HuaJiBot.NET.Utils.Fonts;
-using Newtonsoft.Json;
-using SixLabors.Fonts;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using TextRun = HuaJiBot.NET.Utils.TextRun;
+﻿namespace HuaJiBot.NET.Plugin.Calendar;
 
-namespace HuaJiBot.NET.Plugin.Calendar;
 
 
 //public class CalendarCard(string start) : ImageBuilder
@@ -20,7 +11,7 @@ namespace HuaJiBot.NET.Plugin.Calendar;
 //        using var image = new Image<Rgba32>(width, height);
 //        //导入字体
 //        //new FontCollection()    .
-//        var font = FontManager.ComicNeue.CreateFont(20);
+//        var font = FontManager.ComicSansMS.CreateFont(20);
 //        var yaHeiFont = FontManager.MaoKenTangYuan.CreateFont(20);
 //        //生成文本
 //        var (text, runs) = BuildTextRuns(

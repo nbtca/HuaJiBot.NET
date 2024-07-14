@@ -1,6 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using HuaJiBot.NET.Bot;
-using Microsoft.VisualBasic;
 using static HuaJiBot.NET.Commands.CommonCommandReader;
 
 namespace HuaJiBot.NET.Commands;
