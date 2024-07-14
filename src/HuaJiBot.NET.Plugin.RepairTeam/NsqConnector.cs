@@ -20,8 +20,26 @@ public class NsqConnector : IDisposable
                 MessageReceived?.Invoke(this, msg);
             })
         );
-        _consumer.ConnectToNSQd(url);
-        Console.WriteLine($"Connected to {url} topic: {topicName} channel: {channelName}");
+        Task.Run(async () =>
+        {
+            while (true)
+            {
+                try
+                {
+                    _consumer.ConnectToNSQd(url);
+                    Console.WriteLine(
+                        $"Connected to {url} topic: {topicName} channel: {channelName}"
+                    );
+                    break;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Failed to connect to NSQd, retrying in 10 seconds.");
+                    Console.WriteLine(e);
+                    await Task.Delay(10000);
+                }
+            }
+        });
     }
 
     public event EventHandler<string>? MessageReceived;
