@@ -26,6 +26,6 @@ public static class FontManager
     }
 
     //public static FontLoader ComicMono => new(() => Assets.ComicMono);
-    public static FontLoader ComicNeue => new(() => Assets.ComicNeue_Bold);
+    public static FontLoader ComicSansMs => new(() => Assets.COMIC);
     public static FontLoader MaoKenTangYuan => new(() => Assets.MaoKenTangYuan);
 }

@@ -176,7 +176,7 @@ public class CardBuilder : ImageBuilder
         const int height = 200;
         using var image = new Image<Rgba32>(width, height);
         // 选择字体、颜色和布局
-        var font = FontManager.ComicNeue.CreateFont(20);
+        var font = FontManager.ComicSansMS.CreateFont(20);
         var yaHeiFont = FontManager.MaoKenTangYuan.CreateFont(20);
         var background = Color.Black;
         const int iconWidth = 60;
