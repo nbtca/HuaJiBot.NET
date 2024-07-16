@@ -59,14 +59,14 @@ api.Events.OnBotLogin += (_, eventArgs) =>
 var pluginDir = Path.Combine(Environment.CurrentDirectory, "plugins"); //插件目录
 #region 额外插件
 //复制额外插件（主要开发使用）
-if (config.ExtraPlugins is { Length: > 0 })
+if (config.ExtraPlugins is { Length: > 0 } extraPluginsList)
 {
     var extraPlugins = Path.Combine(pluginDir, "extra");
 
     if (Directory.Exists(extraPlugins))
         Directory.Delete(extraPlugins, true);
     Directory.CreateDirectory(extraPlugins);
-    foreach (var file in config.ExtraPlugins)
+    foreach (var file in extraPluginsList)
     {
         if (File.Exists(file))
         {

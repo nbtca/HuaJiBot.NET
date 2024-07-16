@@ -26,7 +26,7 @@ jobs:
           port: ${{ secrets.REMOTE_PORT }}
           key: ${{ secrets.REMOTE_SSHKEY }}
           source: "dist/*"
-          target: "/home/nbtca/huajibot"
+          target: "/home/nbtca/docker/huajibot"
       - name: ssh pipelines
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -35,4 +35,8 @@ jobs:
           port: ${{ secrets.REMOTE_PORT }}
           key: ${{ secrets.REMOTE_SSHKEY }}
           script: |
-            sh /home/nbtca/huajibot/reset.sh
+            cd /home/nbtca/docker/huajibot
+            docker compose pull
+            docker compose down
+            cp -r dist/plugins/* data/plugins/
+            docker compose up -d
