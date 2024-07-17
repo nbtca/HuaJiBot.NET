@@ -36,7 +36,6 @@ jobs:
           key: ${{ secrets.REMOTE_SSHKEY }}
           script: |
             cd /home/nbtca/docker/huajibot
-            docker compose pull
             docker compose down
             cp -r dist/plugins/* data/plugins/
             docker compose up -d
