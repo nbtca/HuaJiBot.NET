@@ -1,15 +1,14 @@
-﻿namespace HuaJiBot.NET.UnitTest
-{
-    internal class NsqTest
-    {
-        [SetUp]
-        public void Setup() { }
+﻿namespace HuaJiBot.NET.UnitTest;
 
-        [Test]
-        public void Test1()
-        {
-            //Console.WriteLine("test");
-            //Thread.Sleep(1000);
-        }
+internal class NsqTest
+{
+    [SetUp]
+    public void Setup() { }
+
+    [Test]
+    public void Test1()
+    {
+        //Console.WriteLine("test");
+        //Thread.Sleep(1000);
     }
 }

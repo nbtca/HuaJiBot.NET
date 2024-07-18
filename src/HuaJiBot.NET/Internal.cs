@@ -42,7 +42,7 @@ public static class Internal
         foreach (var (_, plugin) in Plugins)
         { //遍历所有插件
             [MethodImpl(MethodImplOptions.Synchronized)]
-            bool TryGetPluginConfig([NotNullWhen(true)] out ConfigBase? config)
+            bool TryGetPluginConfig([NotNullWhen(true)] out ConfigBase? cfg)
             {
                 foreach (var it in plugin.GetType().GetInterfaces())
                 {
@@ -50,14 +50,13 @@ public static class Internal
                     {
                         if (m.PropertyType.IsAssignableTo(typeof(ConfigBase)))
                         {
-                            config = m.GetValue(plugin) as ConfigBase;
-
-                            if (config is null)
+                            cfg = m.GetValue(plugin) as ConfigBase;
+                            if (cfg is null)
                             {
 #if DEBUG
                                 api.Log(
                                     plugin.GetType()
-                                        + "config = m.GetValue(plugin) as ITranslationMainLoader == null"
+                                        + "cfg = m.GetValue(plugin) as ITranslationMainLoader == null"
                                 );
 #endif
                                 return false;
@@ -66,13 +65,18 @@ public static class Internal
                         }
                     }
                 }
-                config = null;
+                cfg = null;
                 return false;
             }
 
             if (TryGetPluginConfig(out var config))
-            { //取出ConfigKey和ConfigObject，将对应的配置注入到ConfigObject
+            {
+                //取出ConfigKey和ConfigObject，将对应的配置注入到ConfigObject
                 api.Config.Populate(plugin.Name, config);
+                if (!config.Enabled)
+                {
+                    plugin.Enabled = false;
+                }
             }
         }
         //保存配置
@@ -81,6 +85,11 @@ public static class Internal
         Events.Events.CallOnStartup(api);
         foreach (var (entryPoint, plugin) in Plugins) //调用所有插件的初始化方法
         {
+            if (!plugin.Enabled)
+            {
+                api.Log($"插件 {plugin.Name} 已禁用");
+                continue;
+            }
             api.Log($"开始加载插件 {entryPoint.Name} 描述：{entryPoint.Description}");
             var sw = Stopwatch.StartNew(); //计时
             api.LoadAddCommand(plugin); //加载命令

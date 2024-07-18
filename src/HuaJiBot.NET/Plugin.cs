@@ -19,6 +19,7 @@ public interface IPluginWithConfig<out T>
 
 public abstract class PluginBase
 {
+    public bool Enabled { get; internal set; } = true;
     public string Name { get; internal set; } = null!;
     public BotServiceBase Service { get; internal set; } = null!;
 
