@@ -18,7 +18,9 @@ let output = Path.Combine(cd, "bin")
 let dotnetBuild src output = 
     let extraArgs = if isDebugBuild then ["-c"; "Debug"] else []
     let exitCode = run "dotnet" (["build"; src; "-o"; output]@extraArgs)
-    if exitCode <> 0 then failwithf "Build failed for %s" src
+    if exitCode <> 0 then
+        printfn "Command: dotnet build %s -o %s %s" src output (System.String.Join(" ", extraArgs))
+        failwithf "Build failed for %s" src
 //delete output folder
 if output|>Directory.Exists then
     Directory.Delete(output,true)

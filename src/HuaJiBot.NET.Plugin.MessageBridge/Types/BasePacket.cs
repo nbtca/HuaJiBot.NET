@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 
 namespace HuaJiBot.NET.Plugin.MessageBridge.Types;
@@ -7,7 +6,6 @@ namespace HuaJiBot.NET.Plugin.MessageBridge.Types;
 public abstract class BasePacket
 {
     public abstract PacketType Type { get; }
-    public abstract object? DataObject { get; }
     public required SenderInformation? Source { get; init; }
 
     public string ToJson() => JsonConvert.SerializeObject(this, SerializerSettings.Value);
@@ -33,7 +31,6 @@ public abstract class DataPacket<T>(PacketType type) : BasePacket
 {
     public sealed override PacketType Type => type;
     public required T Data { get; init; }
-    public override object? DataObject => Data;
 }
 
 public record SenderInformation(string DisplayName, string Name, string Version);

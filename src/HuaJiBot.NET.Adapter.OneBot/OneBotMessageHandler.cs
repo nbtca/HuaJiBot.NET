@@ -192,6 +192,10 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service)
                                 var sender = json["sender"]!;
                                 var card = sender.Value<string>("card");
                                 var msgId = json.Value<string>("message_id")!;
+                                if (QQ == userId)//自己发送的消息
+                                {
+                                    break;
+                                }
                                 Events
                                     .Events
                                     .CallOnGroupMessageReceived(

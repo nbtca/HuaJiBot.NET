@@ -16,7 +16,7 @@ namespace HuaJiBot.NET.Adapter.Satori.Protocol;
 internal class SatoriEventClient
 {
     private readonly JsonSerializerSettings _jsonSerializerSettings =
-        new() { ContractResolver = new CamelCasePropertyNamesContractResolver() };
+        new() { ContractResolver = new DefaultContractResolver { NamingStrategy = new SnakeCaseNamingStrategy() } };
     private readonly WebsocketClient _client;
     private readonly Timer _pingTimer;
     private readonly SatoriAdapter _service;
@@ -104,10 +104,7 @@ internal class SatoriEventClient
             {
                 case SignalOperation.Event:
                     var eventBody = json["body"]!.ToObject<Event>(
-                        new JsonSerializer
-                        {
-                            ContractResolver = new CamelCasePropertyNamesContractResolver()
-                        }
+                        JsonSerializer.CreateDefault(_jsonSerializerSettings)
                     )!;
                     if (
                         eventBody is
@@ -121,6 +118,8 @@ internal class SatoriEventClient
                         }
                     )
                     {
+                        //自身消息
+                        if (self == senderId) break;
                         var name = memberNickName ?? memberName ?? nickName;
                         var messages = ElementSerializer.Deserialize(msg.Content);
                         IEnumerable<CommonCommandReader.ReaderEntity> Parse()
@@ -141,25 +140,25 @@ internal class SatoriEventClient
                                     default:
                                         _service.LogDebug($"未处理的消息元素：{element}");
                                         break;
-                                    //case SharpElement: break;
-                                    //case LinkElement: break;
-                                    //case ImageElement: break;
-                                    //case AudioElement: break;
-                                    //case VideoElement: break;
-                                    //case FileElement: break;
-                                    //case BoldElement: break;
-                                    //case ItalicElement: break;
-                                    //case UnderlineElement: break;
-                                    //case DeleteElement: break;
-                                    //case SpoilerElement: break;
-                                    //case CodeElement: break;
-                                    //case SuperscriptElement: break;
-                                    //case SubscriptElement: break;
-                                    //case BreakElement: break;
-                                    //case ParagraphElement: break;
-                                    //case MessageElement: break;
-                                    //case QuoteElement: break;
-                                    //case AuthorElement: break;
+                                        //case SharpElement: break;
+                                        //case LinkElement: break;
+                                        //case ImageElement: break;
+                                        //case AudioElement: break;
+                                        //case VideoElement: break;
+                                        //case FileElement: break;
+                                        //case BoldElement: break;
+                                        //case ItalicElement: break;
+                                        //case UnderlineElement: break;
+                                        //case DeleteElement: break;
+                                        //case SpoilerElement: break;
+                                        //case CodeElement: break;
+                                        //case SuperscriptElement: break;
+                                        //case SubscriptElement: break;
+                                        //case BreakElement: break;
+                                        //case ParagraphElement: break;
+                                        //case MessageElement: break;
+                                        //case QuoteElement: break;
+                                        //case AuthorElement: break;
                                 }
                             }
                         }
@@ -184,10 +183,7 @@ internal class SatoriEventClient
                     break;
                 case SignalOperation.Ready:
                     var readyBody = json["body"]!.ToObject<ReadySignalBody>(
-                        new JsonSerializer
-                        {
-                            ContractResolver = new CamelCasePropertyNamesContractResolver()
-                        }
+                        JsonSerializer.CreateDefault(_jsonSerializerSettings)
                     )!;
 
                     _service.Accounts = (from x in readyBody.Logins select x.User!.Id).ToArray();
