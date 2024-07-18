@@ -10,7 +10,7 @@ internal class MessageTest
     {
         var pkt = new PlayerDeathPacket
         {
-            Source = new SenderInformation("Test", "1.20.4"),
+            Source = new SenderInformation("test Server", "Test", "1.20.4"),
             Data = new PlayerDeathPacketData { PlayerName = "Test1", DeathMessage = "Test2" }
         };
         Assert.That(pkt.Type, Is.EqualTo(PacketType.PlayerDeath));

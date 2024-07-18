@@ -118,6 +118,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         Service.Events.OnBotLogin += (s, e) =>
         {
             _defaultInformation = new SenderInformation(
+                "QQGroup",
                 $"HuaJiBot.NET.Plugin.MessageBridge({e.ClientName})",
                 e.ClientVersion ?? "?"
             );
@@ -127,6 +128,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     }
 
     private SenderInformation? _defaultInformation = new SenderInformation(
+        "QQGroup",
         "HuaJiBot.NET.Plugin.MessageBridge",
         "?"
     );
