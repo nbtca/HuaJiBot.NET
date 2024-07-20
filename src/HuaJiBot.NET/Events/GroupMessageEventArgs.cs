@@ -51,7 +51,7 @@ public class GroupMessageEventArgs(
     /// 返回消息给发送者（at发送者）
     /// </summary>
     /// <param name="message"></param>
-    public void Feedback(string message)
+    public void Reply(string message)
     {
         Service.FeedbackAt(RobotId, GroupId, MessageId, message);
     }

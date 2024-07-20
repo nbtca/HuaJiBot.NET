@@ -1,11 +1,11 @@
 ﻿using System.Net.WebSockets;
 using System.Text;
-using System.Xml.Linq;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Plugin.MessageBridge.Types;
 using HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
-using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Websocket.Client;
 
 namespace HuaJiBot.NET.Plugin.MessageBridge;
@@ -38,13 +38,14 @@ public class PluginConfig : ConfigBase
         public bool ForwardFromClient { get; set; } = true;
     }
 
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum ClientType
     {
         Minecraft
     }
 }
 
-public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
+public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
     //配置
     public PluginConfig Config { get; } = new();
@@ -117,7 +118,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         Service.Events.OnGroupMessageReceived += (s, e) => _ = ProcessMessageFromGroupAsync(e);
         Service.Events.OnBotLogin += (s, e) =>
         {
-            _defaultInformation = new SenderInformation(
+            BasePacket.DefaultInformation = new SenderInformation(
                 "QQGroup",
                 $"HuaJiBot.NET.Plugin.MessageBridge({e.ClientName})",
                 e.ClientVersion ?? "?"
@@ -126,12 +127,6 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
         Info("启动成功！");
     }
-
-    private SenderInformation? _defaultInformation = new SenderInformation(
-        "QQGroup",
-        "HuaJiBot.NET.Plugin.MessageBridge",
-        "?"
-    );
 
     private async Task ProcessMessageFromGroupAsync(GroupMessageEventArgs e)
     {
@@ -162,7 +157,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     GroupId = e.GroupId,
                     Message = e.TextMessage //todo structure message
                 },
-                Source = _defaultInformation
+                Source = BasePacket.DefaultInformation
             };
             var str = pkt.ToJson();
             foreach (var action in sendActions)
@@ -173,7 +168,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private void ProcessMessageFromClient(string messageRaw, PluginConfig.ClientInfo clientInfo)
     {
         var message = BasePacket.FromJson(messageRaw);
-        var senderName = message is { Source.DisplayName: var sn } ? sn : "Unknown";
+        var senderName = message?.Source?.DisplayName ?? "Unknown";
         switch (clientInfo.Type)
         {
             case PluginConfig.ClientType.Minecraft:
@@ -190,6 +185,11 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         break;
                     case PlayerDeathPacket { Data.DeathMessage: var msg }:
                         SendGroupMessage(clientInfo, $"[{senderName}] {msg}");
+                        break;
+                    case GetPlayerListRequestPacket: //do not reply
+                        break;
+                    case GetPlayerListResponsePacket playerListResponse:
+                        ProcessPlayerListResponse(playerListResponse);
                         break;
                 }
                 break;

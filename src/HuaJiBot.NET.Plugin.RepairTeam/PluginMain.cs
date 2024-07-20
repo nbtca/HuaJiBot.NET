@@ -120,7 +120,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     {
         if (!string.IsNullOrWhiteSpace(a))
         {
-            e.Feedback(a);
+            e.Reply(a);
         }
         Console.WriteLine(e.TextMessage);
     }

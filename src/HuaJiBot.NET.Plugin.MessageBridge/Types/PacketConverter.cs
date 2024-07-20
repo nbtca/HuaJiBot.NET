@@ -17,20 +17,22 @@ internal class PacketConverter : JsonConverter<BasePacket>
         Type objectType,
         BasePacket? existingValue,
         bool hasExistingValue,
-        JsonSerializer serializer
+        JsonSerializer s
     )
     {
-        serializer.Converters.Remove(this);
-        var obj = JObject.Load(reader);
-        var type = obj["type"]?.ToObject<PacketType>();
+        s.Converters.Remove(this);
+        var o = JObject.Load(reader);
+        var type = o["type"]?.ToObject<PacketType>();
         return type switch
         {
-            PacketType.PlayerChat => obj.ToObject<PlayerChatPacket>(serializer),
-            PacketType.PlayerJoin => obj.ToObject<PlayerJoinPacket>(serializer),
-            PacketType.PlayerQuit => obj.ToObject<PlayerQuitPacket>(serializer),
-            PacketType.PlayerDeath => obj.ToObject<PlayerDeathPacket>(serializer),
-            PacketType.GroupMessage => obj.ToObject<GroupMessagePacket>(serializer),
-            _ => throw new ArgumentOutOfRangeException(nameof(type), type, obj["type"]?.ToString())
+            PacketType.PlayerChat => o.ToObject<PlayerChatPacket>(s),
+            PacketType.PlayerJoin => o.ToObject<PlayerJoinPacket>(s),
+            PacketType.PlayerQuit => o.ToObject<PlayerQuitPacket>(s),
+            PacketType.PlayerDeath => o.ToObject<PlayerDeathPacket>(s),
+            PacketType.GroupMessage => o.ToObject<GroupMessagePacket>(s),
+            PacketType.GetPlayerListRequest => o.ToObject<GetPlayerListRequestPacket>(s),
+            PacketType.GetPlayerListResponse => o.ToObject<GetPlayerListResponsePacket>(s),
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, o["type"]?.ToString())
         };
     }
 }

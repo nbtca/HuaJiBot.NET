@@ -25,6 +25,13 @@ public abstract class BasePacket
                     Converters = [new PacketConverter()]
                 }
         );
+
+    [JsonIgnore]
+    public static SenderInformation? DefaultInformation = new SenderInformation(
+        "QQGroup",
+        "HuaJiBot.NET.Plugin.MessageBridge",
+        "?"
+    );
 }
 
 public abstract class DataPacket<T>(PacketType type) : BasePacket

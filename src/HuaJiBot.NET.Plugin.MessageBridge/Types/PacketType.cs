@@ -12,4 +12,6 @@ public enum PacketType
     PlayerQuit,
     PlayerDeath,
     GroupMessage,
+    GetPlayerListRequest,
+    GetPlayerListResponse
 }

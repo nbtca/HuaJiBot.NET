@@ -1,5 +1,7 @@
 ﻿using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace HuaJiBot.NET.Plugin.Calendar;
 
@@ -7,7 +9,22 @@ public class PluginConfig : ConfigBase
 {
     public int MinRange = -128;
     public int MaxRange = 48;
-    public string[] ReminderGroupIds = [];
+    public ReminderFilterConfig[] ReminderGroups = [];
+
+    public class ReminderFilterConfig
+    {
+        public string GroupId { get; set; } = "";
+        public FilterMode Mode { get; set; } = FilterMode.WhiteList;
+        public string[] Keywords { get; set; } = [];
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public enum FilterMode
+        {
+            WhiteList,
+            BlackList,
+            Default
+        }
+    }
 }
 
 public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
@@ -27,13 +44,13 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     protected override void Initialize()
     {
         Service.Log("[日程] 启动成功！");
-        Sync.UpdateCalendarAsync();
+        _ = Sync.UpdateCalendarAsync();
         _reminderTask = new(
             Service,
             Config,
             () =>
             {
-                Sync.UpdateCalendarAsync();
+                _ = Sync.UpdateCalendarAsync();
                 return Calendar;
             }
         );
@@ -58,7 +75,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             var diff = (now - lastTime).TotalMilliseconds; //计算时间差
             if (diff < coldDown) //如果小于冷却时间
             {
-                e.Feedback($"我知道你很急，但是你先别急，{(coldDown - diff) / 1000:F0}秒后再逝");
+                e.Reply($"我知道你很急，但是你先别急，{(coldDown - diff) / 1000:F0}秒后再逝");
                 return;
             }
         }
@@ -69,14 +86,14 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             if (!int.TryParse(content, out week)) //尝试转换为数字表示周数
             {
-                e.Feedback("参数错误");
+                e.Reply("参数错误");
                 return;
             }
         }
 
         if (week < Config.MinRange || week > Config.MaxRange) //进行一个输入范围合法性检查
         {
-            e.Feedback($"超出范围 [{Config.MinRange},{Config.MaxRange}] ");
+            e.Reply($"超出范围 [{Config.MinRange},{Config.MaxRange}] ");
             return;
         }
         DateTimeOffset start,
@@ -92,7 +109,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             start = end.AddDays(7 * week); //week是负的，所以开始时间等于现在减去..
         }
         var output = Calendar.GetEvents(start, end).BuildTextOutput(now);
-        e.Feedback($"近{week}周的日程：\n{output}");
+        e.Reply($"近{week}周的日程：\n{output}");
         //Service.LogDebug(JsonConvert.SerializeObject(e));
     }
 

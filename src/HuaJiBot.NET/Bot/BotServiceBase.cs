@@ -106,7 +106,7 @@ public abstract class BotServiceBase
                 sb.AppendLine();
                 sb.AppendLine($"    {description}");
             }
-            e.Feedback(sb.ToString());
+            e.Reply(sb.ToString());
             return true;
         }
         return false;

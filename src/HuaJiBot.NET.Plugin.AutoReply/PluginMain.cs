@@ -13,7 +13,7 @@ public class PluginMain : PluginBase
     {
         if (e.TextMessage.Contains("你好"))
         {
-            e.Feedback("");
+            e.Reply("");
         }
     }
 

@@ -45,9 +45,22 @@ internal class ReminderTask : IDisposable
 
     private void ForEachMatchedGroup(CalendarEvent e, Action<Action<string>> callback)
     {
-        foreach (var groupId in Config.ReminderGroupIds)
+        foreach (var group in Config.ReminderGroups)
         {
-            callback(str => Service.SendGroupMessage(null, groupId, str));
+            bool shouldSend = false;
+            var list = group.Keywords;
+            if (group.Mode == PluginConfig.ReminderFilterConfig.FilterMode.Default)
+                shouldSend = true;
+            else if (group.Mode == PluginConfig.ReminderFilterConfig.FilterMode.WhiteList) // 检查白名单
+                shouldSend = list.Any(x =>
+                    e.Summary.Contains(x) || e.Description.Contains(x) || e.Location.Contains(x)
+                );
+            else if (group.Mode == PluginConfig.ReminderFilterConfig.FilterMode.BlackList) // 检查黑名单
+                shouldSend = !list.Any(x =>
+                    e.Summary.Contains(x) || e.Description.Contains(x) || e.Location.Contains(x)
+                );
+            if (shouldSend)
+                callback(str => Service.SendGroupMessage(null, group.GroupId, str));
         }
     }
 
@@ -110,11 +123,11 @@ internal class ReminderTask : IDisposable
                                 send =>
                                     send(
                                         $"""
-                                      日程提醒({ev.Start.AsSystemLocal})：
-                                      {ev.Summary} {ev.Location}
-                                      {ev.Description}
-                                      将于 {RemindBeforeStartMinutes} 分钟后开始
-                                      """
+                                        日程提醒({ev.Start.AsSystemLocal})：
+                                        {ev.Summary} {ev.Location}
+                                        {ev.Description}
+                                        将于 {RemindBeforeStartMinutes} 分钟后开始
+                                        """
                                     )
                             );
                         }
@@ -150,10 +163,10 @@ internal class ReminderTask : IDisposable
                                 send =>
                                     send(
                                         $"""
-                                      日程提醒({ev.End.AsSystemLocal})：
-                                      {ev.Summary} {ev.Location}
-                                      预计于 {RemindBeforeEndMinutes} 分钟后结束
-                                      """
+                                        日程提醒({ev.End.AsSystemLocal})：
+                                        {ev.Summary} {ev.Location}
+                                        预计于 {RemindBeforeEndMinutes} 分钟后结束
+                                        """
                                     )
                             );
                         }
