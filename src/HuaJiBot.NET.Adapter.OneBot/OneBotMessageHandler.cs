@@ -27,7 +27,6 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service)
         switch (postType)
         {
             case "meta_event":
-
                 {
                     var metaEventType = json.Value<string>("meta_event_type");
                     switch (metaEventType)
@@ -82,17 +81,15 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service)
                                     appName = appName + " v" + appVersion;
                                     appVersion = protocolVersion;
                                 }
-                                Events
-                                    .Events
-                                    .CallOnBotLogin(
-                                        new BotLoginEventArgs
-                                        {
-                                            Accounts = _qq is null ? [] : [_qq],
-                                            ClientName = appName,
-                                            ClientVersion = appVersion,
-                                            Service = service
-                                        }
-                                    );
+                                Events.Events.CallOnBotLogin(
+                                    new BotLoginEventArgs
+                                    {
+                                        Accounts = _qq is null ? [] : [_qq],
+                                        ClientName = appName,
+                                        ClientVersion = appVersion,
+                                        Service = service
+                                    }
+                                );
                             }
                             break;
                         //{"post_type":"meta_event","meta_event_type":"heartbeat","time":1659587845,"self_id":1,"status":{"app_enabled":true,"app_good":true,"app_initialized":true,"good":true,"online":true,"plugins_good":null,"stat":{"packet_received":75,"packet_sent":66,"packet_lost":0,"message_received":0,"message_sent":0,"last_message_time":0,"disconnect_times":0,"lost_times":0}},"interval":5000}
@@ -107,13 +104,11 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service)
                 }
                 break;
             case "message":
-
                 {
                     var messageType = json.Value<string>("message_type");
                     switch (messageType)
                     {
                         case "group":
-
                             {
                                 /*{
                                     "post_type": "message",
@@ -192,41 +187,37 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service)
                                 var sender = json["sender"]!;
                                 var card = sender.Value<string>("card");
                                 var msgId = json.Value<string>("message_id")!;
-                                if (QQ == userId)//自己发送的消息
+                                if (QQ == userId) //自己发送的消息
                                 {
                                     break;
                                 }
-                                Events
-                                    .Events
-                                    .CallOnGroupMessageReceived(
-                                        new GroupMessageEventArgs(
-                                            () => new OneBotCommandReader(service, message),
-                                            async () => await api.GetGroupNameAsync(groupId)
-                                        )
-                                        {
-                                            Service = service,
-                                            MessageId = msgId,
-                                            GroupId = groupId,
-                                            SenderId = userId,
-                                            SenderMemberCard = string.IsNullOrWhiteSpace(card)
-                                                ? sender.Value<string>("nickname") ?? ""
-                                                : card,
-                                            TextMessageLazy = new(() => rawMessage)
-                                        }
-                                    );
+                                Events.Events.CallOnGroupMessageReceived(
+                                    new GroupMessageEventArgs(
+                                        () => new OneBotCommandReader(service, message),
+                                        async () => await api.GetGroupNameAsync(groupId)
+                                    )
+                                    {
+                                        Service = service,
+                                        MessageId = msgId,
+                                        GroupId = groupId,
+                                        SenderId = userId,
+                                        SenderMemberCard = string.IsNullOrWhiteSpace(card)
+                                            ? sender.Value<string>("nickname") ?? ""
+                                            : card,
+                                        TextMessageLazy = new(() => rawMessage)
+                                    }
+                                );
                             }
                             break;
                     }
                 }
                 break;
             case "notice":
-
                 {
                     var noticeType = json.Value<string>("notice_type");
                     switch (noticeType)
                     {
                         case "group_increase":
-
                             {
                                 //{
                                 //  "post_type": "notice",
@@ -241,7 +232,6 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service)
                             }
                             break;
                         case "group_decrease":
-
                             {
                                 //{
                                 //  "post_type": "notice",
@@ -303,7 +293,6 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service)
                             }
                             break;
                         case "group_upload":
-
                             {
                                 //                                    {
                                 //  "post_type": "notice",
@@ -355,7 +344,7 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service)
         }
         catch (Exception e)
         {
-            service.LogError(nameof(ProcessMessageAsync) + " " + data, e.Message);
+            service.LogError(nameof(ProcessMessageAsync) + " " + data, e);
         }
 #endif
     }

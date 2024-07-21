@@ -17,7 +17,8 @@ FROM mcr.microsoft.com/dotnet/runtime:8.0-alpine3.18
 
 ENV TZ=Asia/Shanghai
 
-COPY --from=build-env /root/out/HuaJiBot.NET.CLI /app/bin/HuaJiBot.NET.CLI
+# COPY --from=build-env /root/out/HuaJiBot.NET.CLI /app/bin/HuaJiBot.NET.CLI
+COPY --from=build-env /root/out /app/bin
 
 RUN mkdir /app/data \
  && adduser -D user \
