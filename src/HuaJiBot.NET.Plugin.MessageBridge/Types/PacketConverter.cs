@@ -32,6 +32,7 @@ internal class PacketConverter : JsonConverter<BasePacket>
             PacketType.GroupMessage => o.ToObject<GroupMessagePacket>(s),
             PacketType.GetPlayerListRequest => o.ToObject<GetPlayerListRequestPacket>(s),
             PacketType.GetPlayerListResponse => o.ToObject<GetPlayerListResponsePacket>(s),
+            PacketType.ActiveClientsChange => o.ToObject<ActiveBroadcastPacket>(s),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, o["type"]?.ToString())
         };
     }

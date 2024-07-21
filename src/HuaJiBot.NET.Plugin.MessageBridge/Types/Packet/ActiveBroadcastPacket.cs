@@ -7,7 +7,7 @@ public sealed class ActiveBroadcastPacket()
 
 public class ActiveBroadcastPacketData
 {
-    public required string Clients;
+    public required ClientInfo[] Clients;
 
     public class ClientInfo
     {

@@ -71,10 +71,23 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             }
                         };
                         if (!string.IsNullOrEmpty(clientInfo.Token))
+                        {
                             cfg.Options.SetRequestHeader(
                                 "Authorization",
                                 "Bearer " + clientInfo.Token
                             );
+                            cfg.Options.SetRequestHeader("client-type", "IM");
+                            cfg.Options.SetRequestHeader("client-subtype", "QQ");
+                            cfg.Options.SetRequestHeader(
+                                "client-name",
+                                BasePacket.DefaultInformation?.Name
+                            );
+                            cfg.Options.SetRequestHeader(
+                                "client-version",
+                                BasePacket.DefaultInformation?.Version
+                            );
+                            cfg.Options.SetRequestHeader("address", clientInfo.Address);
+                        }
                         return cfg;
                     }
                 )
@@ -167,35 +180,42 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     private void ProcessMessageFromClient(string messageRaw, PluginConfig.ClientInfo clientInfo)
     {
-        var message = BasePacket.FromJson(messageRaw);
-        var senderName = message?.Source?.DisplayName ?? "Unknown";
-        switch (clientInfo.Type)
+        try
         {
-            case PluginConfig.ClientType.Minecraft:
-                switch (message)
-                {
-                    case PlayerChatPacket { Data: { Message: var msg, PlayerName: var name } }:
-                        SendGroupMessage(clientInfo, $"[{senderName}] <{name}> {msg}");
-                        break;
-                    case PlayerJoinPacket { Data.PlayerName: var name }:
-                        SendGroupMessage(clientInfo, $"[{senderName}] {name} 加入了服务器");
-                        break;
-                    case PlayerQuitPacket { Data.PlayerName: var name }:
-                        SendGroupMessage(clientInfo, $"[{senderName}] {name} 离开了服务器");
-                        break;
-                    case PlayerDeathPacket { Data.DeathMessage: var msg }:
-                        SendGroupMessage(clientInfo, $"[{senderName}] {msg}");
-                        break;
-                    case GetPlayerListRequestPacket: //do not reply
-                        break;
-                    case GetPlayerListResponsePacket playerListResponse:
-                        ProcessPlayerListResponse(playerListResponse);
-                        break;
-                    case ActiveBroadcastPacket activeBroadcast:
-                        ProcessActiveBroadcast(activeBroadcast);
-                        break;
-                }
-                break;
+            var message = BasePacket.FromJson(messageRaw);
+            var senderName = message?.Source?.DisplayName ?? "Unknown";
+            switch (clientInfo.Type)
+            {
+                case PluginConfig.ClientType.Minecraft:
+                    switch (message)
+                    {
+                        case PlayerChatPacket { Data: { Message: var msg, PlayerName: var name } }:
+                            SendGroupMessage(clientInfo, $"[{senderName}] <{name}> {msg}");
+                            break;
+                        case PlayerJoinPacket { Data.PlayerName: var name }:
+                            SendGroupMessage(clientInfo, $"[{senderName}] {name} 加入了服务器");
+                            break;
+                        case PlayerQuitPacket { Data.PlayerName: var name }:
+                            SendGroupMessage(clientInfo, $"[{senderName}] {name} 离开了服务器");
+                            break;
+                        case PlayerDeathPacket { Data.DeathMessage: var msg }:
+                            SendGroupMessage(clientInfo, $"[{senderName}] {msg}");
+                            break;
+                        case GetPlayerListRequestPacket: //do not reply
+                            break;
+                        case GetPlayerListResponsePacket playerListResponse:
+                            ProcessPlayerListResponse(playerListResponse);
+                            break;
+                        case ActiveBroadcastPacket activeBroadcast:
+                            ProcessActiveBroadcast(activeBroadcast);
+                            break;
+                    }
+                    break;
+            }
+        }
+        catch (Exception e)
+        {
+            Error("处理消息时出现异常：" + messageRaw, e);
         }
     }
 

@@ -88,6 +88,13 @@ partial class PluginMain
 
     private void ProcessActiveBroadcast(ActiveBroadcastPacket activeBroadcast)
     {
-        Info(activeBroadcast.ToJson());
+        foreach (var client in activeBroadcast.Data.Clients)
+        {
+            Info("client : address : " + client.Address);
+            foreach (var (key, value) in client.Headers)
+            {
+                Info("client : header : " + key + " : " + string.Join(";", value));
+            }
+        }
     }
 }
