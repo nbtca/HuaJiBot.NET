@@ -45,8 +45,7 @@ internal class ForwardWebSocketClient
             IsTextMessageConversionEnabled = true,
         };
         _client
-            .MessageReceived
-            .Where(m => m.MessageType == WebSocketMessageType.Text)
+            .MessageReceived.Where(m => m.MessageType == WebSocketMessageType.Text)
             .Select(m => m.Text)
             .Subscribe(msg =>
             {
@@ -72,20 +71,17 @@ internal class ForwardWebSocketClient
                     service.LogError("[OneBotWsClient] 处理消息时出现异常：", e);
                 }
             });
-        _client
-            .DisconnectionHappened
-            .Subscribe(
-                info =>
-                    service.Log(
-                        "[OneBotWsClient] Disconnection Happened. Type:"
-                            + info.Type
-                            + " Description:"
-                            + info.CloseStatusDescription
-                    )
-            );
-        _client
-            .ReconnectionHappened
-            .Subscribe(info => service.Log("[OneBotWsClient] Reconnection Happened " + info.Type));
+        _client.DisconnectionHappened.Subscribe(info =>
+            service.Log(
+                "[OneBotWsClient] Disconnection Happened. Type:"
+                    + info.Type
+                    + " Description:"
+                    + info.CloseStatusDescription
+            )
+        );
+        _client.ReconnectionHappened.Subscribe(info =>
+            service.Log("[OneBotWsClient] Reconnection Happened " + info.Type)
+        );
 
         //var timer = new System.Timers.Timer(500);
         //timer.Elapsed += (sender, args) =>

@@ -85,4 +85,9 @@ partial class PluginMain
             item.callback?.Invoke(pkt);
         }
     }
+
+    private void ProcessActiveBroadcast(ActiveBroadcastPacket activeBroadcast)
+    {
+        Info(activeBroadcast.ToJson());
+    }
 }

@@ -13,5 +13,6 @@ public enum PacketType
     PlayerDeath,
     GroupMessage,
     GetPlayerListRequest,
-    GetPlayerListResponse
+    GetPlayerListResponse,
+    ActiveBroadcast
 }
