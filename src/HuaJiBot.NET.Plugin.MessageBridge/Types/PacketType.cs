@@ -14,5 +14,5 @@ public enum PacketType
     GroupMessage,
     GetPlayerListRequest,
     GetPlayerListResponse,
-    ActiveBroadcast
+    ActiveClientsChange
 }

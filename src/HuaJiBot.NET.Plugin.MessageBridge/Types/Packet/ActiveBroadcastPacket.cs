@@ -3,7 +3,7 @@
 namespace HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
 
 public sealed class ActiveBroadcastPacket()
-    : DataPacket<ActiveBroadcastPacketData>(PacketType.ActiveBroadcast);
+    : DataPacket<ActiveBroadcastPacketData>(PacketType.ActiveClientsChange);
 
 public class ActiveBroadcastPacketData
 {
