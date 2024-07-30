@@ -16,7 +16,13 @@ namespace HuaJiBot.NET.Adapter.Satori.Protocol;
 internal class SatoriEventClient
 {
     private readonly JsonSerializerSettings _jsonSerializerSettings =
-        new() { ContractResolver = new DefaultContractResolver { NamingStrategy = new SnakeCaseNamingStrategy() } };
+        new()
+        {
+            ContractResolver = new DefaultContractResolver
+            {
+                NamingStrategy = new SnakeCaseNamingStrategy()
+            }
+        };
     private readonly WebsocketClient _client;
     private readonly Timer _pingTimer;
     private readonly SatoriAdapter _service;
@@ -33,8 +39,7 @@ internal class SatoriEventClient
         };
         _service = service;
         _client
-            .MessageReceived
-            .Where(m => m.MessageType == WebSocketMessageType.Text)
+            .MessageReceived.Where(m => m.MessageType == WebSocketMessageType.Text)
             .Select(m => m.Text)
             .Subscribe(msg =>
             {
@@ -59,31 +64,27 @@ internal class SatoriEventClient
                     service.LogError("[SatoriEventClient] 处理消息时出现异常：", e);
                 }
             });
-        _client
-            .DisconnectionHappened
-            .Subscribe(info =>
+        _client.DisconnectionHappened.Subscribe(info =>
+        {
+            service.Log(
+                "[SatoriEventClient] Disconnection Happened. Type:"
+                    + info.Type
+                    + " Description:"
+                    + info.CloseStatusDescription
+            );
+            _pingTimer?.Stop();
+        });
+        _client.ReconnectionHappened.Subscribe(info =>
+        {
+            service.Log("[SatoriEventClient] Reconnection Happened " + info.Type);
+            var identify = new Signal<IdentifySignalBody> //鉴权
             {
-                service.Log(
-                    "[SatoriEventClient] Disconnection Happened. Type:"
-                        + info.Type
-                        + " Description:"
-                        + info.CloseStatusDescription
-                );
-                _pingTimer?.Stop();
-            });
-        _client
-            .ReconnectionHappened
-            .Subscribe(info =>
-            {
-                service.Log("[SatoriEventClient] Reconnection Happened " + info.Type);
-                var identify = new Signal<IdentifySignalBody> //鉴权
-                {
-                    Op = SignalOperation.Identify,
-                    Body = new IdentifySignalBody { Token = token }
-                };
-                SendSignal(identify);
-                _pingTimer?.Start();
-            });
+                Op = SignalOperation.Identify,
+                Body = new IdentifySignalBody { Token = token }
+            };
+            SendSignal(identify);
+            _pingTimer?.Start();
+        });
 
         _pingTimer = new Timer
         {
@@ -119,7 +120,8 @@ internal class SatoriEventClient
                     )
                     {
                         //自身消息
-                        if (self == senderId) break;
+                        if (self == senderId)
+                            break;
                         var name = memberNickName ?? memberName ?? nickName;
                         var messages = ElementSerializer.Deserialize(msg.Content);
                         IEnumerable<CommonCommandReader.ReaderEntity> Parse()
@@ -140,45 +142,43 @@ internal class SatoriEventClient
                                     default:
                                         _service.LogDebug($"未处理的消息元素：{element}");
                                         break;
-                                        //case SharpElement: break;
-                                        //case LinkElement: break;
-                                        //case ImageElement: break;
-                                        //case AudioElement: break;
-                                        //case VideoElement: break;
-                                        //case FileElement: break;
-                                        //case BoldElement: break;
-                                        //case ItalicElement: break;
-                                        //case UnderlineElement: break;
-                                        //case DeleteElement: break;
-                                        //case SpoilerElement: break;
-                                        //case CodeElement: break;
-                                        //case SuperscriptElement: break;
-                                        //case SubscriptElement: break;
-                                        //case BreakElement: break;
-                                        //case ParagraphElement: break;
-                                        //case MessageElement: break;
-                                        //case QuoteElement: break;
-                                        //case AuthorElement: break;
+                                    //case SharpElement: break;
+                                    //case LinkElement: break;
+                                    //case ImageElement: break;
+                                    //case AudioElement: break;
+                                    //case VideoElement: break;
+                                    //case FileElement: break;
+                                    //case BoldElement: break;
+                                    //case ItalicElement: break;
+                                    //case UnderlineElement: break;
+                                    //case DeleteElement: break;
+                                    //case SpoilerElement: break;
+                                    //case CodeElement: break;
+                                    //case SuperscriptElement: break;
+                                    //case SubscriptElement: break;
+                                    //case BreakElement: break;
+                                    //case ParagraphElement: break;
+                                    //case MessageElement: break;
+                                    //case QuoteElement: break;
+                                    //case AuthorElement: break;
                                 }
                             }
                         }
-                        NET.Events
-                            .Events
-                            .CallOnGroupMessageReceived(
-                                new GroupMessageEventArgs(
-                                    () => new DefaultCommandReader(Parse()),
-                                    () => ValueTask.FromResult(groupName ?? string.Empty)
-                                )
-                                {
-                                    RobotId = self,
-                                    MessageId = msg.Id,
-                                    GroupId = groupId,
-                                    SenderId = senderId,
-                                    SenderMemberCard = name ?? string.Empty,
-                                    TextMessageLazy = new Lazy<string>(() => msg.Content),
-                                    Service = _service
-                                }
-                            );
+                        NET.Events.Events.CallOnGroupMessageReceived(
+                            new GroupMessageEventArgs(
+                                () => new DefaultCommandReader(Parse()),
+                                () => ValueTask.FromResult(groupName ?? string.Empty)
+                            )
+                            {
+                                RobotId = self,
+                                MessageId = msg.Id,
+                                GroupId = groupId,
+                                SenderId = senderId,
+                                SenderMemberCard = name ?? string.Empty,
+                                TextMessageLazy = new Lazy<string>(() => msg.Content),
+                                Service = _service
+                            }
+                        );
                     }
                     break;
                 case SignalOperation.Ready:
@@ -189,17 +189,15 @@ internal class SatoriEventClient
                     _service.Accounts = (from x in readyBody.Logins select x.User!.Id).ToArray();
                     var account = readyBody.Logins.First();
                     var appName = account.Platform ?? "unknown";
-                    NET.Events
-                        .Events
-                        .CallOnBotLogin(
-                            new BotLoginEventArgs
-                            {
-                                Accounts = _service.AllRobots,
-                                ClientName = appName,
-                                ClientVersion = null,
-                                Service = _service
-                            }
-                        );
+                    NET.Events.Events.CallOnBotLogin(
+                        new BotLoginEventArgs
+                        {
+                            Accounts = _service.AllRobots,
+                            ClientName = appName,
+                            ClientVersion = null,
+                            Service = _service
+                        }
+                    );
                     break;
                 case SignalOperation.Pong:
                     _service.LogDebug("WebSocket::Pong");

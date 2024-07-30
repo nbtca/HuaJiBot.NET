@@ -53,10 +53,9 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             switch (e.Body)
             {
                 case PushEventBody body:
-
                     {
                         var repositoryFullName = body.Repository.FullName;
-                        Service.Log("[GitHub Bridge] PushEvent " + repositoryFullName);
+                        Info("PushEvent " + repositoryFullName);
                         {
                             if (body.Sender.Login.EndsWith("[bot]"))
                                 return; //github-actions[bot]\
@@ -136,9 +135,9 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             var repoInfo = body.Repository.FullName.Replace("/", " / ");
                             if (branch != mainBranch) //如果不是主分支，加上分支名
                                 repoInfo += " : " + branch;
-                            var avatar = await Utils
-                                .AvatarHelper
-                                .GetAsync($"{body.Sender.AvatarUrl}?s=96");
+                            var avatar = await Utils.AvatarHelper.GetAsync(
+                                $"{body.Sender.AvatarUrl}?s=96"
+                            );
                             var editInfo = new List<TextRun>();
                             var addCount = 0;
                             var removeCount = 0;
@@ -236,7 +235,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             }
                             catch (Exception ex)
                             {
-                                Service.LogError("[GitHub Bridge] 生成短链接失败：", ex);
+                                Error("生成短链接失败：", ex);
                             }
                             var text = new TextMessage(compareUrl);
                             var m = new ImageMessage(tempImage);
@@ -249,10 +248,10 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     }
                     break;
                 case WorkflowRunEventBody body:
-                    Service.Log("[GitHub Bridge] WorkflowRun");
+                    Info("WorkflowRun");
                     break;
                 case UnknownEventBody body:
-                    Service.Log("[GitHub Bridge] 收到未实现的事件！" + e.Headers.XGithubEvent[0]);
+                    Info("收到未实现的事件！" + e.Headers.XGithubEvent[0]);
                     break;
             }
         }
@@ -281,56 +280,48 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 MessageEncoding = Encoding.UTF8,
                 IsTextMessageConversionEnabled = true,
             };
-        client
-            .MessageReceived
-            .Subscribe(msg =>
+        client.MessageReceived.Subscribe(msg =>
+        {
+            if (msg.MessageType == WebSocketMessageType.Text)
             {
-                if (msg.MessageType == WebSocketMessageType.Text)
+                try
                 {
-                    try
-                    {
-                        ProcessMessageAsync(
-                                msg.Text ?? throw new NullReferenceException("msg.Text")
-                            )
-                            .ContinueWith(
-                                task =>
-                                {
-                                    var ex = task.Exception;
-                                    if (ex is not null)
-                                        Service.LogError(
-                                            "[GitHub Bridge] ProcessMessage 处理消息时出现异常：",
-                                            ex
-                                        );
-                                },
-                                TaskContinuationOptions.OnlyOnFaulted
-                            );
-                    }
-                    catch (Exception e)
-                    {
-                        Service.LogError("[GitHub Bridge] 处理消息时出现异常：", e);
-                    }
+                    ProcessMessageAsync(msg.Text ?? throw new NullReferenceException("msg.Text"))
+                        .ContinueWith(
+                            task =>
+                            {
+                                var ex = task.Exception;
+                                if (ex is not null)
+                                    Error("ProcessMessage 处理消息时出现异常：", ex);
+                                if (msg.Text is { } raw)
+                                    Error("ProcessMessage 处理消息时出现异常Raw：", raw);
+                            },
+                            TaskContinuationOptions.OnlyOnFaulted
+                        );
                 }
-                else
+                catch (Exception e)
                 {
-                    Service.Log("[GitHub Bridge] 收到非文本消息！");
+                    Error("处理消息时出现异常：", e);
+                    if (msg.Text is { } raw)
+                        Error("处理消息时出现异常Raw：", raw);
                 }
-            });
-        client
-            .DisconnectionHappened
-            .Subscribe(
-                info =>
-                    Service.Log(
-                        "[GitHub Bridge] Disconnection Happened. Type:"
-                            + info.Type
-                            + " Description:"
-                            + info.CloseStatusDescription
-                    )
-            );
-        client
-            .ReconnectionHappened
-            .Subscribe(info => Service.Log("[GitHub Bridge] Reconnection Happened " + info.Type));
+            }
+            else
+            {
+                Info("收到非文本消息！");
+            }
+        });
+        client.DisconnectionHappened.Subscribe(info =>
+            Info(
+                "Disconnection Happened. Type:"
+                    + info.Type
+                    + " Description:"
+                    + info.CloseStatusDescription
+            )
+        );
+        client.ReconnectionHappened.Subscribe(info => Info("Reconnection Happened " + info.Type));
         await client.Start();
-        Service.Log("[GitHub Bridge] 启动成功！");
+        Info("启动成功！");
     }
 
     protected override void Unload() { }
