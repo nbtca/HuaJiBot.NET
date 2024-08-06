@@ -201,6 +201,21 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         case PlayerDeathPacket { Data.DeathMessage: var msg }:
                             SendGroupMessage(clientInfo, $"[{senderName}] {msg}");
                             break;
+                        case PlayerAchievementPacket
+                        {
+                            Data:
+                            {
+                                PlayerName: var name,
+                                Name: var achievementName,
+                                Criteria: var criteria,
+                                Description: var description
+                            }
+                        }:
+                            SendGroupMessage(
+                                clientInfo,
+                                $"[{senderName}] {name} 完成了进度 {achievementName} ({criteria}){Environment.NewLine}{description}"
+                            );
+                            break;
                         case GetPlayerListRequestPacket: //do not reply
                             break;
                         case GetPlayerListResponsePacket playerListResponse:

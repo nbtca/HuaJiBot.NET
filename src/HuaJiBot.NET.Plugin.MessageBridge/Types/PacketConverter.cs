@@ -29,6 +29,7 @@ internal class PacketConverter : JsonConverter<BasePacket>
             PacketType.PlayerJoin => o.ToObject<PlayerJoinPacket>(s),
             PacketType.PlayerQuit => o.ToObject<PlayerQuitPacket>(s),
             PacketType.PlayerDeath => o.ToObject<PlayerDeathPacket>(s),
+            PacketType.PlayerAchievement => o.ToObject<PlayerAchievementPacket>(s),
             PacketType.GroupMessage => o.ToObject<GroupMessagePacket>(s),
             PacketType.GetPlayerListRequest => o.ToObject<GetPlayerListRequestPacket>(s),
             PacketType.GetPlayerListResponse => o.ToObject<GetPlayerListResponsePacket>(s),
