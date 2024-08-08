@@ -59,6 +59,35 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     private readonly Dictionary<string, DateTimeOffset> _cache = new();
 
+    [Command("最近日程", "查看最近一次日程详细信息")]
+    // ReSharper disable once UnusedMember.Global
+    public async Task CalendarCommandAsync(GroupMessageEventArgs e)
+    {
+        await Sync.UpdateCalendarAsync();
+        const int coldDown = 10_000;
+        var now = Utils.NetworkTime.Now;
+        //Service.LogDebug(now.ToString("F"));
+        if (_cache.TryGetValue(e.SenderId, out var lastTime))
+        {
+            var diff = (now - lastTime).TotalMilliseconds;
+            if (diff < coldDown)
+            {
+                e.Reply($"我知道你很急，但是你先别急，{(coldDown - diff) / 1000:F0}秒后再逝");
+                return;
+            }
+        }
+        _cache[e.SenderId] = now;
+        _ = Task.Delay(coldDown).ContinueWith(_ => _cache.Remove(e.SenderId));
+        var all = Calendar.GetEvents(now, now.AddDays(14)).ToArray();
+        if (all.Length == 0)
+        {
+            e.Reply("没有日程");
+            return;
+        }
+        var output = all.First().BuildTextOutput(now);
+        e.Reply(output);
+    }
+
     [Command("日程", "查看近期日程")]
     // ReSharper disable once UnusedMember.Global
     public async Task CalendarCommandAsync(
@@ -69,7 +98,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         await Sync.UpdateCalendarAsync();
         const int coldDown = 10_000; //冷却时间
         var now = Utils.NetworkTime.Now; //当前时间
-        Service.LogDebug(now.ToString("F"));
+        //Service.LogDebug(now.ToString("F"));
         if (_cache.TryGetValue(e.SenderId, out var lastTime)) //如果缓存中有上次发送的时间
         {
             var diff = (now - lastTime).TotalMilliseconds; //计算时间差
