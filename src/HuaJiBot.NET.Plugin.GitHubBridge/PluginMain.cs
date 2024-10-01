@@ -54,6 +54,11 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             {
                 case PushEventBody body:
                     {
+                        //排除如workflow的提交
+                        if (body.Commits.All(x => x.Modified.All(y => y.StartsWith("."))))
+                        {
+                            break;
+                        }
                         var repositoryFullName = body.Repository.FullName;
                         Info("PushEvent " + repositoryFullName);
                         {
