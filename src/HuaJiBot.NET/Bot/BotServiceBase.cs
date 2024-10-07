@@ -64,7 +64,7 @@ public abstract class BotServiceBase
     private bool ProcessHelp(GroupMessageEventArgs e)
     {
         var reader = e.CommandReader;
-        if (reader.Match(["help", "帮助"], x => x, out _))
+        if (reader.Match(["help", "帮助"], x => x, out _, true))
         {
             var sb = new StringBuilder();
             sb.AppendLine("可用命令：");
@@ -92,7 +92,16 @@ public abstract class BotServiceBase
                             {
                                 CommandArgumentType.String => Quote("string"),
                                 CommandArgumentType.RegexString => Quote("regex"),
-                                CommandArgumentType.Enum => Quote("enum"),
+                                CommandArgumentType.Enum
+                                    => Quote(
+                                        string.Join(
+                                            "|",
+                                            from x in (
+                                                (CommandArgumentEnumAttributeBase)arg.Attribute
+                                            ).EnumItems
+                                            select x.Key
+                                        )
+                                    ),
                                 CommandArgumentType.Unknown => "unknown",
                                 _
                                     => throw new ArgumentOutOfRangeException(
@@ -141,7 +150,6 @@ public abstract class BotServiceBase
                             value = e;
                             break;
                         case CommandArgumentType.String:
-
                             {
                                 if (!reader.Input(out var str))
                                     continue;
@@ -149,7 +157,6 @@ public abstract class BotServiceBase
                             }
                             break;
                         case CommandArgumentType.RegexString:
-
                             {
                                 var regexAttr = (CommandArgumentStringMatchAttribute)arg.Attribute;
                                 if (!reader.Input(out var str))
@@ -160,13 +167,12 @@ public abstract class BotServiceBase
                             }
                             break;
                         case CommandArgumentType.Enum:
-
                             {
                                 var enumAttr = (CommandArgumentEnumAttributeBase)arg.Attribute;
                                 if (
                                     !reader.Match(
                                         enumAttr.EnumItems,
-                                        x => [x.Key, x.Alias],
+                                        x => [x.Key, x.Alias], //枚举的key或者别名，匹配到同一个元素
                                         out var item
                                     )
                                 )

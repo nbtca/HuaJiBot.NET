@@ -48,7 +48,7 @@ public class CommandArgumentEnumAttribute<T>(string description)
 
     public override bool TryParse(string input, [NotNullWhen(true)] out object? value)
     {
-        if (Enum.TryParse<T>(input, out var result))
+        if (Enum.TryParse<T>(input, true, out var result))
         {
             value = result;
             return true;
