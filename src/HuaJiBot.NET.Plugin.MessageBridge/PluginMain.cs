@@ -1,12 +1,15 @@
 ﻿using System.Net.WebSockets;
+using System.Reflection;
 using System.Text;
 using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Plugin.MessageBridge.Types;
 using HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Websocket.Client;
+using ClientEventType = HuaJiBot.NET.Plugin.MessageBridge.PluginConfig.GroupConfig.ClientEventType;
 
 namespace HuaJiBot.NET.Plugin.MessageBridge;
 
@@ -36,6 +39,23 @@ public class PluginConfig : ConfigBase
          *  是否将来自客户端的消息转发给群
          */
         public bool ForwardFromClient { get; set; } = true;
+        public HashSet<ClientEventType> ForwardFromClientDisabledEvent { get; set; } = new();
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public enum ClientEventType
+        {
+            [CommandEnumItem("加入", "玩家进退服务器")]
+            JoinLeft,
+
+            [CommandEnumItem("聊天", "玩家在聊天框发送消息")]
+            Chat,
+
+            [CommandEnumItem("死亡", "玩家死亡")]
+            PlayerDeath,
+
+            [CommandEnumItem("进度", "玩家获得成就")]
+            PlayerAchievement
+        }
     }
 
     [JsonConverter(typeof(StringEnumConverter))]
@@ -49,7 +69,6 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
     //配置
     public PluginConfig Config { get; } = new();
-
     private readonly Dictionary<PluginConfig.ClientInfo, WebsocketClient> _clients = new();
 
     //初始化
@@ -129,7 +148,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
 
         Service.Events.OnGroupMessageReceived += (s, e) => _ = ProcessMessageFromGroupAsync(e);
-        Service.Events.OnBotLogin += (s, e) =>
+        Service.Events.OnBotLogin += (_, e) =>
         {
             BasePacket.DefaultInformation = new SenderInformation(
                 "QQGroup",
@@ -137,7 +156,6 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 e.ClientVersion ?? "?"
             );
         };
-
         Info("启动成功！");
     }
 
@@ -190,16 +208,32 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     switch (message)
                     {
                         case PlayerChatPacket { Data: { Message: var msg, PlayerName: var name } }:
-                            SendGroupMessage(clientInfo, $"[{senderName}] <{name}> {msg}");
+                            SendGroupMessage(
+                                clientInfo,
+                                ClientEventType.Chat,
+                                $"[{senderName}] <{name}> {msg}"
+                            );
                             break;
                         case PlayerJoinPacket { Data.PlayerName: var name }:
-                            SendGroupMessage(clientInfo, $"[{senderName}] {name} 加入了服务器");
+                            SendGroupMessage(
+                                clientInfo,
+                                ClientEventType.JoinLeft,
+                                $"[{senderName}] {name} 加入了服务器"
+                            );
                             break;
                         case PlayerQuitPacket { Data.PlayerName: var name }:
-                            SendGroupMessage(clientInfo, $"[{senderName}] {name} 离开了服务器");
+                            SendGroupMessage(
+                                clientInfo,
+                                ClientEventType.JoinLeft,
+                                $"[{senderName}] {name} 离开了服务器"
+                            );
                             break;
                         case PlayerDeathPacket { Data.DeathMessage: var msg }:
-                            SendGroupMessage(clientInfo, $"[{senderName}] {msg}");
+                            SendGroupMessage(
+                                clientInfo,
+                                ClientEventType.PlayerDeath,
+                                $"[{senderName}] {msg}"
+                            );
                             break;
                         case PlayerAchievementPacket
                         {
@@ -213,7 +247,8 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         }:
                             SendGroupMessage(
                                 clientInfo,
-                                $"[{senderName}] {name} 完成了进度 {achievementName} ({criteria}){Environment.NewLine}{description}"
+                                ClientEventType.PlayerAchievement,
+                                $"[{senderName}] {name} 完成了进度 {achievementName} ({string.Join(",", criteria)}){Environment.NewLine}{description}"
                             );
                             break;
                         case GetPlayerListRequestPacket: //do not reply
@@ -234,16 +269,93 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    private void SendGroupMessage(PluginConfig.ClientInfo clientInfo, string message)
+    private void SendGroupMessage(
+        PluginConfig.ClientInfo clientInfo,
+        ClientEventType eventType,
+        string message
+    )
     {
         foreach (
             var config in from config in clientInfo.Groups
             where config is { Enabled: true, ForwardFromClient: true }
+            where !config.ForwardFromClientDisabledEvent.Contains(eventType)
             select config
         )
         {
             Service.SendGroupMessage(null, config.GroupId, new TextMessage(message));
         }
+    }
+
+    private bool stringToToggle(string input, out bool result)
+    {
+        switch (input.ToLower())
+        {
+            case "开"
+            or "on"
+            or "true":
+                result = true;
+                return true;
+            case "关"
+            or "off"
+            or "false":
+                result = false;
+                return true;
+            default:
+                result = false;
+                return false;
+        }
+    }
+
+    public string EnumToAttributeName<T>(T value)
+        where T : Enum
+    {
+        Type enumType = typeof(T);
+        foreach (var field in enumType.GetFields(BindingFlags.Public | BindingFlags.Static))
+        {
+            if (field.GetValue(null)?.Equals(value) ?? false)
+            {
+                return field.GetCustomAttribute<CommandEnumItemAttribute>()?.Alias ?? field.Name;
+            }
+        }
+        return value.ToString();
+    }
+
+    [Command("事件", "开关事件")]
+    // ReSharper disable once UnusedMember.Global
+    public void EventControlCommand(
+        [CommandArgumentEnum<ClientEventType>("类型")] ClientEventType? typeOptional,
+        [CommandArgumentString("状态")] string? status,
+        GroupMessageEventArgs e
+    )
+    {
+        if (typeOptional is not { } type)
+        {
+            e.Reply("类型 可选：" + string.Join(", ", Enum.GetNames(typeof(ClientEventType))));
+            return;
+        }
+        if (!stringToToggle(status ?? "", out var result))
+        {
+            e.Reply("状态 可选：true、false");
+            return;
+        }
+        var name = EnumToAttributeName(type);
+        foreach (var clientInfo in Config.Clients)
+        {
+            if (clientInfo.Groups.Any(x => x.GroupId == e.GroupId))
+            {
+                var group = clientInfo.Groups.First(x => x.GroupId == e.GroupId);
+                if (group is { Enabled: true })
+                {
+                    if (result)
+                        group.ForwardFromClientDisabledEvent.Remove(type);
+                    else
+                        group.ForwardFromClientDisabledEvent.Add(type);
+                    e.Reply($"已 {(result ? "开启" : "关闭")} 事件 {name} 的转发");
+                    return;
+                }
+            }
+        }
+        e.Reply($"未找到群 {e.GroupId} 的配置");
     }
 
     protected override void Unload() { }
