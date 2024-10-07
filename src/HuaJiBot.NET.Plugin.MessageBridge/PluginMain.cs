@@ -291,11 +291,13 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         switch (input.ToLower())
         {
             case "开"
+            or "开启"
             or "on"
             or "true":
                 result = true;
                 return true;
             case "关"
+            or "关闭"
             or "off"
             or "false":
                 result = false;
@@ -330,29 +332,58 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     {
         if (typeOptional is not { } type)
         {
-            e.Reply("类型 可选：" + string.Join(", ", Enum.GetNames(typeof(ClientEventType))));
-            return;
-        }
-        if (!stringToToggle(status ?? "", out var result))
-        {
-            e.Reply("状态 可选：true、false");
+            var allStatus = new StringBuilder();
+            foreach (var clientInfo in Config.Clients)
+            {
+                if (
+                    clientInfo.Groups.FirstOrDefault(x => x.GroupId == e.GroupId) is
+                    { Enabled: true } group
+                )
+                {
+                    allStatus.AppendLine($"[{group.GroupId}]");
+                    foreach (var eventType in Enum.GetValues<ClientEventType>())
+                    {
+                        var enumName = EnumToAttributeName(eventType);
+                        var disabled = group.ForwardFromClientDisabledEvent.Contains(eventType);
+                        allStatus.AppendLine($"    {enumName}：{(disabled ? "关闭" : "开启")}");
+                    }
+                }
+            }
+            e.Reply(
+                "类型 可选："
+                    + string.Join(
+                        ", ",
+                        from x in Enum.GetValues<ClientEventType>()
+                        select EnumToAttributeName(x)
+                    )
+                    + $"\n当前状态：\n{allStatus}"
+            );
             return;
         }
         var name = EnumToAttributeName(type);
-        foreach (var clientInfo in Config.Clients)
+        if (!stringToToggle(status ?? "", out var result))
         {
-            if (clientInfo.Groups.Any(x => x.GroupId == e.GroupId))
+            var currentStatusDisabled =
+                Config
+                    .Clients.SelectMany(x => x.Groups)
+                    .FirstOrDefault(x => x is { Enabled: true })
+                    ?.ForwardFromClientDisabledEvent.Contains(type) ?? true;
+            e.Reply("状态 可选：true、false\n" + $"当前{name}状态：{!currentStatusDisabled}");
+            return;
+        }
+        foreach (var clientInfo in Config.Clients)
+        { //TODO：多client
+            if (
+                clientInfo.Groups.FirstOrDefault(x => x.GroupId == e.GroupId) is
+                { Enabled: true } group
+            )
             {
-                var group = clientInfo.Groups.First(x => x.GroupId == e.GroupId);
-                if (group is { Enabled: true })
-                {
-                    if (result)
-                        group.ForwardFromClientDisabledEvent.Remove(type);
-                    else
-                        group.ForwardFromClientDisabledEvent.Add(type);
-                    e.Reply($"已 {(result ? "开启" : "关闭")} 事件 {name} 的转发");
-                    return;
-                }
+                if (result)
+                    group.ForwardFromClientDisabledEvent.Remove(type);
+                else
+                    group.ForwardFromClientDisabledEvent.Add(type);
+                e.Reply($"已 {(result ? "开启" : "关闭")} 事件 {name} 的转发");
+                return;
             }
         }
         e.Reply($"未找到群 {e.GroupId} 的配置");
