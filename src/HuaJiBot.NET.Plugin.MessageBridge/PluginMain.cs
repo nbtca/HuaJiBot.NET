@@ -382,6 +382,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     group.ForwardFromClientDisabledEvent.Remove(type);
                 else
                     group.ForwardFromClientDisabledEvent.Add(type);
+                Service.Config.Save();
                 e.Reply($"已 {(result ? "开启" : "关闭")} 事件 {name} 的转发");
                 return;
             }
