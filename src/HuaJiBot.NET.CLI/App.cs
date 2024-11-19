@@ -102,7 +102,7 @@ while (true)
                 api.Log("配置文件保存成功：" + result);
                 break;
             case ["send", var targetGroup, var message]:
-                api.SendGroupMessage(accountId, targetGroup, message);
+                api.SendGroupMessageAsync(accountId, targetGroup, message);
                 break;
             default:
                 Console.WriteLine($"未知的命令 {line} .");

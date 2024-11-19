@@ -54,14 +54,14 @@ public class PluginConfig : ConfigBase
             PlayerDeath,
 
             [CommandEnumItem("进度", "玩家获得成就")]
-            PlayerAchievement
+            PlayerAchievement,
         }
     }
 
     [JsonConverter(typeof(StringEnumConverter))]
     public enum ClientType
     {
-        Minecraft
+        Minecraft,
     }
 }
 
@@ -86,8 +86,8 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             Options =
                             {
                                 KeepAliveInterval = TimeSpan.FromSeconds(5),
-                                CollectHttpResponseDetails = true
-                            }
+                                CollectHttpResponseDetails = true,
+                            },
                         };
                         if (!string.IsNullOrEmpty(clientInfo.Token))
                         {
@@ -114,7 +114,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     IsReconnectionEnabled = true,
                     ReconnectTimeout = null,
                     MessageEncoding = Encoding.UTF8,
-                    IsTextMessageConversionEnabled = true
+                    IsTextMessageConversionEnabled = true,
                 };
             client.MessageReceived.Subscribe(msg =>
             {
@@ -122,7 +122,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 {
                     try
                     {
-                        ProcessMessageFromClient(
+                        ProcessMessageFromClientAsync(
                             msg.Text ?? throw new NullReferenceException("msg.Text"),
                             clientInfo
                         );
@@ -186,9 +186,11 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     GroupName = groupName,
                     SenderId = e.SenderId,
                     GroupId = e.GroupId,
-                    Message = e.TextMessage //todo structure message
+                    Message =
+                        e.TextMessage //todo structure message
+                    ,
                 },
-                Source = BasePacket.DefaultInformation
+                Source = BasePacket.DefaultInformation,
             };
             var str = pkt.ToJson();
             foreach (var action in sendActions)
@@ -196,7 +198,12 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    private void ProcessMessageFromClient(string messageRaw, PluginConfig.ClientInfo clientInfo)
+    private Dictionary<string, int[]> _onlinePlayers = new();
+
+    private async ValueTask ProcessMessageFromClientAsync(
+        string messageRaw,
+        PluginConfig.ClientInfo clientInfo
+    )
     {
         try
         {
@@ -208,28 +215,29 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     switch (message)
                     {
                         case PlayerChatPacket { Data: { Message: var msg, PlayerName: var name } }:
-                            SendGroupMessage(
+                            _ = SendGroupMessageAsync(
                                 clientInfo,
                                 ClientEventType.Chat,
                                 $"[{senderName}] <{name}> {msg}"
                             );
                             break;
                         case PlayerJoinPacket { Data.PlayerName: var name }:
-                            SendGroupMessage(
+                            var msgIds = await SendGroupMessageAsync(
                                 clientInfo,
                                 ClientEventType.JoinLeft,
                                 $"[{senderName}] {name} 加入了服务器"
                             );
+
                             break;
                         case PlayerQuitPacket { Data.PlayerName: var name }:
-                            SendGroupMessage(
+                            _ = SendGroupMessageAsync(
                                 clientInfo,
                                 ClientEventType.JoinLeft,
                                 $"[{senderName}] {name} 离开了服务器"
                             );
                             break;
                         case PlayerDeathPacket { Data.DeathMessage: var msg }:
-                            SendGroupMessage(
+                            _ = SendGroupMessageAsync(
                                 clientInfo,
                                 ClientEventType.PlayerDeath,
                                 $"[{senderName}] {msg}"
@@ -245,7 +253,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                                 Description: var description
                             }
                         }:
-                            SendGroupMessage(
+                            _ = SendGroupMessageAsync(
                                 clientInfo,
                                 ClientEventType.PlayerAchievement,
                                 $"[{senderName}] {name} 完成了进度 {achievementName} ({string.Join(",", criteria)}){Environment.NewLine}{description}"
@@ -269,12 +277,13 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    private void SendGroupMessage(
+    private async Task<int[]> SendGroupMessageAsync(
         PluginConfig.ClientInfo clientInfo,
         ClientEventType eventType,
         string message
     )
     {
+        List<int> msgIds = new();
         foreach (
             var config in from config in clientInfo.Groups
             where config is { Enabled: true, ForwardFromClient: true }
@@ -282,11 +291,14 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             select config
         )
         {
-            Service.SendGroupMessage(null, config.GroupId, new TextMessage(message));
+            msgIds.Add(
+                await Service.SendGroupMessageAsync(null, config.GroupId, new TextMessage(message))
+            );
         }
+        return msgIds.ToArray();
     }
 
-    private bool stringToToggle(string input, out bool result)
+    private static bool StringToToggle(string input, out bool result)
     {
         switch (input.ToLower())
         {
@@ -361,7 +373,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             return;
         }
         var name = EnumToAttributeName(type);
-        if (!stringToToggle(status ?? "", out var result))
+        if (!StringToToggle(status ?? "", out var result))
         {
             var currentStatusDisabled =
                 Config

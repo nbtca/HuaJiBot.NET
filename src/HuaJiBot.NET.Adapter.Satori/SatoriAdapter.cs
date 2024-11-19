@@ -64,16 +64,30 @@ public class SatoriAdapter : BotServiceBase
                         x switch
                         {
                             AtMessage { Target: var target } => new AtElement { Id = target },
-                            ImageMessage { ImagePath: var path }
-                                => new ImageElement { Src = ConvertFileToBase64(path) },
-                            ReplyMessage { MessageId: var msgId }
-                                => new QuoteElement { Id = msgId, },
+                            ImageMessage { ImagePath: var path } => new ImageElement
+                            {
+                                Src = ConvertFileToBase64(path),
+                            },
+                            ReplyMessage { MessageId: var msgId } => new QuoteElement
+                            {
+                                Id = msgId,
+                            },
                             TextMessage { Text: var text } => new TextElement { Text = text },
                             _ => throw new ArgumentOutOfRangeException(nameof(x)),
                         }
                     )
                 ).ToArray()
             );
+    }
+
+    public override void RecallMessage(string robotId, string targetGroup, string msgId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override void SetGroupName(string robotId, string targetGroup, string groupName)
+    {
+        throw new NotImplementedException();
     }
 
     public override MemberType GetMemberType(string robotId, string targetGroup, string userId)

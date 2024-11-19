@@ -25,35 +25,41 @@ public class OneBotAdapter : BotServiceBase
 
     public override string[] AllRobots => _client.QQ is not null ? [_client.QQ] : [];
 
-    public override void SendGroupMessage(
+    public override async Task<int> SendGroupMessageAsync(
         string? robotId,
         string targetGroup,
         params SendingMessageBase[] messages
     )
     {
-        _ = _client
-            .Api
-            .SendGroupMessageAsync(
-                targetGroup,
-                messages
-                    .Select<SendingMessageBase, MessageEntity>(
-                        x =>
-                            x switch
-                            {
-                                TextMessage { Text: var text } => new TextMessageEntity(text),
-                                ImageMessage { ImagePath: var path }
-                                    => new ImageMessageEntity
-                                    {
-                                        File = CommonResolver.EncodingBase64Async(path)
-                                    },
-                                AtMessage { Target: var target }
-                                    => new AtMessageEntity(uint.Parse(target)),
-                                ReplyMessage { MessageId: var id, } => new ReplyMessageEntity(id),
-                                _ => throw new NotSupportedException()
-                            }
-                    )
-                    .ToArray()
-            );
+        var result = await _client.Api.SendGroupMessageAsync(
+            targetGroup,
+            messages
+                .Select<SendingMessageBase, MessageEntity>(x =>
+                    x switch
+                    {
+                        TextMessage { Text: var text } => new TextMessageEntity(text),
+                        ImageMessage { ImagePath: var path } => new ImageMessageEntity
+                        {
+                            File = CommonResolver.EncodingBase64Async(path),
+                        },
+                        AtMessage { Target: var target } => new AtMessageEntity(uint.Parse(target)),
+                        ReplyMessage { MessageId: var id } => new ReplyMessageEntity(id),
+                        _ => throw new NotSupportedException(),
+                    }
+                )
+                .ToArray()
+        );
+        return result.MessageId;
+    }
+
+    public override void RecallMessage(string robotId, string targetGroup, string msgId)
+    {
+        _client.Api.RecallMessageAsync(targetGroup, msgId);
+    }
+
+    public override void SetGroupName(string robotId, string targetGroup, string groupName)
+    {
+        _client.Api.SetGroupNameAsync(targetGroup, groupName);
     }
 
     public override MemberType GetMemberType(string robotId, string targetGroup, string userId)
@@ -63,7 +69,12 @@ public class OneBotAdapter : BotServiceBase
 
     public override void FeedbackAt(string? robotId, string targetGroup, string msgId, string text)
     {
-        SendGroupMessage(robotId, targetGroup, new ReplyMessage(msgId), new TextMessage(text));
+        _ = SendGroupMessageAsync(
+            robotId,
+            targetGroup,
+            new ReplyMessage(msgId),
+            new TextMessage(text)
+        );
     }
 
     public override string GetNick(string robotId, string userId)

@@ -247,7 +247,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             #endregion
                             foreach (var group in GetBroadcastTargets(repositoryFullName))
                             {
-                                Service.SendGroupMessage(null, group, m, text);
+                                Service.SendGroupMessageAsync(null, group, m, text);
                             }
                         }
                     }

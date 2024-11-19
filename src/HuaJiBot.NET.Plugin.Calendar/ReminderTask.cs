@@ -60,7 +60,7 @@ internal class ReminderTask : IDisposable
                     e.Summary.Contains(x) || e.Description.Contains(x) || e.Location.Contains(x)
                 );
             if (shouldSend)
-                callback(str => Service.SendGroupMessage(null, group.GroupId, str));
+                callback(str => Service.SendGroupMessageAsync(null, group.GroupId, str));
         }
     }
 

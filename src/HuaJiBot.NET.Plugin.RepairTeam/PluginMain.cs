@@ -74,7 +74,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     {
         Service.Log(msg);
         if (!string.IsNullOrWhiteSpace(Config.PushRawGroup))
-            Service.SendGroupMessage(null, Config.PushRawGroup, msg);
+            Service.SendGroupMessageAsync(null, Config.PushRawGroup, msg);
         if (Config.PushInfoGroup.Length != 0)
         {
             var e = JsonConvert.DeserializeObject<LogEventEntity>(msg)!;
@@ -96,7 +96,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             {
                 foreach (var group in Config.PushInfoGroup)
                 {
-                    Service.SendGroupMessage(null, group, str);
+                    Service.SendGroupMessageAsync(null, group, str);
                 }
             });
         }

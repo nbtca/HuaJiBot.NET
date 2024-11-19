@@ -51,7 +51,7 @@ internal class OneBotApi(BotServiceBase service, Action<string> send)
                 {
                     1400 => new Exception("Invalid request"),
                     1404 => new Exception("Action not found"),
-                    _ => new Exception("Unknown error: " + ret.Status)
+                    _ => new Exception("Unknown error: " + ret.Status),
                 };
             }
             return ret.Data;
@@ -64,6 +64,8 @@ internal class OneBotApi(BotServiceBase service, Action<string> send)
 
     private Task<TR> SendAsync<TR>(string action) =>
         SendAsync<JValue, TR>(action, JValue.CreateNull());
+
+    private Task SendAsync<T>(string action, T data) => SendAsync<T, JToken>(action, data);
 
     public Task ProcessMessageAsync(JObject data)
     {
@@ -157,7 +159,7 @@ internal class OneBotApi(BotServiceBase service, Action<string> send)
             {
                 AutoEscape = true,
                 GroupId = uint.Parse(targetGroup),
-                Messages = message
+                Messages = message,
             }
         );
     }
@@ -180,5 +182,32 @@ internal class OneBotApi(BotServiceBase service, Action<string> send)
             var msg = new OneBotMessage { GroupId = uint.Parse(targetGroup), Messages = messages };
             return await SendAsync<OneBotMessage, OneBotMessageResponse>("send_group_msg", msg);
         }
+    }
+
+    public class OneBotDeleteMsg
+    {
+        [JsonProperty("message_id")]
+        public required int MessageId { get; set; }
+    }
+
+    public Task RecallMessageAsync(string targetGroup, string messageId)
+    {
+        var msg = new OneBotDeleteMsg { MessageId = int.Parse(messageId) };
+        return SendAsync("delete_msg", msg);
+    }
+
+    public class OneBotSetGroupName
+    {
+        [JsonProperty("group_id")]
+        public required string GroupId { get; set; }
+
+        [JsonProperty("group_name")]
+        public required string GroupName { get; set; }
+    }
+
+    public Task SetGroupNameAsync(string groupId, string groupName)
+    {
+        var msg = new OneBotSetGroupName { GroupId = groupId, GroupName = groupName };
+        return SendAsync("set_group_name", msg);
     }
 }

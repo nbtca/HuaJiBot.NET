@@ -11,7 +11,7 @@ public enum MemberType
     Unknown = 0,
     Member = 1,
     Admin = 2,
-    Owner = 3
+    Owner = 3,
 }
 
 public abstract record SendingMessageBase
@@ -45,15 +45,17 @@ public abstract class BotServiceBase
     public Config.ConfigWrapper Config { get; internal set; } = null!;
     public Events.Events Events { get; } = new();
     public abstract string[] AllRobots { get; }
-    public abstract void SendGroupMessage(
+    public abstract Task<int> SendGroupMessageAsync(
         string? robotId,
         string targetGroup,
         params SendingMessageBase[] messages
     );
+    public abstract void RecallMessage(string robotId, string targetGroup, string msgId);
+    public abstract void SetGroupName(string robotId, string targetGroup, string groupName);
 
     public virtual void FeedbackAt(string? robotId, string targetGroup, string msgId, string text)
     {
-        SendGroupMessage(robotId, targetGroup, new ReplyMessage(msgId), new TextMessage(text));
+        SendGroupMessageAsync(robotId, targetGroup, new ReplyMessage(msgId), new TextMessage(text));
     }
 
     public abstract MemberType GetMemberType(string robotId, string targetGroup, string userId);
@@ -92,21 +94,19 @@ public abstract class BotServiceBase
                             {
                                 CommandArgumentType.String => Quote("string"),
                                 CommandArgumentType.RegexString => Quote("regex"),
-                                CommandArgumentType.Enum
-                                    => Quote(
-                                        string.Join(
-                                            "|",
-                                            from x in (
-                                                (CommandArgumentEnumAttributeBase)arg.Attribute
-                                            ).EnumItems
-                                            select x.Key
-                                        )
-                                    ),
-                                CommandArgumentType.Unknown => "unknown",
-                                _
-                                    => throw new ArgumentOutOfRangeException(
-                                        nameof(arg.Attribute.ArgumentType)
+                                CommandArgumentType.Enum => Quote(
+                                    string.Join(
+                                        "|",
+                                        from x in (
+                                            (CommandArgumentEnumAttributeBase)arg.Attribute
+                                        ).EnumItems
+                                        select x.Key
                                     )
+                                ),
+                                CommandArgumentType.Unknown => "unknown",
+                                _ => throw new ArgumentOutOfRangeException(
+                                    nameof(arg.Attribute.ArgumentType)
+                                ),
                             }
                         );
                         sb.Append(' ');
