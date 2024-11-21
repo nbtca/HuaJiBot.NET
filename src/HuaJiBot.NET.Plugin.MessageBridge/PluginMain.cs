@@ -1,4 +1,5 @@
-﻿using System.Net.WebSockets;
+﻿using System.Collections.Concurrent;
+using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
 using HuaJiBot.NET.Bot;
@@ -198,7 +199,8 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    private Dictionary<string, int[]> _onlinePlayers = new();
+    private readonly ConcurrentDictionary<string, (string groupId, string msgId)[]> _onlinePlayers =
+        new();
 
     private async ValueTask ProcessMessageFromClientAsync(
         string messageRaw,
@@ -222,12 +224,11 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             );
                             break;
                         case PlayerJoinPacket { Data.PlayerName: var name }:
-                            var msgIds = await SendGroupMessageAsync(
+                            _onlinePlayers[name] = await SendGroupMessageAsync(
                                 clientInfo,
                                 ClientEventType.JoinLeft,
                                 $"[{senderName}] {name} 加入了服务器"
                             );
-
                             break;
                         case PlayerQuitPacket { Data.PlayerName: var name }:
                             _ = SendGroupMessageAsync(
@@ -235,6 +236,23 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                                 ClientEventType.JoinLeft,
                                 $"[{senderName}] {name} 离开了服务器"
                             );
+                            if (_onlinePlayers.TryRemove(name, out var msgIds))
+                            {
+                                foreach (var (groupId, msgId) in msgIds)
+                                {
+                                    try
+                                    {
+                                        Service.RecallMessage(null, groupId, msgId);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Warn(
+                                            $"撤回消息失败(groupId={groupId}, msgId={msgId})：",
+                                            e
+                                        );
+                                    }
+                                }
+                            }
                             break;
                         case PlayerDeathPacket { Data.DeathMessage: var msg }:
                             _ = SendGroupMessageAsync(
@@ -277,13 +295,13 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    private async Task<int[]> SendGroupMessageAsync(
+    private async Task<(string groupId, string msgId)[]> SendGroupMessageAsync(
         PluginConfig.ClientInfo clientInfo,
         ClientEventType eventType,
         string message
     )
     {
-        List<int> msgIds = new();
+        List<(string, string)> msgIds = new();
         foreach (
             var config in from config in clientInfo.Groups
             where config is { Enabled: true, ForwardFromClient: true }
@@ -292,7 +310,14 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         )
         {
             msgIds.Add(
-                await Service.SendGroupMessageAsync(null, config.GroupId, new TextMessage(message))
+                (
+                    config.GroupId,
+                    await Service.SendGroupMessageAsync(
+                        null,
+                        config.GroupId,
+                        new TextMessage(message)
+                    )
+                )
             );
         }
         return msgIds.ToArray();

@@ -25,6 +25,10 @@ public abstract class PluginBase
 
     public void Info(object msg) => Service.Log($"[{Name}] {msg}");
 
+    public void Warn(object msg) => Service.Warn($"[{Name}] {msg}");
+
+    public void Warn(object msg, object detail) => Service.Warn($"[{Name}] {msg}" + detail);
+
     public void Error(object msg, object detail) => Service.LogError($"[{Name}] {msg}", detail);
 
     /// <summary>
