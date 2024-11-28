@@ -38,7 +38,7 @@ BotServiceBase CreateService(Config config)
     {
         Config.ServiceType.OneBot => CreateOneBotService(config),
         Config.ServiceType.Satori => CreateSatoriService(config),
-        _ => throw new NotSupportedException("不支持的协议类型")
+        _ => throw new NotSupportedException("不支持的协议类型"),
     };
 }
 Console.WriteLine("运行路径：" + Environment.CurrentDirectory);
@@ -102,7 +102,7 @@ while (true)
                 api.Log("配置文件保存成功：" + result);
                 break;
             case ["send", var targetGroup, var message]:
-                api.SendGroupMessageAsync(accountId, targetGroup, message);
+                await api.SendGroupMessageAsync(accountId, targetGroup, message);
                 break;
             default:
                 Console.WriteLine($"未知的命令 {line} .");

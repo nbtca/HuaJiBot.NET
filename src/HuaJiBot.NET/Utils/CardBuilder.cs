@@ -59,7 +59,7 @@ public abstract class ImageBuilder
             {
                 Antialias = true,
                 // Enforces that any part of this shape that has color is punched out of the background
-                AlphaCompositionMode = PixelAlphaCompositionMode.DestOut
+                AlphaCompositionMode = PixelAlphaCompositionMode.DestOut,
             }
         );
 
@@ -202,8 +202,8 @@ public class CardBuilder : ImageBuilder
                         Origin = new Vector2(iconWidth, 45),
                         HorizontalAlignment = HorizontalAlignment.Left,
                         VerticalAlignment = VerticalAlignment.Center,
-                        FallbackFontFamilies = new[] { yaHeiFont.Family },
-                        TextRuns = runs
+                        FallbackFontFamilies = [yaHeiFont.Family],
+                        TextRuns = runs,
                     },
                     text,
                     secondaryBrush
@@ -230,7 +230,7 @@ public class CardBuilder : ImageBuilder
                             Origin = new Vector2(width - 10, 10),
                             HorizontalAlignment = HorizontalAlignment.Right,
                             FallbackFontFamilies = new[] { yaHeiFont.Family },
-                            TextRuns = runs
+                            TextRuns = runs,
                         },
                         text,
                         secondaryBrush
@@ -247,7 +247,7 @@ public class CardBuilder : ImageBuilder
                         Origin = new PointF(iconWidth, 60),
                         FallbackFontFamilies = new[] { yaHeiFont.Family },
                         LineSpacing = 1.1f,
-                        TextRuns = runs
+                        TextRuns = runs,
                     },
                     text,
                     new SolidBrush(Color.White)

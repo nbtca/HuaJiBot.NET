@@ -22,15 +22,22 @@ public static class AvatarHelper
         return Path.Combine(dir, key);
     }
 
-    private static bool GetFromCache(string name, [NotNullWhen(true)] out byte[]? bytes)
+    private static bool GetFromCache(
+        string name,
+        [NotNullWhen(true)] out byte[]? bytes,
+        out bool needUpdate
+    )
     {
         var path = GetAvatarCachePath(name);
-        if (File.Exists(path))
+        var file = new FileInfo(path);
+        if (file.Exists)
         {
             bytes = File.ReadAllBytes(path);
+            needUpdate = DateTime.Now - file.LastWriteTime > TimeSpan.FromDays(7);
             return true;
         }
         bytes = null;
+        needUpdate = false;
         return false;
     }
 
@@ -45,8 +52,19 @@ public static class AvatarHelper
         var name = GetAvatarFileName(avatarUrl);
         try
         {
-            if (GetFromCache(name, out var result))
+            if (GetFromCache(name, out var result, out var needUpdate))
             {
+                if (needUpdate)
+                {
+                    try
+                    {
+                        return await TryUpdate();
+                    }
+                    catch
+                    {
+                        return result;
+                    }
+                }
                 return result;
             }
         }
@@ -56,10 +74,7 @@ public static class AvatarHelper
         }
         try
         {
-            using HttpClient client = new();
-            var result = await client.GetByteArrayAsync(avatarUrl);
-            SaveToCache(name, result);
-            return result;
+            return await TryUpdate();
         }
         catch (Exception)
         {
@@ -67,6 +82,13 @@ public static class AvatarHelper
             Console.WriteLine(avatarUrl);
             using HttpClient client = new();
             return await client.GetByteArrayAsync("https://i.nbtca.space/favicon.png");
+        }
+        async Task<byte[]> TryUpdate()
+        {
+            using HttpClient client = new();
+            var result = await client.GetByteArrayAsync(avatarUrl);
+            SaveToCache(name, result);
+            return result;
         }
     }
 }

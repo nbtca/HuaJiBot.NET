@@ -123,7 +123,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 {
                     try
                     {
-                        ProcessMessageFromClientAsync(
+                        _ = ProcessMessageFromClientAsync(
                             msg.Text ?? throw new NullReferenceException("msg.Text"),
                             clientInfo
                         );
