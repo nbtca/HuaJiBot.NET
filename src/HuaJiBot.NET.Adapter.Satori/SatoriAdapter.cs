@@ -47,15 +47,17 @@ public class SatoriAdapter : BotServiceBase
         return "data:" + mineType + ";base64," + Convert.ToBase64String(File.ReadAllBytes(path));
     }
 
-    public override void SendGroupMessage(
+    public override async Task<string[]> SendGroupMessageAsync(
         string? robotId,
         string targetGroup,
         params SendingMessageBase[] messages
     )
     {
         var robots = robotId is null ? AllRobots : [robotId];
+        var msgIds = new List<string>();
         foreach (var robot in robots)
-            _ = _apiClient.SendGroupMessageAsync(
+        {
+            var msg = await _apiClient.SendGroupMessageAsync(
                 robot,
                 targetGroup,
                 (
@@ -78,6 +80,9 @@ public class SatoriAdapter : BotServiceBase
                     )
                 ).ToArray()
             );
+            msgIds.AddRange(msg.Select(x => x.Id));
+        }
+        return msgIds.ToArray();
     }
 
     public override void RecallMessage(string robotId, string targetGroup, string msgId)

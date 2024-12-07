@@ -45,7 +45,7 @@ public abstract class BotServiceBase
     public Config.ConfigWrapper Config { get; internal set; } = null!;
     public Events.Events Events { get; } = new();
     public abstract string[] AllRobots { get; }
-    public abstract Task<string> SendGroupMessageAsync(
+    public abstract Task<string[]> SendGroupMessageAsync(
         string? robotId,
         string targetGroup,
         params SendingMessageBase[] messages

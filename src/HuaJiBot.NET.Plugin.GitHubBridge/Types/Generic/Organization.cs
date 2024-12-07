@@ -1,7 +1,8 @@
 ﻿#nullable disable
+using HuaJiBot;
 using Newtonsoft.Json;
 
-namespace HuaJiBot.NET.Plugin.GitHubBridge.Types.WorkflowRunEventBody;
+namespace HuaJiBot.NET.Plugin.GitHubBridge.Types.Generic;
 
 internal class Organization
 {

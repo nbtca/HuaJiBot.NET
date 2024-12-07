@@ -9,8 +9,8 @@ internal class ReminderTask : IDisposable
 {
     public PluginConfig Config { get; }
     public BotServiceBase Service { get; }
-    private readonly Func<Ical.Net.Calendar> _getCalendar;
-    private Ical.Net.Calendar Calendar => _getCalendar();
+    private readonly Func<Ical.Net.Calendar?> _getCalendar;
+    private Ical.Net.Calendar? Calendar => _getCalendar();
     private readonly Timer _timer;
     private const int CheckDurationInMinutes = 15;
     private const int RemindBeforeStartMinutes = 15;
@@ -19,7 +19,7 @@ internal class ReminderTask : IDisposable
     public ReminderTask(
         BotServiceBase service,
         PluginConfig config,
-        Func<Ical.Net.Calendar> getCalendar
+        Func<Ical.Net.Calendar?> getCalendar
     )
     {
         Service = service;
@@ -30,7 +30,6 @@ internal class ReminderTask : IDisposable
         Task.Delay(10_000)
             .ContinueWith(_ =>
             {
-                InvokeCheck();
                 InvokeCheck();
             }); //10秒后检查第一次
         _timer.AutoReset = true;
@@ -88,6 +87,11 @@ internal class ReminderTask : IDisposable
     {
         try
         {
+            if (Calendar is null)
+            {
+                Service.Log("日历为空，跳过检查。（日历未成功同步）");
+                return;
+            }
             Service.LogDebug("Invoke Check");
             var now = Utils.NetworkTime.Now; //现在
             var nextEnd = now.AddMinutes(CheckDurationInMinutes); //下次检查的结束时间

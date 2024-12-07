@@ -22,7 +22,7 @@ public class PluginConfig : ConfigBase
         {
             WhiteList,
             BlackList,
-            Default
+            Default,
         }
     }
 }
@@ -38,7 +38,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     private readonly Lazy<RemoteSync> _sync;
     private RemoteSync Sync => _sync.Value;
-    private Ical.Net.Calendar Calendar => _sync.Value.Calendar;
+    private Ical.Net.Calendar? Calendar => _sync.Value.Calendar;
     private ReminderTask? _reminderTask;
 
     protected override void Initialize()

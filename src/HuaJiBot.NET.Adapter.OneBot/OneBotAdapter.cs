@@ -25,7 +25,7 @@ public class OneBotAdapter : BotServiceBase
 
     public override string[] AllRobots => _client.QQ is not null ? [_client.QQ] : [];
 
-    public override async Task<string> SendGroupMessageAsync(
+    public override async Task<string[]> SendGroupMessageAsync(
         string? robotId,
         string targetGroup,
         params SendingMessageBase[] messages
@@ -49,7 +49,7 @@ public class OneBotAdapter : BotServiceBase
                 )
                 .ToArray()
         );
-        return result.MessageId.ToString();
+        return [result.MessageId.ToString()];
     }
 
     public override void RecallMessage(string? robotId, string targetGroup, string msgId)

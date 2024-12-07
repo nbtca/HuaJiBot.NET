@@ -199,8 +199,10 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    private readonly ConcurrentDictionary<string, (string groupId, string msgId)[]> _onlinePlayers =
-        new();
+    private readonly ConcurrentDictionary<
+        string,
+        (string groupId, string[] msgId)[]
+    > _onlinePlayers = new();
 
     private async ValueTask ProcessMessageFromClientAsync(
         string messageRaw,
@@ -236,20 +238,23 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                                 ClientEventType.JoinLeft,
                                 $"[{senderName}] {name} 离开了服务器"
                             );
-                            if (_onlinePlayers.TryRemove(name, out var msgIds))
+                            if (_onlinePlayers.TryRemove(name, out var allMsg))
                             {
-                                foreach (var (groupId, msgId) in msgIds)
+                                foreach (var (groupId, msgIds) in allMsg)
                                 {
-                                    try
+                                    foreach (var msgId in msgIds)
                                     {
-                                        Service.RecallMessage(null, groupId, msgId);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        Warn(
-                                            $"撤回消息失败(groupId={groupId}, msgId={msgId})：",
-                                            e
-                                        );
+                                        try
+                                        {
+                                            Service.RecallMessage(null, groupId, msgId);
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            Warn(
+                                                $"撤回消息失败(groupId={groupId}, msgId={msgId})：",
+                                                e
+                                            );
+                                        }
                                     }
                                 }
                             }
@@ -295,13 +300,13 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    private async Task<(string groupId, string msgId)[]> SendGroupMessageAsync(
+    private async Task<(string groupId, string[] msgId)[]> SendGroupMessageAsync(
         PluginConfig.ClientInfo clientInfo,
         ClientEventType eventType,
         string message
     )
     {
-        List<(string, string)> msgIds = new();
+        List<(string, string[])> msgIds = new();
         foreach (
             var config in from config in clientInfo.Groups
             where config is { Enabled: true, ForwardFromClient: true }

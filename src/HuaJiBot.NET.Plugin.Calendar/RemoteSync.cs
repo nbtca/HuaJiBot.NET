@@ -10,7 +10,7 @@ internal class RemoteSync(
 )
 {
     private DateTimeOffset _lastLoadTime = DateTimeOffset.MinValue;
-    public Ical.Net.Calendar Calendar { get; private set; } = null!;
+    public Ical.Net.Calendar? Calendar { get; private set; }
 
     public async Task UpdateCalendarAsync()
     {
@@ -30,7 +30,9 @@ internal class RemoteSync(
             var resp = await client.GetAsync(icalUrl); //从Url获取
             resp.EnsureSuccessStatusCode();
             Calendar = Ical.Net.Calendar.Load(await resp.Content.ReadAsStringAsync());
-            service.Log($"日历更新成功 当前时间 {NetworkTime.Now} 网络时间差分 {NetworkTime.Diff:g}");
+            service.Log(
+                $"日历更新成功 当前时间 {NetworkTime.Now} 网络时间差分 {NetworkTime.Diff:g}"
+            );
             //var testStart = DateTimeOffset.Parse("4/19/2024 8:25:27 PM +08:00");
             //var testEnd = testStart;
             var testStart = NetworkTime.Now;
