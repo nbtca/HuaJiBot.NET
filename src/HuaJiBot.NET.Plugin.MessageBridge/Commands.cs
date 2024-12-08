@@ -55,10 +55,10 @@ partial class PluginMain
             var pkt = new GetPlayerListRequestPacket
             {
                 Data = new() { RequestId = uuid },
-                Source = BasePacket.DefaultInformation
+                Source = BasePacket.DefaultInformation,
             };
             var req = pkt.ToJson();
-            _requestQueue.TryAdd(uuid, (callback, new()));
+            _requestQueue.TryAdd(uuid, (callback, []));
             foreach (var (_, connection) in _clients)
             {
                 connection.Send(req);

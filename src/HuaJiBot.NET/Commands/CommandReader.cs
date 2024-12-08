@@ -22,7 +22,7 @@ public abstract class CommandReader
         bool lastOne = false
     )
     {
-        return Match(expectedEnums, x => new[] { selector(x) }, out matched, lastOne);
+        return Match(expectedEnums, x => [selector(x)], out matched, lastOne);
     }
 
     public bool Match<T>(
@@ -217,7 +217,7 @@ public abstract class CommonCommandReader : CommandReader
                     text = v;
                     return true;
                 //向下匹配一个参数 把At当文本显示
-                case MatchAt { AtText: var v2, }:
+                case MatchAt { AtText: var v2 }:
                     text = v2;
                     return true;
             }

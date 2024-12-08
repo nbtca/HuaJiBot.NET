@@ -248,7 +248,7 @@ public class CardBuilder : ImageBuilder
                         {
                             Origin = new Vector2(width - 10, 10),
                             HorizontalAlignment = HorizontalAlignment.Right,
-                            FallbackFontFamilies = new[] { yaHeiFont.Family },
+                            FallbackFontFamilies = [yaHeiFont.Family],
                             TextRuns = runs,
                         },
                         text,
@@ -264,7 +264,7 @@ public class CardBuilder : ImageBuilder
                     {
                         WrappingLength = width - iconWidth - 20,
                         Origin = new PointF(iconWidth, 60),
-                        FallbackFontFamilies = new[] { yaHeiFont.Family },
+                        FallbackFontFamilies = [yaHeiFont.Family],
                         LineSpacing = 1.1f,
                         TextRuns = runs,
                     },

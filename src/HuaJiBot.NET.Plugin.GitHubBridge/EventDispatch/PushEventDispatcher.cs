@@ -162,12 +162,11 @@ internal static class PushEventDispatcher
                     Content = (
                         from x in body.Commits
                         select (IEnumerable<TextRun>)
-                            new TextRun[]
-                            {
+                            [
                                 new(x.Message),
                                 new($" by @{x.Author.Name}", Color.Gray),
                                 Environment.NewLine,
-                            }
+                            ]
                     ).Aggregate((a, b) => a.Concat(b).ToArray()),
                     Footer =
                         $"@{body.Sender.Login} pushed {body.Commits.Length} commit{(body.Commits.Length > 1 ? "s" : "")}.",

@@ -163,7 +163,7 @@ public class Tests
             Console.WriteLine(test);
         }
         {
-            var result = reader.Match(new[] { "test" }, x => x, out var test);
+            var result = reader.Match(["test"], x => x, out var test);
             Console.WriteLine(result);
             Console.WriteLine(test);
         }

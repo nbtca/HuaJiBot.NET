@@ -40,7 +40,7 @@ public class PluginConfig : ConfigBase
          *  是否将来自客户端的消息转发给群
          */
         public bool ForwardFromClient { get; set; } = true;
-        public HashSet<ClientEventType> ForwardFromClientDisabledEvent { get; set; } = new();
+        public HashSet<ClientEventType> ForwardFromClientDisabledEvent { get; set; } = [];
 
         [JsonConverter(typeof(StringEnumConverter))]
         public enum ClientEventType
@@ -163,7 +163,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private async Task ProcessMessageFromGroupAsync(GroupMessageEventArgs e)
     {
         var groupName = await e.GetGroupNameAsync();
-        List<Action<string>> sendActions = new();
+        List<Action<string>> sendActions = [];
         foreach (var clientInfo in Config.Clients)
         {
             if (
@@ -306,7 +306,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         string message
     )
     {
-        List<(string, string[])> msgIds = new();
+        List<(string, string[])> msgIds = [];
         foreach (
             var config in from config in clientInfo.Groups
             where config is { Enabled: true, ForwardFromClient: true }

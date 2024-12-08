@@ -66,7 +66,7 @@ internal class BuildImageTest
 
                     return list;
                 }).Invoke(),
-                Content = new TextRun[] { "迁移文章 by ", "测试", "test", "s" },
+                Content = ["迁移文章 by ", "测试", "test", "s"],
                 Footer = "@nbtca pushed 1 commit.",
                 FooterIcon = avatar,
                 Icon = CardBuilder.CharToImage(
@@ -75,12 +75,12 @@ internal class BuildImageTest
                     Color.White
                 ),
                 IconPlaceholder = "fb6edcb1\nfb6edcb1\nfb6edcb1",
-                TopRightContent = new[]
-                {
+                TopRightContent =
+                [
                     new TextRun(" +2", Color.ParseHex("#2cbe4e")),
                     new TextRun(" -3", Color.ParseHex("#eb2431")),
                     new TextRun(" ~4", Color.ParseHex("#ffc000")),
-                },
+                ],
             };
         // 保存图像到文件
         var file = Path.GetFullPath("output.png");
@@ -134,7 +134,7 @@ internal class BuildImageTest
 
                     return list;
                 }).Invoke(),
-                Content = new TextRun[] { "迁移文章 by ", "测试", "test", "s" },
+                Content = ["迁移文章 by ", "测试", "test", "s"],
                 Footer = "@nbtca pushed 1 commit.",
                 FooterIcon = avatar,
                 Icon = CardBuilder.CharToImage(
@@ -143,12 +143,12 @@ internal class BuildImageTest
                     Color.White
                 ),
                 IconPlaceholder = "fb6edcb1\nfb6edcb1\nfb6edcb1",
-                TopRightContent = new[]
-                {
+                TopRightContent =
+                [
                     new TextRun(" +2", Color.ParseHex("#2cbe4e")),
                     new TextRun(" -3", Color.ParseHex("#eb2431")),
                     new TextRun(" ~4", Color.ParseHex("#ffc000")),
-                },
+                ],
             };
         // 保存图像到文件
         var file = Path.GetFullPath("output.png");

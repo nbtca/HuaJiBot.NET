@@ -14,13 +14,13 @@ internal class KeyboardMessageEntity(KeyboardMessageEntity.KeyboardData content)
     public class KeyboardData
     {
         [JsonProperty("rows")]
-        public List<Row> Rows { get; set; } = new();
+        public List<Row> Rows { get; set; } = [];
     }
 
     public class Row
     {
         [JsonProperty("buttons")]
-        public List<Button> Buttons { get; set; } = new();
+        public List<Button> Buttons { get; set; } = [];
     }
 
     public class Button
@@ -65,10 +65,10 @@ internal class KeyboardMessageEntity(KeyboardMessageEntity.KeyboardData content)
         public int Type { get; set; }
 
         [JsonProperty("specify_role_ids")]
-        public List<string> SpecifyRoleIds { get; set; } = new();
+        public List<string> SpecifyRoleIds { get; set; } = [];
 
         [JsonProperty("specify_user_ids")]
-        public List<string> SpecifyUserIds { get; set; } = new();
+        public List<string> SpecifyUserIds { get; set; } = [];
     }
 
     public class RenderData

@@ -21,7 +21,7 @@ public static class Internal
     /// <summary>
     /// 插件列表
     /// </summary>
-    internal static readonly List<(EntryPointBase entryPoint, PluginBase instance)> Plugins = new();
+    internal static readonly List<(EntryPointBase entryPoint, PluginBase instance)> Plugins = [];
 
     /// <summary>
     /// 启动并加载插件
@@ -135,7 +135,10 @@ public static class Internal
                 .SkipWhile(x => libs.Contains(x.FullName)) //跳过libs目录下的dll
         )
         {
-            api.Log("加载动态链接库：" + Path.GetRelativePath(Environment.CurrentDirectory, file.FullName));
+            api.Log(
+                "加载动态链接库："
+                    + Path.GetRelativePath(Environment.CurrentDirectory, file.FullName)
+            );
             var assembly = Assembly.LoadFrom(file.FullName); //加载程序集
             foreach (var entryPoint in assembly.GetCustomAttributes<EntryPointBase>()) //遍历所有EntryPoint注解
             {
