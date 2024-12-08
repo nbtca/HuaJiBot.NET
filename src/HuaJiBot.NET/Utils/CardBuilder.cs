@@ -165,6 +165,25 @@ public class CardBuilder : ImageBuilder
     public byte[]? FooterIcon;
     public required byte[] Icon;
 
+    public static byte[] CharToImage(char text, Font font, Color color) =>
+        TextToImage(text.ToString(), font, color, (int)font.Size, (int)font.Size);
+
+    public static byte[] TextToImage(string text, Font font, Color color, int width, int height)
+    {
+        using var image = new Image<Rgba32>(width, height);
+        var textGraphicOptions = new RichTextOptions(font)
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextAlignment = TextAlignment.Center,
+            Origin = new Vector2(width / 2f, height / 2f),
+        };
+        image.Mutate(ctx => ctx.DrawText(textGraphicOptions, text, new SolidBrush(color)));
+        using var stream = new MemoryStream();
+        image.SaveAsPng(stream);
+        return stream.ToArray();
+    }
+
     /// <summary>
     /// 生成图像
     /// 并输出到 <see cref="Stream"/> 中
@@ -184,7 +203,7 @@ public class CardBuilder : ImageBuilder
         using var iconStream = new MemoryStream(Icon);
         //加载图标
         var icon = Image.Load(iconStream);
-        icon.Mutate(x => x.Resize(30, 30, KnownResamplers.Bicubic).Invert());
+        icon.Mutate(x => x.Resize(30, 30, KnownResamplers.Bicubic));
         var footerIcon = FooterIcon is not null ? Image.Load(new MemoryStream(FooterIcon)) : null;
         image.Mutate(ctx => //变换
         {

@@ -24,4 +24,7 @@ public static class IconFonts
     public static char IconStars => 'e';
     public static char IconCircle => 'f';
     public static char IconCommit => 'g';
+    public static char ActionSkip => 'h';
+    public static char IssueClosed => 'i';
+    public static char IssueOpened => 'j';
 }

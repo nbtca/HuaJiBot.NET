@@ -172,8 +172,10 @@ internal static class PushEventDispatcher
                     Footer =
                         $"@{body.Sender.Login} pushed {body.Commits.Length} commit{(body.Commits.Length > 1 ? "s" : "")}.",
                     FooterIcon = avatar,
-                    Icon = Convert.FromBase64String(
-                        "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAN5JREFUSEvt0zFqAkEUh/HfksPY2FvEwnQiBok38ACSJthqadqkSxUQayFgYWcleoAUOUWOkLCygiy7O4Zlqjjlzs7/m/e9eYnIK4mc7woIGv4/itqYo4EffOENi5CjSxTNMC0JGuG9ChIC9LDOAg54xA2e8JB9H+CjDBICpAfv8YlmLuQFY2xxdwkgdVu2utjkNlvYV5w5Xv68girALXZ1AUWXOSlaYZj74RmTvygqApw3+RVLfGd96aODWk1OoVGf6amqqIMWGtbK/dAc1ArPP9PaYUUB1wqCWqMr+gV7eiMZdZi41AAAAABJRU5ErkJggg=="
+                    Icon = CardBuilder.CharToImage(
+                        IconFonts.IconCommit,
+                        IconFonts.IcoMoonFont(30),
+                        Color.White
                     ),
                     IconPlaceholder = string.Join(Environment.NewLine, commitList),
                     TopRightContent = editInfo,

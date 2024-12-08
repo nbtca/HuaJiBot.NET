@@ -21,11 +21,21 @@ internal class TestAdapter : BotServiceBase
 
     public override string[] AllRobots => throw new NotImplementedException();
 
-    public override void SendGroupMessage(
+    public override Task<string[]> SendGroupMessageAsync(
         string? robotId,
         string targetGroup,
         params SendingMessageBase[] messages
     )
+    {
+        throw new NotImplementedException();
+    }
+
+    public override void RecallMessage(string? robotId, string targetGroup, string msgId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override void SetGroupName(string? robotId, string targetGroup, string groupName)
     {
         throw new NotImplementedException();
     }
@@ -70,7 +80,7 @@ public class Tests
         [CommandEnumItem("XA", "testA")]
         A,
         B,
-        C
+        C,
     }
 
     [Test]
@@ -153,7 +163,7 @@ public class Tests
             Console.WriteLine(test);
         }
         {
-            var result = reader.Match(new[] { "test", }, x => x, out var test);
+            var result = reader.Match(new[] { "test" }, x => x, out var test);
             Console.WriteLine(result);
             Console.WriteLine(test);
         }
