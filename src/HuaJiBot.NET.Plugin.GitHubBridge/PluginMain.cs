@@ -6,6 +6,7 @@ using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssuesEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.PushEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.WorkflowRunEventBody;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Websocket.Client;
 
 namespace HuaJiBot.NET.Plugin.GitHubBridge;
@@ -51,6 +52,26 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     //处理消息
     private async Task ProcessMessageAsync(string msg)
     {
+        var jsonObject = JObject.Parse(msg);
+        if (jsonObject.TryGetValue("type", out var pktTypeObj))
+        {
+            var pktType = pktTypeObj.Value<string>();
+            if (pktType == "active_clients_change")
+            {
+                var data = jsonObject["data"]!.Value<JArray>("clients")!;
+                var clients = data.Select(x =>
+                        x.Value<string>("address")
+                        + "("
+                        + (x["headers"]?["Cf-Ipcountry"]?[0] ?? "?")
+                        + ":"
+                        + (x["headers"]?["X-Forwarded-For"]?[0] ?? "?")
+                        + ")"
+                    )
+                    .ToArray();
+                Info("当前在线客户端：" + string.Join(", ", clients));
+            }
+            return;
+        }
         var e = JsonConvert.DeserializeObject<Event>(msg)!;
         {
             switch (e.Body)

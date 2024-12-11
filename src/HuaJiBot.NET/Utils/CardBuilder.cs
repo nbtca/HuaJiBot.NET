@@ -1,6 +1,10 @@
-﻿using System.Numerics;
+﻿using System.Collections.Generic;
+using System.Numerics;
 using System.Text;
 using HuaJiBot.NET.Utils.Fonts;
+using Markdig;
+using Markdig.Syntax;
+using Markdig.Syntax.Inlines;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing;
@@ -25,18 +29,65 @@ public abstract class ImageBuilder
     {
         var sb = new StringBuilder();
         var list = new List<RichTextRun>();
-        foreach (var (text, color, font) in runs)
+
+        int count = 0;
+        var defaultFont = new Lazy<Font>(() => FontManager.MaoKenTangYuan.CreateFont(20));
+        string prefix = string.Empty;
+        foreach (var line in runs)
         {
-            list.Add(
-                new RichTextRun
-                {
-                    Brush = new SolidBrush(color),
-                    Start = sb.Length,
-                    End = sb.Length + text.Length,
-                    Font = font,
-                }
-            );
+            if (line.Text == string.Empty)
+                continue; //空字符串
+
+            if (line.StartPrefix)
+            {
+                prefix += line.Text;
+                continue;
+            }
+
+            if (line.EndPrefix)
+            {
+                //todo
+                continue;
+            }
+            if (count++ > 200) //防止死循环
+                break;
+            var (text, color, font) = line;
+            var run = new RichTextRun
+            {
+                Brush = new SolidBrush(color),
+                Start = sb.Length,
+                End = sb.Length + text.Length,
+                Font = font,
+                TextAttributes = line.TextAttributes,
+            };
+            if (line.Underline)
+                run.TextDecorations = TextDecorations.Underline;
+            if (line.Italic || line.Bold)
+            {
+                run.Font ??= defaultFont.Value;
+                run.Font = new Font(
+                    run.Font.Family,
+                    run.Font.Size,
+                    (line.Italic ? FontStyle.Italic : FontStyle.Regular)
+                        | (line.Bold ? FontStyle.Bold : FontStyle.Regular)
+                );
+            }
+            if (line.Strikethrough)
+                run.TextDecorations |= TextDecorations.Strikeout;
+            if (line.Olive)
+                run.TextDecorations |= TextDecorations.Overline;
+            if (line.FontSize is { } newFontSize)
+            {
+                run.Font ??= defaultFont.Value;
+                run.Font = new Font(
+                    run.Font.Family,
+                    newFontSize,
+                    (run.Font.IsItalic ? FontStyle.Italic : FontStyle.Regular)
+                        | (run.Font.IsBold ? FontStyle.Bold : FontStyle.Regular)
+                );
+            }
             sb.Append(text);
+            list.Add(run);
         }
         return (sb.ToString(), list);
     }
@@ -143,13 +194,14 @@ public abstract class ImageBuilder
     /// 并直接保存到文件
     /// </summary>
     /// <param name="file">文件路径</param>
-    public void Generate(string file)
+    /// <param name="autoHeight">自动测量高度</param>
+    public void Generate(string file, bool autoHeight = false)
     {
         using var stream = File.OpenWrite(file);
-        Generate(stream);
+        Generate(stream, autoHeight);
     }
 
-    public abstract void Generate(Stream stream);
+    public abstract void Generate(Stream stream, bool autoHeight = false);
 }
 
 public class CardBuilder : ImageBuilder
@@ -165,8 +217,198 @@ public class CardBuilder : ImageBuilder
     public byte[]? FooterIcon;
     public required byte[] Icon;
 
-    public static byte[] CharToImage(char text, Font font, Color color) =>
-        TextToImage(text.ToString(), font, color, (int)font.Size, (int)font.Size);
+    public static IEnumerable<TextRun> MarkdownRender(string markdown)
+    {
+        string GetRawText(SourceSpan span)
+        {
+            return markdown[span.Start..span.End];
+        }
+        var document = Markdown.Parse(markdown);
+
+        TextRun newLine = new(Environment.NewLine) { FontSize = 0 };
+
+        TextRun Indent(int indent, int? fontSize = null, char space = ' ') =>
+            new(new string(space, indent)) { FontSize = fontSize };
+
+        IEnumerable<TextRun> InlineToString(ContainerInline? inline, int? fontSize = null)
+        {
+            if (inline is null)
+                yield break;
+            foreach (var line in inline)
+            {
+                switch (line)
+                {
+                    case LiteralInline literal:
+                        yield return new TextRun(literal.Content.ToString(), Color.White)
+                        {
+                            FontSize = fontSize,
+                        };
+                        break;
+                    case EmphasisInline emphasis:
+                        foreach (var run in InlineToString(emphasis, fontSize))
+                            yield return run;
+                        break;
+                    case LineBreakInline _:
+                        yield return new TextRun("\r\n", Color.White) { FontSize = fontSize };
+                        break;
+                    case CodeInline code:
+                        yield return new TextRun(code.Content, Color.White)
+                        {
+                            Italic = true,
+                            FontSize = fontSize,
+                        };
+                        break;
+                    case LinkInline link:
+                        yield return new TextRun(link.Url ?? GetRawText(link.Span), Color.Blue)
+                        {
+                            Underline = true,
+                            FontSize = fontSize,
+                        };
+                        break;
+                    case AutolinkInline autolink:
+                        yield return new TextRun(autolink.Url, Color.Blue)
+                        {
+                            Underline = true,
+                            FontSize = fontSize,
+                        };
+                        break;
+                    case HtmlInline html:
+                        yield return new TextRun(html.Tag, Color.Gray)
+                        {
+                            Italic = true,
+                            FontSize = fontSize,
+                        };
+                        break;
+                    case ContainerInline container:
+                        foreach (var run in InlineToString(container, fontSize))
+                            yield return run;
+                        break;
+                    default:
+                        yield return new TextRun(GetRawText(line.Span)
+#if DEBUG
+                                + line.GetType()
+#endif
+                            , Color.Red)
+                        {
+                            FontSize = fontSize,
+                        };
+                        break;
+                }
+            }
+        }
+
+        IEnumerable<TextRun> ProcessBlock(Block block, int level)
+        {
+            if (level > 10) //防止死循环
+            {
+                yield return new TextRun("...", Color.Red);
+                yield break;
+            }
+            const int baseFontSize = 15;
+            var fontSize = block switch
+            {
+                HeadingBlock heading => baseFontSize + 8 - heading.Level,
+                QuoteBlock or CodeBlock => baseFontSize - 2,
+                _ => baseFontSize,
+            };
+
+            switch (block)
+            {
+                case ParagraphBlock paragraph:
+                    foreach (var run in InlineToString(paragraph.Inline, fontSize))
+                    {
+                        yield return run;
+                    }
+
+                    break;
+                case HeadingBlock heading:
+                    foreach (var run in InlineToString(heading.Inline, fontSize))
+                    {
+                        yield return run;
+                    }
+
+                    break;
+                case ThematicBreakBlock _:
+                    yield return new TextRun("\n--------------------\n", Color.Gray)
+                    {
+                        FontSize = 8,
+                    };
+
+                    break;
+                case ListItemBlock listItem:
+                    {
+                        if (block.Column is > 0 and var col)
+                            yield return Indent(col, fontSize);
+                    }
+                    yield return new TextRun(" ", Color.White) { FontSize = fontSize };
+                    yield return new TextRun("-", Color.Pink) { FontSize = fontSize };
+                    yield return new TextRun(" ", Color.White) { FontSize = fontSize };
+                    if (listItem.Order is > 0 and var order)
+                    {
+                        yield return new TextRun(order + ". ", Color.Pink) { FontSize = fontSize };
+                    }
+                    foreach (var listItemBlock in listItem)
+                    {
+                        foreach (var run in ProcessBlock(listItemBlock, level + 1))
+                        {
+                            yield return run;
+                        }
+                    }
+                    break;
+                case ListBlock list:
+                    foreach (var item in list)
+                    {
+                        foreach (var run in ProcessBlock(item, level + 1))
+                            yield return run;
+                    }
+                    break;
+                case CodeBlock code:
+                    yield return new TextRun(GetRawText(code.Span), Color.LightBlue)
+                    {
+                        Italic = true,
+                        FontSize = fontSize,
+                    };
+                    break;
+                case QuoteBlock quote:
+
+                    yield return new TextRun(">", Color.LightGoldenrodYellow)
+                    {
+                        StartPrefix = true,
+                    };
+                    foreach (var line in quote)
+                    {
+                        foreach (var run in ProcessBlock(line, level + 1))
+                        {
+                            yield return run;
+                        }
+                    }
+                    yield return new TextRun(">", Color.LightGoldenrodYellow) { EndPrefix = true };
+                    break;
+                default:
+                    yield return new TextRun(GetRawText(block.Span)
+#if DEBUG
+                            + block.GetType()
+#endif
+                        , Color.Red);
+                    break;
+            }
+
+            yield return newLine;
+        }
+        foreach (var block in document)
+        {
+            foreach (var run in ProcessBlock(block, 0))
+            {
+                yield return run;
+            }
+        }
+    }
+
+    public static byte[] CharToImage(char text, Font font, Color color, int? size = null)
+    {
+        var sizeInt = size ?? (int)font.Size;
+        return TextToImage(text.ToString(), font, color, sizeInt, sizeInt);
+    }
 
     public static byte[] TextToImage(string text, Font font, Color color, int width, int height)
     {
@@ -189,10 +431,11 @@ public class CardBuilder : ImageBuilder
     /// 并输出到 <see cref="Stream"/> 中
     /// </summary>
     /// <param name="stream">输出流</param>
-    public override void Generate(Stream stream)
+    /// <param name="autoHeight">自动测量高度</param>
+    public override void Generate(Stream stream, bool autoHeight = false)
     {
         const int width = 500;
-        const int height = 200;
+        int height = 200;
         using var image = new Image<Rgba32>(width, height);
         // 选择字体、颜色和布局
         var font = FontManager.ComicSansMs.CreateFont(20);
@@ -256,23 +499,33 @@ public class CardBuilder : ImageBuilder
                     );
                 }
             }
-            // 绘制主题内容
+            // 绘制主体内容
             {
                 var (text, runs) = BuildTextRuns(Content);
-                ctx.DrawText(
-                    new RichTextOptions(font)
-                    {
-                        WrappingLength = width - iconWidth - 20,
-                        Origin = new PointF(iconWidth, 60),
-                        FallbackFontFamilies = [yaHeiFont.Family],
-                        LineSpacing = 1.1f,
-                        TextRuns = runs,
-                    },
-                    text,
-                    new SolidBrush(Color.White)
-                );
+                var richTextOptions = new RichTextOptions(font)
+                {
+                    WrappingLength = width - iconWidth - 20,
+                    Origin = new PointF(iconWidth, 60),
+                    FallbackFontFamilies = [yaHeiFont.Family],
+                    LineSpacing = 1.1f,
+                    TextRuns = runs,
+                };
+                if (autoHeight)
+                {
+                    var measureSize = TextMeasurer.MeasureSize(text, richTextOptions); //测量文本大小
+                    height = (int)measureSize.Height + 130; //设置高度
+                    ctx.Resize(
+                        new ResizeOptions
+                        {
+                            Size = new Size(width, height),
+                            Position = AnchorPositionMode.Top,
+                            Mode = ResizeMode.Pad,
+                            PadColor = background,
+                        }
+                    ); //调整大小
+                }
+                ctx.DrawText(richTextOptions, text, new SolidBrush(Color.White));
             }
-            //TextMeasurer.MeasureSize(options)//测量文本大小
             // 淡化下方超出范围的文本内容
             ctx.Fill(
                 new LinearGradientBrush( //Gradient from opaque to background color
@@ -293,12 +546,22 @@ public class CardBuilder : ImageBuilder
                     ApplyRoundedCorners(x, footerIcon.Width / 2f); //圆角
                     x.Resize(25, 25, KnownResamplers.Bicubic); //缩放
                 });
-                ctx.DrawText(Footer, yaHeiFont, secondaryBrush, new PointF(iconWidth + 30, 160))
-                    .DrawImage(footerIcon, new Point(iconWidth, 158), 1);
+                ctx.DrawText(
+                        Footer,
+                        yaHeiFont,
+                        secondaryBrush,
+                        new PointF(iconWidth + 30, height - (200 - 160))
+                    )
+                    .DrawImage(footerIcon, new Point(iconWidth, height - (200 - 158)), 1);
             }
             else
             {
-                ctx.DrawText(Footer, yaHeiFont, secondaryBrush, new PointF(iconWidth, 160));
+                ctx.DrawText(
+                    Footer,
+                    yaHeiFont,
+                    secondaryBrush,
+                    new PointF(iconWidth, height - (200 - 160))
+                );
             }
 
             ApplyRoundedCorners(ctx, 15);
