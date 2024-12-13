@@ -127,12 +127,6 @@ internal class BuildImageTest
                         return f"Hello, {name}!"
                     ```
 
-                        ```javascript
-                        // JavaScript example
-                        function greet(name) {
-                            return `Hello, ${name}!`;
-                        }
-                        ```
 
                     ## Horizontal Rules
 

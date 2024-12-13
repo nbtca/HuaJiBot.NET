@@ -1,8 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using HuaJiBot.NET.Utils.Fonts;
 using Markdig;
+using Markdig.Parsers;
+using Markdig.Renderers.Html;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using SixLabors.Fonts;
@@ -30,27 +33,26 @@ public abstract class ImageBuilder
         var sb = new StringBuilder();
         var list = new List<RichTextRun>();
 
-        int count = 0;
+        var count = 0;
         var defaultFont = new Lazy<Font>(() => FontManager.MaoKenTangYuan.CreateFont(20));
-        string prefix = string.Empty;
+        var prefix = string.Empty;
         foreach (var line in runs)
         {
             if (line.Text == string.Empty)
                 continue; //空字符串
-
+            if (count++ > 200) //防止死循环
+                break;
             if (line.StartPrefix)
             {
                 prefix += line.Text;
                 continue;
             }
-
             if (line.EndPrefix)
             {
-                //todo
+                if (prefix.Length > line.Text.Length)
+                    prefix = prefix[..^line.Text.Length];
                 continue;
             }
-            if (count++ > 200) //防止死循环
-                break;
             var (text, color, font) = line;
             var run = new RichTextRun
             {
@@ -62,16 +64,21 @@ public abstract class ImageBuilder
             };
             if (line.Underline)
                 run.TextDecorations = TextDecorations.Underline;
-            if (line.Italic || line.Bold)
-            {
-                run.Font ??= defaultFont.Value;
-                run.Font = new Font(
-                    run.Font.Family,
-                    run.Font.Size,
-                    (line.Italic ? FontStyle.Italic : FontStyle.Regular)
-                        | (line.Bold ? FontStyle.Bold : FontStyle.Regular)
-                );
-            }
+            //if (line.Italic || line.Bold)
+            //{
+            //var boldStrokeWidth = .5f;
+            //if (line.Italic)
+            //{
+            //    float[] pattern = [3, 2, 1];
+            //    run.Pen = line.Bold
+            //        ? new PatternPen(color, boldStrokeWidth, pattern)
+            //        : new PatternPen(color, pattern);
+            //}
+            //else if (line.Bold)
+            //{
+            //    run.Pen = new SolidPen(color, boldStrokeWidth);
+            //}
+            //}
             if (line.Strikethrough)
                 run.TextDecorations |= TextDecorations.Strikeout;
             if (line.Olive)
@@ -245,11 +252,33 @@ public class CardBuilder : ImageBuilder
                         };
                         break;
                     case EmphasisInline emphasis:
-                        foreach (var run in InlineToString(emphasis, fontSize))
-                            yield return run;
+                        if (emphasis is { DelimiterChar: '`' })
+                        {
+                            foreach (var run in InlineToString(emphasis, fontSize))
+                                yield return run;
+                        }
+                        else
+                        {
+                            var isBold =
+                                emphasis is { DelimiterChar: not '~', DelimiterCount: 2 or 3 };
+                            var isItalic =
+                                emphasis is { DelimiterChar: not '~', DelimiterCount: 1 or 3 };
+                            var isStrikethrough =
+                                emphasis is { DelimiterChar: '~', DelimiterCount: 2 };
+                            foreach (var run in InlineToString(emphasis, fontSize))
+                                yield return run with
+                                {
+                                    Bold = isBold,
+                                    Italic = isItalic,
+                                    Strikethrough = isStrikethrough,
+                                };
+                        }
                         break;
                     case LineBreakInline _:
-                        yield return new TextRun("\r\n", Color.White) { FontSize = fontSize };
+                        yield return new TextRun(Environment.NewLine, Color.White)
+                        {
+                            FontSize = fontSize,
+                        };
                         break;
                     case CodeInline code:
                         yield return new TextRun(code.Content, Color.White)
@@ -259,14 +288,14 @@ public class CardBuilder : ImageBuilder
                         };
                         break;
                     case LinkInline link:
-                        yield return new TextRun(link.Url ?? GetRawText(link.Span), Color.Blue)
+                        yield return new TextRun(link.Url ?? GetRawText(link.Span), Color.LightBlue)
                         {
                             Underline = true,
                             FontSize = fontSize,
                         };
                         break;
                     case AutolinkInline autolink:
-                        yield return new TextRun(autolink.Url, Color.Blue)
+                        yield return new TextRun(autolink.Url, Color.LightBlue)
                         {
                             Underline = true,
                             FontSize = fontSize,
@@ -329,23 +358,22 @@ public class CardBuilder : ImageBuilder
 
                     break;
                 case ThematicBreakBlock _:
-                    yield return new TextRun("\n--------------------\n", Color.Gray)
-                    {
-                        FontSize = 8,
-                    };
-
+                    yield return newLine;
+                    yield return new TextRun(new string('—', 50), Color.Gray) { FontSize = 8 };
                     break;
                 case ListItemBlock listItem:
                     {
                         if (block.Column is > 0 and var col)
                             yield return Indent(col, fontSize);
                     }
-                    yield return new TextRun(" ", Color.White) { FontSize = fontSize };
-                    yield return new TextRun("-", Color.Pink) { FontSize = fontSize };
-                    yield return new TextRun(" ", Color.White) { FontSize = fontSize };
+
                     if (listItem.Order is > 0 and var order)
-                    {
+                    { //带序号
                         yield return new TextRun(order + ". ", Color.Pink) { FontSize = fontSize };
+                    }
+                    else
+                    { //无序号
+                        yield return new TextRun(" - ", Color.Pink) { FontSize = fontSize };
                     }
                     foreach (var listItemBlock in listItem)
                     {
@@ -363,7 +391,7 @@ public class CardBuilder : ImageBuilder
                     }
                     break;
                 case CodeBlock code:
-                    yield return new TextRun(GetRawText(code.Span), Color.LightBlue)
+                    yield return new TextRun(GetRawText(code.Span), Color.LightSeaGreen)
                     {
                         Italic = true,
                         FontSize = fontSize,
@@ -383,6 +411,42 @@ public class CardBuilder : ImageBuilder
                         }
                     }
                     yield return new TextRun(">", Color.LightGoldenrodYellow) { EndPrefix = true };
+                    break;
+                case HtmlBlock html:
+                    var htmlRaw = GetRawText(html.Span);
+                    var htmlText = htmlRaw.Length > 20 ? htmlRaw[..20] : htmlRaw;
+
+                    switch (html.Type)
+                    {
+                        //case HtmlBlockType.DocumentType:
+                        //    yield return new TextRun("<!DOCTYPE html>" + htmlText, Color.Gray)
+                        //    {
+                        //        FontSize = fontSize,
+                        //    };
+                        //    break;
+                        //case HtmlBlockType.CData:
+                        //    break;
+                        case HtmlBlockType.Comment:
+                            //yield return new TextRun("//" + htmlText, Color.Gray)
+                            //{
+                            //    FontSize = fontSize,
+                            //};
+                            break;
+                        //case HtmlBlockType.ProcessingInstruction:
+                        //    break;
+                        //case HtmlBlockType.ScriptPreOrStyle:
+                        //    break;
+                        //case HtmlBlockType.InterruptingBlock:
+                        //    break;
+                        //case HtmlBlockType.NonInterruptingBlock:
+                        //    break;
+                        default:
+                            yield return new TextRun(htmlText, Color.LightSeaGreen)
+                            {
+                                FontSize = fontSize,
+                            };
+                            break;
+                    }
                     break;
                 default:
                     yield return new TextRun(GetRawText(block.Span)

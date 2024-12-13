@@ -3,8 +3,15 @@ using SixLabors.ImageSharp;
 
 namespace HuaJiBot.NET.Utils;
 
-public class TextRun(string text, Color color, Font? font = null)
+public record TextRun
 {
+    public TextRun(string text, Color color, Font? font = null)
+    {
+        Text = text.Replace("\r", null);
+        Color = color;
+        Font = font;
+    }
+
     public TextRun(string text, Font? font = null)
         : this(text, Color.White, font) { }
 
@@ -16,9 +23,9 @@ public class TextRun(string text, Color color, Font? font = null)
 
     public static implicit operator TextRun(string text) => new(text, Color.White, null);
 
-    public string Text { get; init; } = text.Replace("\r", null);
-    public Color Color { get; init; } = color;
-    public Font? Font { get; init; } = font;
+    public string Text { get; init; }
+    public Color Color { get; init; }
+    public Font? Font { get; init; }
     public bool Underline { get; init; }
     public bool Bold { get; init; }
     public bool Italic { get; init; }
