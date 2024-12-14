@@ -35,18 +35,14 @@ internal class EventJsonConverter : JsonConverter<Event>
             Headers = headers,
             Body = headers.XGithubEvent switch
             {
-                [
-                    "push",
-                ] //仓库提交事件（commit）
-                => bodyJsonObj.ToObject<PushEventBody.PushEventBody>(serializer),
-                [
-                    "workflow_run",
-                ] //Workflow运行事件
-                => bodyJsonObj.ToObject<WorkflowRunEventBody.WorkflowRunEventBody>(serializer),
-                [
-                    "issues",
-                ] //issue变更
-                => bodyJsonObj.ToObject<IssuesEventBody.IssuesEventBody>(serializer),
+                ["push"] => //仓库提交事件（commit）
+                bodyJsonObj.ToObject<PushEventBody.PushEventBody>(serializer),
+                ["workflow_run"] => //Workflow运行事件
+                bodyJsonObj.ToObject<WorkflowRunEventBody.WorkflowRunEventBody>(serializer),
+                ["issues"] => //issue变更
+                bodyJsonObj.ToObject<IssuesEventBody.IssuesEventBody>(serializer),
+                ["issue_comment"] => //issue评论
+                bodyJsonObj.ToObject<IssueCommentEventBody.IssueCommentEventBody>(serializer),
                 _ => new UnknownEventBody
                 {
                     Raw = bodyJsonObj,

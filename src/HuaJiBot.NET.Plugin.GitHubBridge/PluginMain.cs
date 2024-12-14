@@ -2,6 +2,7 @@
 using System.Text;
 using HuaJiBot.NET.Plugin.GitHubBridge.EventDispatch;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types;
+using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssueCommentEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssuesEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.PushEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.WorkflowRunEventBody;
@@ -81,6 +82,9 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     break;
                 case IssuesEventBody body: //issue事件
                     await this.DispatchIssuesEventAsync(body);
+                    break;
+                case IssueCommentEventBody body: //issue comment事件
+                    await this.DispatchIssueCommentEventAsync(body);
                     break;
                 case WorkflowRunEventBody body: //actions构建事件
                     await this.DispatchWorkflowRunEventAsync(body);

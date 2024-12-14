@@ -19,4 +19,4 @@ internal class UnknownEventBody : EventBody
     public JToken Raw { get; set; }
 }
 
-internal abstract class EventBody { }
+internal abstract class EventBody;
