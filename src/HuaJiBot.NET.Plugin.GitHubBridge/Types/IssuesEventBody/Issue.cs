@@ -76,7 +76,7 @@ internal class Issue
     public object ActiveLockReason { get; set; }
 
     [JsonProperty("body")]
-    public object Body { get; set; }
+    public string Body { get; set; }
 
     [JsonProperty("reactions")]
     public Reactions Reactions { get; set; }

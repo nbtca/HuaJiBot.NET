@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Runtime.CompilerServices;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using Newtonsoft.Json;
@@ -23,13 +24,31 @@ public abstract class PluginBase
     public string Name { get; internal set; } = null!;
     public BotServiceBase Service { get; internal set; } = null!;
 
-    public void Info(object msg) => Service.Log($"[{Name}] {msg}");
+    public void Info(
+        object msg,
+        [CallerFilePath] string? file = null,
+        [CallerLineNumber] int? line = null
+    ) => Service.Log($"[{Name}] {msg}", file, line);
 
-    public void Warn(object msg) => Service.Warn($"[{Name}] {msg}");
+    public void Warn(
+        object msg,
+        [CallerFilePath] string? file = null,
+        [CallerLineNumber] int? line = null
+    ) => Service.Warn($"[{Name}] {msg}", file, line);
 
-    public void Warn(object msg, object detail) => Service.Warn($"[{Name}] {msg}" + detail);
+    public void Warn(
+        object msg,
+        object detail,
+        [CallerFilePath] string? file = null,
+        [CallerLineNumber] int? line = null
+    ) => Service.Warn($"[{Name}] {msg}" + detail, file, line);
 
-    public void Error(object msg, object detail) => Service.LogError($"[{Name}] {msg}", detail);
+    public void Error(
+        object msg,
+        object detail,
+        [CallerFilePath] string? file = null,
+        [CallerLineNumber] int? line = null
+    ) => Service.LogError($"[{Name}] {msg}", detail, file, line);
 
     /// <summary>
     /// 插件初始化(异步)

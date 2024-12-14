@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
@@ -32,14 +33,42 @@ public abstract class BotServiceBase
     #region Logger
     public abstract ILogger Logger { get; init; }
 
-    public void Log(object message) => Logger.Log(message);
+    public void Log(
+        object message,
+        [CallerFilePath] string? file = null,
+        [CallerLineNumber] int? line = null
+    ) => Logger.Log(AppendSourceInfo(message, file, line));
 
-    public void Warn(object message) => Logger.Warn(message);
+    public void Warn(
+        object message,
+        [CallerFilePath] string? file = null,
+        [CallerLineNumber] int? line = null
+    ) => Logger.Warn(AppendSourceInfo(message, file, line));
 
-    public void LogDebug(object message) => Logger.LogDebug(message);
+    public void LogDebug(
+        object message,
+        [CallerFilePath] string? file = null,
+        [CallerLineNumber] int? line = null
+    ) => Logger.LogDebug(AppendSourceInfo(message, file, line));
 
-    public void LogError(object message, object detail) => Logger.LogError(message, detail);
+    public void LogError(
+        object message,
+        object detail,
+        [CallerFilePath] string? file = null,
+        [CallerLineNumber] int? line = null
+    ) => Logger.LogError(AppendSourceInfo(message, file, line), detail);
     #endregion
+
+    private string AppendSourceInfo(object msg, string? file = null, int? line = null)
+    {
+        const string indexStr = "huaji-bot-dotnet";
+        if (file?.IndexOf(indexStr) is > 0 and var index)
+        {
+            file = file[(index + indexStr.Length)..];
+        }
+        return $"{msg} [{file}:{line}]";
+    }
+
     public abstract void Reconnect();
     public abstract Task SetupServiceAsync();
     public Config.ConfigWrapper Config { get; internal set; } = null!;
