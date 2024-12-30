@@ -1,6 +1,6 @@
 ﻿namespace HuaJiBot.NET.Utils;
 
-internal static class TempFile
+public static class TempFile
 {
     /// <summary>
     /// 用于出作用域自动删除文件
@@ -32,7 +32,7 @@ internal static class TempFile
     /// 保存到临时文件
     /// </summary>
     /// <returns>自动删除文件</returns>
-    public AutoDeleteFile SaveTempAutoDelete(Stream stream)
+    public static AutoDeleteFile SaveTempAutoDelete(Stream stream)
     {
         var tempName = Path.GetTempFileName();
         var tempDir = Path.Combine(Environment.CurrentDirectory, "temp");

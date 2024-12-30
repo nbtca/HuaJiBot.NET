@@ -161,7 +161,7 @@ public abstract class ImageBuilder
     /// 保存到临时文件
     /// </summary>
     /// <returns>自动删除文件</returns>
-    public AutoDeleteFile SaveTempAutoDelete(bool autoHeight = false)
+    public TempFile.AutoDeleteFile SaveTempAutoDelete(bool autoHeight = false)
     {
         var tempName = Path.GetTempFileName();
         var tempDir = Path.Combine(Environment.CurrentDirectory, "temp");
@@ -169,7 +169,7 @@ public abstract class ImageBuilder
             Directory.CreateDirectory(tempDir);
         var tempFile = Path.Combine(tempDir, tempName);
         Generate(tempFile, autoHeight);
-        return new AutoDeleteFile(tempFile);
+        return new TempFile.AutoDeleteFile(tempFile);
     }
 
     /// <summary>
