@@ -1,11 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Numerics;
-using System.Runtime.CompilerServices;
+﻿using System.Numerics;
 using System.Text;
 using HuaJiBot.NET.Utils.Fonts;
 using Markdig;
-using Markdig.Parsers;
-using Markdig.Renderers.Html;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using SixLabors.Fonts;
@@ -553,13 +549,14 @@ public class CardBuilder : ImageBuilder
                 if (autoHeight)
                 {
                     var measureSize = TextMeasurer.MeasureSize(text, richTextOptions); //测量文本大小
+                    var originalHeight = height;
                     height = (int)measureSize.Height + 130; //设置高度
                     ctx.Resize(
                         new ResizeOptions
                         {
                             Size = new Size(width, height),
                             Position = AnchorPositionMode.Top,
-                            Mode = ResizeMode.Pad,
+                            Mode = height < originalHeight ? ResizeMode.Crop : ResizeMode.Pad,
                             PadColor = background,
                         }
                     ); //调整大小
