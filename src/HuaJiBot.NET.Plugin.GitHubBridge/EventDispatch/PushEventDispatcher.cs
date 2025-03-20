@@ -11,7 +11,13 @@ internal static class PushEventDispatcher
     public static async Task DispatchPushEventAsync(this PluginMain plugin, PushEventBody body)
     {
         //排除如workflow的提交
-        if (body.Commits.All(x => x.Modified.All(y => y.StartsWith("."))))
+        if (
+            body.Commits.All(x =>
+                x.Modified.All(y => y.StartsWith("."))
+                && x.Added.All(y => y.StartsWith("."))
+                && x.Removed.All(y => y.StartsWith("."))
+            )
+        )
         {
             return;
         }
