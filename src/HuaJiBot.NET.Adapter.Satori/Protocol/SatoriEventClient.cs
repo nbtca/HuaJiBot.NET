@@ -15,14 +15,13 @@ namespace HuaJiBot.NET.Adapter.Satori.Protocol;
 
 internal class SatoriEventClient
 {
-    private readonly JsonSerializerSettings _jsonSerializerSettings =
-        new()
+    private readonly JsonSerializerSettings _jsonSerializerSettings = new()
+    {
+        ContractResolver = new DefaultContractResolver
         {
-            ContractResolver = new DefaultContractResolver
-            {
-                NamingStrategy = new SnakeCaseNamingStrategy()
-            }
-        };
+            NamingStrategy = new SnakeCaseNamingStrategy(),
+        },
+    };
     private readonly WebsocketClient _client;
     private readonly Timer _pingTimer;
     private readonly SatoriAdapter _service;
@@ -35,7 +34,7 @@ internal class SatoriEventClient
         {
             IsTextMessageConversionEnabled = true,
             MessageEncoding = Encoding.UTF8,
-            ReconnectTimeout = null
+            ReconnectTimeout = null,
         };
         _service = service;
         _client
@@ -80,7 +79,7 @@ internal class SatoriEventClient
             var identify = new Signal<IdentifySignalBody> //鉴权
             {
                 Op = SignalOperation.Identify,
-                Body = new IdentifySignalBody { Token = token }
+                Body = new IdentifySignalBody { Token = token },
             };
             SendSignal(identify);
             _pingTimer?.Start();
@@ -89,7 +88,7 @@ internal class SatoriEventClient
         _pingTimer = new Timer
         {
             AutoReset = true,
-            Interval = TimeSpan.FromSeconds(10).TotalMilliseconds
+            Interval = TimeSpan.FromSeconds(10).TotalMilliseconds,
         };
         _pingTimer.Elapsed += (_, _) => SendSignal(new Signal { Op = SignalOperation.Ping });
     }
@@ -98,7 +97,7 @@ internal class SatoriEventClient
     {
         try
         {
-            _service.LogDebug($"WebSocket::Process {message}");
+            //_service.LogDebug($"WebSocket::Process {message}");
             var json = JObject.Parse(message);
             var op = (SignalOperation)json.Value<int>("op");
             switch (op)
@@ -112,7 +111,7 @@ internal class SatoriEventClient
                         {
                             Type: SatoriEventTypes.MessageCreated,
                             SelfId: var self,
-                            Channel: { Id: var groupId, Name: var groupName, },
+                            Channel: { Id: var groupId, Name: var groupName },
                             User: { Id: var senderId, Name: var nickName },
                             Member: { Name: var memberName, Nick: var memberNickName },
                             Message: { } msg
@@ -176,7 +175,7 @@ internal class SatoriEventClient
                                 SenderId = senderId,
                                 SenderMemberCard = name ?? string.Empty,
                                 TextMessageLazy = new Lazy<string>(() => msg.Content),
-                                Service = _service
+                                Service = _service,
                             }
                         );
                     }
@@ -195,12 +194,12 @@ internal class SatoriEventClient
                             Accounts = _service.AllRobots,
                             ClientName = appName,
                             ClientVersion = null,
-                            Service = _service
+                            Service = _service,
                         }
                     );
                     break;
                 case SignalOperation.Pong:
-                    _service.LogDebug("WebSocket::Pong");
+                    //_service.LogDebug("WebSocket::Pong");
                     break;
                 default:
                     _service.Log($"WebSocket::Process Unknown operation {op}");
@@ -219,7 +218,7 @@ internal class SatoriEventClient
         where T : Signal
     {
         var text = JsonConvert.SerializeObject(signal, _jsonSerializerSettings);
-        _service.LogDebug($"WebSocket::SendSignal {text}");
+        //_service.LogDebug($"WebSocket::SendSignal {text}");
         _client.Send(text);
     }
 }
