@@ -120,14 +120,14 @@ internal class ReminderTask : IDisposable
                         ev =>
                         {
                             Service.Log(
-                                $"[日程] {RemindBeforeStartMinutes} 分钟后开始日程：{ev.Summary}({ev.Start.AsSystemLocal})"
+                                $"[日程] {RemindBeforeStartMinutes} 分钟后开始日程：{ev.Summary}({ev.Start.ToLocalNetworkTime()})"
                             );
                             ForEachMatchedGroup(
                                 ev,
                                 send =>
                                     send(
                                         $"""
-                                        日程提醒({ev.Start.AsSystemLocal})：
+                                        日程提醒({ev.Start.ToLocalNetworkTime()})：
                                         {ev.Summary} {ev.Location}
                                         {ev.Description}
                                         将于 {RemindBeforeStartMinutes} 分钟后开始
@@ -154,20 +154,23 @@ internal class ReminderTask : IDisposable
                     var timeRemained = remindTime - now; //计算距离提醒时间还有多久
                     if (timeRemained < TimeSpan.Zero) //如果已经开始了
                         continue; //跳过
+                    if (e.End is null) //跳过没有结束时间的事件
+                        continue;
+
                     ScheduleStartReminder(
                         timeRemained,
                         e,
                         ev =>
                         {
                             Service.Log(
-                                $"[日程] {RemindBeforeEndMinutes} 分钟后开始日程：{ev.Summary}({ev.Start.AsSystemLocal})"
+                                $"[日程] {RemindBeforeEndMinutes} 分钟后开始日程：{ev.Summary}({ev.Start.ToLocalNetworkTime()})"
                             );
                             ForEachMatchedGroup(
                                 ev,
                                 send =>
                                     send(
                                         $"""
-                                        日程提醒({ev.End.AsSystemLocal})：
+                                        日程提醒({ev.End.ToLocalNetworkTime()})：
                                         {ev.Summary} {ev.Location}
                                         预计于 {RemindBeforeEndMinutes} 分钟后结束
                                         """
@@ -193,13 +196,13 @@ internal class ReminderTask : IDisposable
     {
         Task.Delay(waiting).ContinueWith(_ => SendReminder(e, start));
         Service.Log(
-            $"[日程] 计划发送提醒：{e.Summary}({e.Start.AsSystemLocal}) ({waiting.TotalMinutes:F1}分钟后发送)"
+            $"[日程] 计划发送提醒：{e.Summary}({e.Start.ToLocalNetworkTime()}) ({waiting.TotalMinutes:F1}分钟后发送)"
         );
     }
 
     private void SendReminder(CalendarEvent e, Action<CalendarEvent> start)
     {
-        Service.Log($"[日程] 发送提醒：{e.Summary}({e.Start.AsSystemLocal})");
+        Service.Log($"[日程] 发送提醒：{e.Summary}({e.Start.ToLocalNetworkTime()})");
         start(e);
     }
 

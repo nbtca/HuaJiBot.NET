@@ -5,6 +5,7 @@ public class NetworkTime
     private static TimeSpan _diff;
     public static TimeSpan Diff => _diff;
     public static TimeSpan LocalTimeZoneOffset = TimeSpan.FromHours(8);
+    public static string LocalTimeZoneName = "Asia/Shanghai";
 
     public static async Task UpdateDiffAsync()
     {
