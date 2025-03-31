@@ -10,11 +10,9 @@ internal static class CalendarExtensions
 {
     public class Period(Ical.Net.DataTypes.Period p)
     {
-        public DateTimeOffset StartTime { get; } =
-            new(p.StartTime.AsUtc, NetworkTime.LocalTimeZoneOffset);
+        public DateTimeOffset StartTime { get; } = p.StartTime.ToLocalNetworkTime();
 
-        public DateTimeOffset EndTime { get; } =
-            new(p.EndTime?.AsUtc ?? p.StartTime.AsUtc, NetworkTime.LocalTimeZoneOffset);
+        public DateTimeOffset EndTime { get; } = (p.EndTime ?? p.StartTime).ToLocalNetworkTime();
     }
 
     /// <summary>

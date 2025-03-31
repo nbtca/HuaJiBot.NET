@@ -7,6 +7,9 @@ internal static class CalDateTimeExtensions
 {
     public static DateTimeOffset ToLocalNetworkTime(this CalDateTime @this)
     {
-        return new DateTimeOffset(@this.AsUtc, NetworkTime.LocalTimeZoneOffset);
+        var utcDateTime = @this.AsUtc;
+        return new DateTimeOffset(utcDateTime.Ticks, TimeSpan.Zero).ToOffset(
+            NetworkTime.LocalTimeZoneOffset
+        );
     }
 }
