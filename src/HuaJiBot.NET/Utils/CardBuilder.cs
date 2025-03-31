@@ -1,10 +1,13 @@
 ﻿using System.Numerics;
 using System.Text;
+using System.Text.RegularExpressions;
 using HuaJiBot.NET.Utils.Fonts;
 using Markdig;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using SixLabors.Fonts;
+using SixLabors.Fonts.Tables.AdvancedTypographic;
+using SixLabors.Fonts.Unicode;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
@@ -17,6 +20,33 @@ namespace HuaJiBot.NET.Utils;
 public abstract class ImageBuilder
 {
     #region TextRuns
+
+    private static int getCodePointLength(string text)
+    {
+        //// https://github.com/SixLabors/Fonts/blob/main/src/SixLabors.Fonts/Unicode/UnicodeUtility.cs#L645
+        // var pattern = @"[\uD800-\uDBFF][\uDC00-\uDFFF]";
+        //var regex = new Regex(pattern);
+        //var count = regex.Matches(text).Count;
+        //return text.Length - count;
+        //https://github.com/SixLabors/Fonts/blob/d74f3fae7250cf3a76f43780abea6e15ec40b75e/src/SixLabors.Fonts/TextRun.cs#L55
+        var chars = 0;
+        SpanGraphemeEnumerator graphemeEnumerator = new(text);
+        while (graphemeEnumerator.MoveNext())
+        {
+            //SpanCodePointEnumerator codePointEnumerator = new(graphemeEnumerator.Current);
+            //while (codePointEnumerator.MoveNext())
+            //{
+            //    //chars += codePointEnumerator.Current.Utf16SequenceLength;
+            //    Console.WriteLine(" + " + codePointEnumerator.Current.Utf16SequenceLength);
+            chars++;
+            //}
+            //Console.WriteLine(graphemeEnumerator.Current.);
+        }
+        Console.WriteLine(text + " >>> " + chars);
+
+        return chars;
+    }
+
     /// <summary>
     /// 将富文本转换为ImageSharp的RichTextRun
     /// </summary>
@@ -27,10 +57,16 @@ public abstract class ImageBuilder
     )
     {
         var sb = new StringBuilder();
+        var currentIndex = 0;
         var list = new List<RichTextRun>();
 
         var count = 0;
         var defaultFont = new Lazy<Font>(() => FontManager.MaoKenTangYuan.CreateFont(20));
+        var boldFont = new Lazy<Font>(() => FontManager.MaoKenTangYuanBold.CreateFont(20));
+        var italicFont = new Lazy<Font>(() => FontManager.MaoKenTangYuanItalic.CreateFont(20));
+        var boldItalicFont = new Lazy<Font>(
+            () => FontManager.MaoKenTangYuanItalicBold.CreateFont(20)
+        );
         var prefix = string.Empty;
         foreach (var line in runs)
         {
@@ -53,28 +89,22 @@ public abstract class ImageBuilder
             var run = new RichTextRun
             {
                 Brush = new SolidBrush(color),
-                Start = sb.Length,
-                End = sb.Length + text.Length,
+                Start = currentIndex,
+                End = currentIndex += getCodePointLength(text),
                 Font = font,
                 TextAttributes = line.TextAttributes,
             };
             if (line.Underline)
                 run.TextDecorations = TextDecorations.Underline;
-            //if (line.Italic || line.Bold)
-            //{
-            //var boldStrokeWidth = .5f;
-            //if (line.Italic)
-            //{
-            //    float[] pattern = [3, 2, 1];
-            //    run.Pen = line.Bold
-            //        ? new PatternPen(color, boldStrokeWidth, pattern)
-            //        : new PatternPen(color, pattern);
-            //}
-            //else if (line.Bold)
-            //{
-            //    run.Pen = new SolidPen(color, boldStrokeWidth);
-            //}
-            //}
+            if (line.Italic || line.Bold)
+            {
+                if (line is { Italic: true, Bold: true })
+                    run.Font = boldItalicFont.Value;
+                else if (line.Italic)
+                    run.Font = italicFont.Value;
+                else if (line.Bold)
+                    run.Font = boldFont.Value;
+            }
             if (line.Strikethrough)
                 run.TextDecorations |= TextDecorations.Strikeout;
             if (line.Olive)
@@ -475,7 +505,9 @@ public class CardBuilder : ImageBuilder
         using var image = new Image<Rgba32>(width, height);
         // 选择字体、颜色和布局
         var font = FontManager.ComicSansMs.CreateFont(20);
-        var yaHeiFont = FontManager.MaoKenTangYuan.CreateFont(20);
+        var chineseFont = FontManager.MaoKenTangYuan.CreateFont(20);
+        var emojiFont = FontManager.TwEmoji.CreateFont(20);
+        var fallbackFontFamilies = new List<FontFamily> { chineseFont.Family, emojiFont.Family };
         var background = Color.Black;
         const int iconWidth = 60;
         var secondaryBrush = new SolidBrush(Color.FromRgb(167, 169, 181));
@@ -490,7 +522,7 @@ public class CardBuilder : ImageBuilder
                 // 绘制图标
                 .DrawImage(icon, new Point(15, 15), 1)
                 // 绘制标题文本
-                .DrawText(Title, yaHeiFont, secondaryBrush, new PointF(iconWidth, 10));
+                .DrawText(Title, chineseFont, secondaryBrush, new PointF(iconWidth, 10));
             // 绘制副标题文本
             {
                 var (text, runs) = BuildTextRuns(Subtitle);
@@ -500,7 +532,7 @@ public class CardBuilder : ImageBuilder
                         Origin = new Vector2(iconWidth, 45),
                         HorizontalAlignment = HorizontalAlignment.Left,
                         VerticalAlignment = VerticalAlignment.Center,
-                        FallbackFontFamilies = [yaHeiFont.Family],
+                        FallbackFontFamilies = fallbackFontFamilies,
                         TextRuns = runs,
                     },
                     text,
@@ -527,7 +559,7 @@ public class CardBuilder : ImageBuilder
                         {
                             Origin = new Vector2(width - 10, 10),
                             HorizontalAlignment = HorizontalAlignment.Right,
-                            FallbackFontFamilies = [yaHeiFont.Family],
+                            FallbackFontFamilies = fallbackFontFamilies,
                             TextRuns = runs,
                         },
                         text,
@@ -542,24 +574,42 @@ public class CardBuilder : ImageBuilder
                 {
                     WrappingLength = width - iconWidth - 20,
                     Origin = new PointF(iconWidth, 60),
-                    FallbackFontFamilies = [yaHeiFont.Family],
+                    FallbackFontFamilies = fallbackFontFamilies,
                     LineSpacing = 1.1f,
                     TextRuns = runs,
+                    ColorFontSupport = ColorFontSupport.MicrosoftColrFormat,
                 };
                 if (autoHeight)
                 {
-                    var measureSize = TextMeasurer.MeasureSize(text, richTextOptions); //测量文本大小
-                    var originalHeight = height;
-                    height = (int)measureSize.Height + 130; //设置高度
-                    ctx.Resize(
-                        new ResizeOptions
-                        {
-                            Size = new Size(width, height),
-                            Position = AnchorPositionMode.Top,
-                            Mode = height < originalHeight ? ResizeMode.Crop : ResizeMode.Pad,
-                            PadColor = background,
-                        }
-                    ); //调整大小
+#if DEBUG
+                    var measureSizeOrNull = TextMeasurer.MeasureSize(text, richTextOptions); //测量文本大小
+#else
+                    FontRectangle? measureSizeOrNull;
+                    try
+                    {
+                        measureSizeOrNull = TextMeasurer.MeasureSize(text, richTextOptions); //测量文本大小
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        measureSizeOrNull = null;
+                    }
+#endif
+
+                    if (measureSizeOrNull is { } measureSize)
+                    {
+                        var originalHeight = height;
+                        height = (int)measureSize.Height + 130; //设置高度
+                        ctx.Resize(
+                            new ResizeOptions
+                            {
+                                Size = new Size(width, height),
+                                Position = AnchorPositionMode.Top,
+                                Mode = height < originalHeight ? ResizeMode.Crop : ResizeMode.Pad,
+                                PadColor = background,
+                            }
+                        ); //调整大小
+                    }
                 }
                 ctx.DrawText(richTextOptions, text, new SolidBrush(Color.White));
             }
@@ -585,7 +635,7 @@ public class CardBuilder : ImageBuilder
                 });
                 ctx.DrawText(
                         Footer,
-                        yaHeiFont,
+                        chineseFont,
                         secondaryBrush,
                         new PointF(iconWidth + 30, height - (200 - 160))
                     )
@@ -595,7 +645,7 @@ public class CardBuilder : ImageBuilder
             {
                 ctx.DrawText(
                     Footer,
-                    yaHeiFont,
+                    chineseFont,
                     secondaryBrush,
                     new PointF(iconWidth, height - (200 - 160))
                 );

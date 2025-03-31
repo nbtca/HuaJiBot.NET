@@ -27,118 +27,128 @@ internal class BuildImageTest
     public async Task GitIssue()
     {
         var text = "test";
-        text = """
-            # Markdown Syntax Guide
+        text =
+            "你好\ud83d\ude0a"
+            + "你好\ud83d\udc69\u200d\ud83d\udc69\u200d\ud83d\udc67\u200d\ud83d\udc66" // 家庭 emoji，是一个连接的 emoji
+            + "你好\ud83d\udc4d"
+            + "你好\ud83d\udc68\u200d\u2695\ufe0f" // 职业 emoji，也是一个连接的 emoji
+            + "\ud83d\ude00\ud83d\ude03\ud83d\ude04\ud83d\ude01\ud83d\ude06\ud83d\ude05\ud83d\ude02\ud83d\ude03\ud83d\ude04\ud83d\ude01\ud83d\ude06\ud83d\ude05\ud83d\ude02\ud83e\udd23\r\n\ud83d\ude03\ud83d\ude04\ud83d\ude01\ud83d\ude06\ud83d\ude05\ud83d\ude02\ud83e\udd23 \ud83d\ude0a\ud83d\ude07\ud83d\ude42\ud83d\ude43\ud83d\ude09\ud83d\ude0c\ud83d\ude0d\ud83e\udd70\ud83d\ude18\ud83d\ude17\ud83d\ude19\ud83d\ude1a\ud83d\ude0b\ud83d\ude1b\ud83d\ude1d\ud83d\ude1c\ud83e\udd2a\ud83e\udd28\ud83e\uddd0\ud83e\udd13\ud83d\ude0e\ud83e\udd78\ud83e\udd29\ud83e\udd73\ud83d\ude42\u200d\u2195\ufe0f\ud83d\ude0f\ud83d\ude12\ud83d\ude42\u200d\u2194\ufe0f\ud83d\ude1e\ud83d\ude14\ud83d\ude1f\ud83d\ude15\ud83d\ude41\u2639\ufe0f\ud83d\ude23\ud83d\ude16\ud83d\ude2b\ud83d\ude29\ud83e\udd7a\ud83d\ude22\ud83d\ude2d\ud83d\ude2e\u200d\ud83d\udca8\ud83d\ude24\ud83d\ude20\ud83d\ude21\ud83e\udd2c\ud83e\udd2f\ud83d\ude33\ud83e\udd75\ud83e\udd76\ud83d\ude31\ud83d\ude28\ud83d\ude30\ud83d\ude25\ud83d\ude13\ud83e\udee3\ud83e\udd17\ud83e\udee1\ud83e\udd14\ud83e\udee2\ud83e\udd2d\ud83e\udd2b\ud83e\udd25\ud83d\ude36\ud83d\ude36\u200d\ud83c\udf2b\ufe0f\ud83d\ude10\ud83d\ude11\ud83d\ude2c\ud83e\udee8\ud83e\udee0\ud83d\ude44\ud83d\ude2f\ud83d\ude26\ud83d\ude27\ud83d\ude2e\ud83d\ude32\ud83e\udd71\ud83d\ude34\ud83e\udee9\ud83e\udd24\ud83d\ude2a\ud83d\ude35\ud83d\ude35\u200d\ud83d\udcab\ud83e\udee5\ud83e\udd10\ud83e\udd74\ud83e\udd22\ud83e\udd2e\ud83e\udd27\ud83d\ude37\ud83e\udd12\ufffd\ufffd\ud83e\udd11\ud83e\udd20\ud83d\ude08\ud83d\udc7f\ud83d\udc79\ud83d\udc7a\ud83e\udd21\ud83d\udca9";
 
-            ## Headings
+        //
+        //
 
-            # H1 Heading
-            ## H2 Heading
-            ### H3 Heading
-            #### H4 Heading
-            ##### H5 Heading
-            ###### H6 Heading
+        //text = """
+        //    # Markdown Syntax Guide
 
-            ## Text Formatting
+        //    ## Headings
 
-            **Bold Text**
-            *Italic Text*
-            ***Bold and Italic***
-            ~~Strikethrough~~
+        //    # H1 Heading
+        //    ## H2 Heading
+        //    ### H3 Heading
+        //    #### H4 Heading
+        //    ##### H5 Heading
+        //    ###### H6 Heading
 
-            ## Blockquotes
+        //    ## Text Formatting
 
-            > This is a blockquote.
-            >
-            > - Nested item 1
-            >   - Nested subitem 1
-            > - Nested item 2
+        //    **Bold Text**
+        //    *Italic Text*
+        //    ***Bold and Italic***
+        //    ~~Strikethrough~~
 
+        //    ## Blockquotes
 
-            ## Lists
-
-            ### Unordered List
-
-            - Item 1
-              - Subitem 1
-              - Subitem 2
-            - Item 2
-
-            ### Ordered List
-
-            1. First item
-            2. Second item
-               1. Subitem 1
-               2. Subitem 2
-            3. Third item
-
-            ## Code
-
-            ### Inline Code
-
-            Use `inline code` for small snippets.
-
-            ### Code Blocks
-
-            ```
-            # Python code example
-            def greet(name):
-                return f"Hello, {name}!"
-            ```
+        //    > This is a blockquote.
+        //    >
+        //    > - Nested item 1
+        //    >   - Nested subitem 1
+        //    > - Nested item 2
 
 
-            ## Horizontal Rules
+        //    ## Lists
 
-            ---
+        //    ### Unordered List
 
-            ## Links
+        //    - Item 1
+        //      - Subitem 1
+        //      - Subitem 2
+        //    - Item 2
 
-            [Markdown Guide](https://www.markdownguide.org)
+        //    ### Ordered List
 
-            ### Image
+        //    1. First item
+        //    2. Second item
+        //       1. Subitem 1
+        //       2. Subitem 2
+        //    3. Third item
 
-            ![Markdown Logo](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)
+        //    ## Code
 
-            ## Tables
+        //    ### Inline Code
 
-            | Syntax      | Description |
-            |-------------|-------------|
-            | Header      | Title       |
-            | Paragraph   | Text        |
+        //    Use `inline code` for small snippets.
 
-            ## Task Lists
+        //    ### Code Blocks
 
-            - [x] Task 1
-            - [ ] Task 2
-            - [ ] Task 3
-                - [ ] Task 2
-                - [ ] Task 3
+        //    ```
+        //    # Python code example
+        //    def greet(name):
+        //        return f"Hello, {name}!"
+        //    ```
 
-            ## Inline HTML
 
-            <div style="color: red;">This is a red text block in HTML.</div>
+        //    ## Horizontal Rules
 
-            ## Escape Characters
+        //    ---
 
-            \*Literal asterisks\*
+        //    ## Links
 
-            ## Footnotes
+        //    [Markdown Guide](https://www.markdownguide.org)
 
-            Here is a footnote reference[^1].
+        //    ### Image
 
-            [^1]: This is the footnote content.
+        //    ![Markdown Logo](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)
 
-            ## Math (if supported by parser)
+        //    ## Tables
 
-            Inline math: $a^2 + b^2 = c^2$
+        //    | Syntax      | Description |
+        //    |-------------|-------------|
+        //    | Header      | Title       |
+        //    | Paragraph   | Text        |
 
-            Block math:
+        //    ## Task Lists
 
-            $$
-            \int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}
-            $$
+        //    - [x] Task 1
+        //    - [ ] Task 2
+        //    - [ ] Task 3
+        //        - [ ] Task 2
+        //        - [ ] Task 3
 
-            """;
+        //    ## Inline HTML
+
+        //    <div style="color: red;">This is a red text block in HTML.</div>
+
+        //    ## Escape Characters
+
+        //    \*Literal asterisks\*
+
+        //    ## Footnotes
+
+        //    Here is a footnote reference[^1].
+
+        //    [^1]: This is the footnote content.
+
+        //    ## Math (if supported by parser)
+
+        //    Inline math: $a^2 + b^2 = c^2$
+
+        //    Block math:
+
+        //    $$
+        //    \int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}
+        //    $$
+
+        //    """;
         var avatar = await AvatarHelper.GetAsync(avatarUrl);
         //var icon = CardBuilder.CharToImage(
         //    IconFonts.IssueOpened,

@@ -28,4 +28,8 @@ public static class FontManager
     //public static FontLoader ComicMono => new(() => Assets.ComicMono);
     public static FontLoader ComicSansMs => new(() => Assets.COMIC);
     public static FontLoader MaoKenTangYuan => new(() => Assets.MaoKenTangYuan);
+    public static FontLoader MaoKenTangYuanBold => new(() => Assets.MaoKenTangYuanBold);
+    public static FontLoader MaoKenTangYuanItalic => new(() => Assets.MaoKenTangYuanItalic);
+    public static FontLoader MaoKenTangYuanItalicBold => new(() => Assets.MaoKenTangYuanItalicBold);
+    public static FontLoader TwEmoji => new(() => Assets.TwemojiCOLRv0);
 }

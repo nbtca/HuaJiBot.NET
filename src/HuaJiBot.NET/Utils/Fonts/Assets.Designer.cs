@@ -73,9 +73,59 @@ namespace HuaJiBot.NET.Utils.Fonts {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] FluentUIEmoji {
+            get {
+                object obj = ResourceManager.GetObject("FluentUIEmoji", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] MaoKenTangYuan {
             get {
                 object obj = ResourceManager.GetObject("MaoKenTangYuan", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] MaoKenTangYuanBold {
+            get {
+                object obj = ResourceManager.GetObject("MaoKenTangYuanBold", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] MaoKenTangYuanItalic {
+            get {
+                object obj = ResourceManager.GetObject("MaoKenTangYuanItalic", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] MaoKenTangYuanItalicBold {
+            get {
+                object obj = ResourceManager.GetObject("MaoKenTangYuanItalicBold", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] TwemojiCOLRv0 {
+            get {
+                object obj = ResourceManager.GetObject("TwemojiCOLRv0", resourceCulture);
                 return ((byte[])(obj));
             }
         }
