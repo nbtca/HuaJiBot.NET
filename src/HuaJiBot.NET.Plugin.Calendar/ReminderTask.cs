@@ -13,7 +13,7 @@ internal class ReminderTask : IDisposable
     private Ical.Net.Calendar? Calendar => _getCalendar();
     private readonly Timer _timer;
     private const int CheckDurationInMinutes = 15;
-    private const int RemindBeforeStartMinutes = 15;
+    private const int RemindBeforeStartMinutes = 60;
     private const int RemindBeforeEndMinutes = 5;
 
     public ReminderTask(
@@ -46,20 +46,30 @@ internal class ReminderTask : IDisposable
     {
         foreach (var group in Config.ReminderGroups)
         {
-            bool shouldSend = false;
             var list = group.Keywords;
-            if (group.Mode == PluginConfig.ReminderFilterConfig.FilterMode.Default)
-                shouldSend = true;
-            else if (group.Mode == PluginConfig.ReminderFilterConfig.FilterMode.WhiteList) // 检查白名单
-                shouldSend = list.Any(x =>
-                    e.Summary.Contains(x) || e.Description.Contains(x) || e.Location.Contains(x)
-                );
-            else if (group.Mode == PluginConfig.ReminderFilterConfig.FilterMode.BlackList) // 检查黑名单
-                shouldSend = !list.Any(x =>
-                    e.Summary.Contains(x) || e.Description.Contains(x) || e.Location.Contains(x)
-                );
-            if (shouldSend)
+            if (
+                group.Mode switch
+                {
+                    // 默认发送
+                    PluginConfig.ReminderFilterConfig.FilterMode.Default => true,
+                    // 检查白名单
+                    PluginConfig.ReminderFilterConfig.FilterMode.WhiteList => list.Any(x =>
+                        e.Summary.Contains(x)
+                        || e.Description.Contains(x)
+                        || (e.Location ?? "").Contains(x)
+                    ),
+                    // 检查黑名单
+                    PluginConfig.ReminderFilterConfig.FilterMode.BlackList => !list.Any(x =>
+                        e.Summary.Contains(x)
+                        || e.Description.Contains(x)
+                        || (e.Location ?? "").Contains(x)
+                    ),
+                    _ => false,
+                }
+            )
+            {
                 callback(str => Service.SendGroupMessageAsync(null, group.GroupId, str));
+            }
         }
     }
 
@@ -94,13 +104,13 @@ internal class ReminderTask : IDisposable
             }
             Service.LogDebug("Invoke Check");
             var now = Utils.NetworkTime.Now; //现在
-            var nextEnd = now.AddMinutes(CheckDurationInMinutes); //下次检查的结束时间
+            var nextEnd = now.AddMinutes(CheckDurationInMinutes); //下次检查的结束时间（避免检查过的时间被重复添加进队列）
             var start = _scheduledTimeEnd; //从上次结束的时间点开始检查
             var end = nextEnd; //到下次结束的时间点结束检查
             _scheduledTimeEnd = nextEnd; //更新时间节点
             #region 开始提醒
             {
-                //RemindBeforeStartMinutes 事件发生前 提前 5 分钟提醒
+                //RemindBeforeStartMinutes 事件发生前 提前 _ 分钟提醒
                 var remindStart = start.AddMinutes(RemindBeforeStartMinutes); //计算提醒开始时间
                 var remindEnd = end.AddMinutes(RemindBeforeStartMinutes); //计算提醒结束时间
                 foreach (
@@ -170,7 +180,7 @@ internal class ReminderTask : IDisposable
                                 send =>
                                     send(
                                         $"""
-                                        日程提醒({ev.End.ToLocalNetworkTime()})：
+                                        日程提醒({ev.End?.ToLocalNetworkTime()})：
                                         {ev.Summary} {ev.Location}
                                         预计于 {RemindBeforeEndMinutes} 分钟后结束
                                         """

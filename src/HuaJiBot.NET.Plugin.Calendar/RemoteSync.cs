@@ -15,7 +15,7 @@ internal class RemoteSync(
     public async Task UpdateCalendarAsync()
     {
         var now = Utils.NetworkTime.Now;
-        lock (this) //锁定，防止同时多次更新日历
+        lock (this) //上锁，防止同时多次更新日历
         {
             if (now - _lastLoadTime < TimeSpan.FromMinutes(updateDurationInMinutes)) //如果距离上次加载小于指定时长
             {

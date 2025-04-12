@@ -78,6 +78,11 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
         _cache[e.SenderId] = now;
         _ = Task.Delay(coldDown).ContinueWith(_ => _cache.Remove(e.SenderId));
+        if (Calendar is null)
+        {
+            e.Reply("日历获取失败");
+            return;
+        }
         var all = Calendar.GetEvents(now, now.AddDays(14)).ToArray();
         if (all.Length == 0)
         {
@@ -136,6 +141,11 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             end = now; //结束时间
             start = end.AddDays(7 * week); //week是负的，所以开始时间等于现在减去..
+        }
+        if (Calendar is null)
+        {
+            e.Reply("日历获取失败");
+            return;
         }
         var output = Calendar.GetEvents(start, end).BuildTextOutput(now);
         e.Reply($"近{week}周的日程：\n{output}");
