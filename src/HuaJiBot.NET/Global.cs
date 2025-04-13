@@ -2,7 +2,7 @@
 
 public class Global
 {
-    //internal static BotServiceBase? ServiceInstance { private get; set; }
-    //public static BotServiceBase Service =>
+    //internal static BotService? ServiceInstance { private get; set; }
+    //public static BotService Service =>
     //    ServiceInstance ?? throw new InvalidOperationException("Service is not set up.");
 }

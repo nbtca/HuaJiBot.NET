@@ -163,7 +163,7 @@ internal class SatoriEventClient
                                 }
                             }
                         }
-                        NET.Events.Events.CallOnGroupMessageReceived(
+                        _service.Events.CallOnGroupMessageReceived(
                             new GroupMessageEventArgs(
                                 () => new DefaultCommandReader(Parse()),
                                 () => ValueTask.FromResult(groupName ?? string.Empty)
@@ -188,7 +188,7 @@ internal class SatoriEventClient
                     _service.Accounts = (from x in readyBody.Logins select x.User!.Id).ToArray();
                     var account = readyBody.Logins.First();
                     var appName = account.Platform ?? "unknown";
-                    NET.Events.Events.CallOnBotLogin(
+                    _service.Events.CallOnBotLogin(
                         new BotLoginEventArgs
                         {
                             Accounts = _service.AllRobots,

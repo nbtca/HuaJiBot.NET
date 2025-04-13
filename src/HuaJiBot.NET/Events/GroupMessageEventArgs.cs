@@ -5,7 +5,7 @@ namespace HuaJiBot.NET.Events;
 
 public class BotEventArgs : EventArgs
 {
-    public required BotServiceBase Service { get; init; }
+    public required BotService Service { get; init; }
 }
 
 /// <summary>
@@ -58,4 +58,36 @@ public class GroupMessageEventArgs(
 
     /// <summary>群名称</summary>
     public ValueTask<string> GetGroupNameAsync() => getGroupName();
+}
+
+/// <summary>
+/// 私聊消息事件
+/// </summary>
+public class PrivateMessageEventArgs(Func<CommandReader> createCommandReader) : BotEventArgs
+{
+    public string? RobotId { get; init; }
+
+    /// <summary>
+    /// 消息ID
+    /// </summary>
+    public required string MessageId { get; init; }
+
+    /// <summary>群ID</summary>
+    public required string? GroupId { get; init; }
+
+    /// <summary>发送者ID</summary>
+    public required string SenderId { get; init; }
+
+    public required Lazy<string> TextMessageLazy { get; init; }
+    public string TextMessage => TextMessageLazy.Value;
+    public CommandReader CommandReader => createCommandReader();
+
+    /// <summary>
+    /// 返回消息给发送者（at发送者）
+    /// </summary>
+    /// <param name="message"></param>
+    public void Reply(string message)
+    {
+        //Service.FeedbackAt(RobotId, GroupId, MessageId, message);
+    }
 }

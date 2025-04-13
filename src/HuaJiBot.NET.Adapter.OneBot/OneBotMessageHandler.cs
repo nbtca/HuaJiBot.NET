@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.OneBot;
 
-internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service)
+internal class OneBotMessageHandler(OneBotApi api, OneBotAdapter service)
 {
     private string? _qq = null;
     public string? QQ => _qq;
@@ -81,13 +81,13 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service)
                                     appName = appName + " v" + appVersion;
                                     appVersion = protocolVersion;
                                 }
-                                Events.Events.CallOnBotLogin(
+                                service.Events.CallOnBotLogin(
                                     new BotLoginEventArgs
                                     {
                                         Accounts = _qq is null ? [] : [_qq],
                                         ClientName = appName,
                                         ClientVersion = appVersion,
-                                        Service = service
+                                        Service = service,
                                     }
                                 );
                             }
@@ -191,7 +191,7 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service)
                                 {
                                     break;
                                 }
-                                Events.Events.CallOnGroupMessageReceived(
+                                service.Events.CallOnGroupMessageReceived(
                                     new GroupMessageEventArgs(
                                         () => new OneBotCommandReader(service, message),
                                         async () => await api.GetGroupNameAsync(groupId)
@@ -204,7 +204,7 @@ internal class OneBotMessageHandler(OneBotApi api, BotServiceBase service)
                                         SenderMemberCard = string.IsNullOrWhiteSpace(card)
                                             ? sender.Value<string>("nickname") ?? ""
                                             : card,
-                                        TextMessageLazy = new(() => rawMessage)
+                                        TextMessageLazy = new(() => rawMessage),
                                     }
                                 );
                             }

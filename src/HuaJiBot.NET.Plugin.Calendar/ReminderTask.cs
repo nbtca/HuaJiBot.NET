@@ -8,7 +8,7 @@ namespace HuaJiBot.NET.Plugin.Calendar;
 internal class ReminderTask : IDisposable
 {
     public PluginConfig Config { get; }
-    public BotServiceBase Service { get; }
+    public BotService Service { get; }
     private readonly Func<Ical.Net.Calendar?> _getCalendar;
     private Ical.Net.Calendar? Calendar => _getCalendar();
     private readonly Timer _timer;
@@ -17,7 +17,7 @@ internal class ReminderTask : IDisposable
     private const int RemindBeforeEndMinutes = 5;
 
     public ReminderTask(
-        BotServiceBase service,
+        BotService service,
         PluginConfig config,
         Func<Ical.Net.Calendar?> getCalendar
     )

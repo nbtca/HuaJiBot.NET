@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.OneBot;
 
-internal class OneBotApi(BotServiceBase service, Action<string> send)
+internal class OneBotApi(BotService service, Action<string> send)
 {
     private class ActionRequest<T>(string action, T? data, string echo)
     {

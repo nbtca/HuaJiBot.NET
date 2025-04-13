@@ -10,7 +10,7 @@ namespace HuaJiBot.NET;
 public static class Internal
 {
     public static Task SetupServiceAsync<T>(T service, Config.Config config)
-        where T : BotServiceBase
+        where T : BotService
     {
         Utils.NetworkTime.TryUpdateTimeDiff();
         service.Config = new ConfigWrapper(config);
@@ -82,7 +82,7 @@ public static class Internal
         //保存配置
         api.Config.Save();
         //触发启动事件
-        Events.Events.CallOnStartup(api);
+        api.Events.CallOnStartup(api);
         foreach (var (entryPoint, plugin) in Plugins) //调用所有插件的初始化方法
         {
             if (!plugin.Enabled)
@@ -100,7 +100,7 @@ public static class Internal
             api.Log($"加载插件 {entryPoint.Name} 完成，耗时 {sw.ElapsedMilliseconds} ms");
         }
         //触发插件初始化完成事件
-        Events.Events.CallOnInitialized(api);
+        api.Events.CallOnInitialized(api);
     }
 
     /// <summary>
@@ -109,7 +109,7 @@ public static class Internal
     public static void Shutdown(BotServiceBase api)
     {
         //响应关闭事件
-        Events.Events.CallOnShutdown(api);
+        api.Events.CallOnShutdown(api);
         foreach (var (_, plugin) in Plugins) //调用所有插件的卸载方法
         {
             plugin.Unload();
@@ -117,7 +117,7 @@ public static class Internal
         Plugins.Clear(); //清空插件列表
     }
 
-    private static void LoadAllPlugins(BotServiceBase api, DirectoryInfo directoryInfo)
+    private static void LoadAllPlugins(BotService api, DirectoryInfo directoryInfo)
     {
         var libsDir = Path.Combine(directoryInfo.FullName, "libs");
         if (!Directory.Exists(libsDir))

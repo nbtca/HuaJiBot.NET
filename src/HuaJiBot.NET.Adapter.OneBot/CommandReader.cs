@@ -8,7 +8,7 @@ namespace HuaJiBot.NET.Adapter.OneBot;
 /// <summary>
 /// 指令读取
 /// </summary>
-internal class OneBotCommandReader(BotServiceBase service, List<MessageEntity> msg)
+internal class OneBotCommandReader(BotService service, List<MessageEntity> msg)
     : CommonCommandReader
 {
     public override IEnumerable<ReaderEntity> Msg

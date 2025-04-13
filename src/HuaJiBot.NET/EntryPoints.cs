@@ -17,7 +17,7 @@ public abstract class EntryPointBase : Attribute
     /// <summary>
     /// 插件实例/对象
     /// </summary>
-    public abstract PluginBase CreateInstance(BotServiceBase api);
+    public abstract PluginBase CreateInstance(BotService api);
 }
 
 //[AttributeUsage(AttributeTargets.Module)]
@@ -36,6 +36,6 @@ public class PluginEntryPointAttribute<T>(string pluginName, string description)
     public override string Name { get; } = pluginName;
     public override string Description { get; } = description;
 
-    public override PluginBase CreateInstance(BotServiceBase api) =>
+    public override PluginBase CreateInstance(BotService api) =>
         new T { Name = Name, Service = api };
 }

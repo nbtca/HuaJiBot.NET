@@ -85,12 +85,12 @@ public class SatoriAdapter : BotServiceBase
         return msgIds.ToArray();
     }
 
-    public override void RecallMessage(string robotId, string targetGroup, string msgId)
+    public override void RecallMessage(string? robotId, string targetGroup, string msgId)
     {
         throw new NotImplementedException();
     }
 
-    public override void SetGroupName(string robotId, string targetGroup, string groupName)
+    public override void SetGroupName(string? robotId, string targetGroup, string groupName)
     {
         throw new NotImplementedException();
     }

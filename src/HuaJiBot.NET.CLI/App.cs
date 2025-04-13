@@ -6,7 +6,7 @@ using HuaJiBot.NET.Config;
 using HuaJiBot.NET.Logger;
 
 //using HuaJiBot.NET.Adapter.Red;
-//BotServiceBase CreateRedProtocolService()
+//BotService CreateRedProtocolService()
 //{
 //    var token = File.ReadAllText(
 //        Path.Combine(

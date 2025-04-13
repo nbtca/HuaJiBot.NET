@@ -15,7 +15,7 @@ internal class ForwardWebSocketClient
 
     public Task ConnectAsync() => _client.Start();
 
-    public ForwardWebSocketClient(BotServiceBase service, string wsUrl, string? token)
+    public ForwardWebSocketClient(OneBotAdapter service, string wsUrl, string? token)
     {
         void Send(string text) => _client!.Send(text);
         Api = new OneBotApi(service, Send);
@@ -31,7 +31,7 @@ internal class ForwardWebSocketClient
                         KeepAliveInterval = TimeSpan.FromSeconds(5),
                         CollectHttpResponseDetails = true,
                         //Credentials = new NetworkCredential("Bearer", token),
-                    }
+                    },
                 };
                 if (!string.IsNullOrEmpty(token))
                     cfg.Options.SetRequestHeader("Authorization", "Bearer " + token);

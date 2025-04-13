@@ -5,7 +5,7 @@ using HuaJiBot.NET.Logger;
 
 namespace HuaJiBot.NET.UnitTest;
 
-internal class TestAdapter : BotServiceBase
+internal class TestAdapter : BotService
 {
     public override ILogger Logger { get; init; } = new ConsoleLogger();
 

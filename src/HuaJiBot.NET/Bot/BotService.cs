@@ -28,7 +28,12 @@ public sealed record AtMessage(string Target) : SendingMessageBase;
 
 public sealed record ReplyMessage(string MessageId) : SendingMessageBase;
 
-public abstract class BotServiceBase
+public abstract class BotServiceBase : BotService
+{
+    public override EventsSender Events { get; } = new();
+}
+
+public abstract class BotService
 {
     #region Logger
     public abstract ILogger Logger { get; init; }
@@ -72,7 +77,7 @@ public abstract class BotServiceBase
     public abstract void Reconnect();
     public abstract Task SetupServiceAsync();
     public Config.ConfigWrapper Config { get; internal set; } = null!;
-    public Events.Events Events { get; } = new();
+    public abstract IEvents Events { get; }
     public abstract string[] AllRobots { get; }
     public abstract Task<string[]> SendGroupMessageAsync(
         string? robotId,
