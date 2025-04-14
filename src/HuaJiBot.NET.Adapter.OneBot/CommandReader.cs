@@ -29,6 +29,9 @@ internal class OneBotCommandReader(BotService service, List<MessageEntity> msg)
                         case AtMessageEntity { At: not null and var userId }: //At消息
                             yield return new ReaderAt(userId);
                             break;
+                        case ReplyMessageEntity { MessageId: var id }:
+                            yield return new ReaderReply(id);
+                            break;
                         default:
                             service.LogDebug($"未转换消息类型：{element.GetType().Name}");
                             break;

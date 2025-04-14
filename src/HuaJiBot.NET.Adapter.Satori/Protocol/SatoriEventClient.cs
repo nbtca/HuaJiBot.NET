@@ -138,6 +138,12 @@ internal class SatoriEventClient
                                             targetName
                                         );
                                         break;
+                                    case QuoteElement { Id: var id, Forward: var forward }:
+                                        yield return new CommonCommandReader.ReaderReply(
+                                            id ?? "-1",
+                                            forward
+                                        );
+                                        break;
                                     default:
                                         _service.LogDebug($"未处理的消息元素：{element}");
                                         break;

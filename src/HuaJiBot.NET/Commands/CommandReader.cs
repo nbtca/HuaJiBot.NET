@@ -46,6 +46,7 @@ public abstract class CommandReader
 
     public abstract bool Input([NotNullWhen(true)] out string? text, bool lastOne = false);
     public abstract bool At([NotNullWhen(true)] out string? id);
+    public abstract bool Reply([NotNullWhen(true)] out string? messageId);
 }
 
 public class DefaultCommandReader(IEnumerable<ReaderEntity> msg) : CommonCommandReader
@@ -76,6 +77,8 @@ public abstract class CommonCommandReader : CommandReader
         public string AtText { get; init; } = $"@{AtTarget}";
     }
 
+    public record ReaderReply(string MessageId, bool? IsForward = null) : ReaderEntity;
+
     private abstract record MatchResult
     {
         public static implicit operator MatchResult(string text) => new MatchText(text);
@@ -84,6 +87,8 @@ public abstract class CommonCommandReader : CommandReader
     private record MatchText(string Text) : MatchResult;
 
     private record MatchAt(string AtTarget, string AtText) : MatchResult;
+
+    private record MatchReply(string MessageId, bool? IsForward) : MatchResult;
 
     private IEnumerable<string>? _currentExpected = null;
     public abstract IEnumerable<ReaderEntity> Msg { get; }
@@ -176,6 +181,11 @@ public abstract class CommonCommandReader : CommandReader
                         yield return new MatchAt(atTarget, atText);
                         break;
                     }
+                    case ReaderReply { IsForward: var forward, MessageId: var messageId }:
+                    {
+                        yield return new MatchReply(messageId, forward);
+                        break;
+                    }
                 }
             }
         }
@@ -234,6 +244,17 @@ public abstract class CommonCommandReader : CommandReader
             return true;
         }
         id = null;
+        return false;
+    }
+
+    public override bool Reply([NotNullWhen(true)] out string? messageId)
+    {
+        if (_seq.MoveNext() && _seq.Current is MatchReply { MessageId: var v }) //向下匹配一个参数
+        {
+            messageId = v;
+            return true;
+        }
+        messageId = null;
         return false;
     }
 }
