@@ -14,6 +14,7 @@ internal class SatoriApiClient
     private readonly HttpClient _http;
     private readonly SatoriAdapter _service;
 
+    //get all api from https://chronocat.vercel.app/openapi.yaml
     public SatoriApiClient(SatoriAdapter service, Uri httpUrl, string token)
     {
         _service = service;
@@ -37,6 +38,16 @@ internal class SatoriApiClient
         );
     }
 
+    //https://github.com/satorijs/satori/blob/e285fe65aea7c5d437e365746de82e41bbc06ab7/packages/protocol/src/index.ts#L51
+    public Task DeleteMessage(string selfId, string channelId, string messageId)
+    {
+        return HttpPostAsync<JObject>(
+            selfId,
+            "/v1/message.delete",
+            new JObject { ["channel_id"] = channelId, ["message_id"] = messageId }
+        );
+    }
+
     public async Task<TData> HttpPostAsync<TData>(string selfId, string endpoint, JObject body)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
@@ -51,6 +62,8 @@ internal class SatoriApiClient
         return data!;
     }
 
-    internal static readonly JsonSerializerOptions JsonOptions =
-        new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+    internal static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+    };
 }

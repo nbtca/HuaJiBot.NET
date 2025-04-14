@@ -87,7 +87,11 @@ public class SatoriAdapter : BotServiceBase
 
     public override void RecallMessage(string? robotId, string targetGroup, string msgId)
     {
-        throw new NotImplementedException();
+        var robots = robotId is null ? AllRobots : [robotId];
+        foreach (var robot in robots)
+        {
+            _apiClient.DeleteMessage(robot, targetGroup, msgId);
+        }
     }
 
     public override void SetGroupName(string? robotId, string targetGroup, string groupName)
