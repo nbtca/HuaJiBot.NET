@@ -6,10 +6,10 @@ let run cmd args =
     printfn "Exec %s %A" cmd args
     let psi = cmd |> System.Diagnostics.ProcessStartInfo
     for arg in args do
-        psi.ArgumentList.Add(arg)
-    psi.UseShellExecute <- isWindows
+        psi.ArgumentList.Add arg
+    psi.UseShellExecute <- false//isWindows
     psi.CreateNoWindow <- false
-    let p = System.Diagnostics.Process.Start(psi)
+    let p = System.Diagnostics.Process.Start psi
     p.WaitForExit()
     p.ExitCode
 let cd = __SOURCE_DIRECTORY__
@@ -34,17 +34,17 @@ let coreFileNameList=
     let fileNameList=
         outputDir
         |> Directory.GetFiles
-        |> Array.map (fun p -> Path.GetFileName(p))
+        |> Array.map (fun p -> Path.GetFileName p)
     Directory.Delete(outputDir,true)
     fileNameList
 
 let buidActions = [ 
     for proj in projs do
         printfn "Processing %s" proj
-        let filename = Path.GetFileName(proj)
-        if filename.StartsWith("HuaJiBot.NET.Plugin") then
+        let filename = Path.GetFileName proj
+        if filename.StartsWith "HuaJiBot.NET.Plugin" then
             async {
-                let projName = Path.GetFileNameWithoutExtension(proj)
+                let projName = Path.GetFileNameWithoutExtension proj
                 let outputDir = Path.Combine(output, projName)
                 if outputDir|>Directory.Exists|>not then outputDir|>Directory.CreateDirectory|>ignore
                 printfn "Building %s" filename
@@ -54,7 +54,7 @@ let buidActions = [
                 for file in coreFileNameList do
                     let coreFile = Path.Combine(outputDir, file)
                     if coreFile|>File.Exists then
-                        File.Delete(coreFile)
+                        File.Delete coreFile
                         printfn "Delete %s" coreFile
                 printfn "Build %s done" filename
                 return outputDir
@@ -73,8 +73,8 @@ if libsDir|>Directory.Exists|>not then libsDir|>Directory.CreateDirectory|>ignor
 for dir in binDirs do
     let files = Array.concat [Directory.GetFiles(dir,"*.dll")  ;Directory.GetFiles(dir,"*.pdb")]
     for file in files do
-        let fileName = Path.GetFileName(file)
-        if fileName.StartsWith("HuaJiBot.NET.Plugin") then
+        let fileName = Path.GetFileName file
+        if fileName.StartsWith "HuaJiBot.NET.Plugin" then
             let dest = Path.Combine(pluginDir, fileName)
             File.Copy(file, dest, true)
             printfn "Copy %s to %s" file dest
@@ -91,10 +91,10 @@ open SharpCompress.Archives
 open SharpCompress.Archives.Zip
 let compress()=
     let zipFile = Path.Combine(cd, "HuaJiBot.NET.Plugins.zip")
-    if zipFile|>File.Exists then File.Delete(zipFile)
+    if zipFile|>File.Exists then File.Delete zipFile
     use archive = ZipArchive.Create()
     archive.AddAllFromDirectory output
-    use fileStream = File.Create(zipFile)
-    archive.SaveTo(fileStream)|>ignore
+    use fileStream = File.Create zipFile
+    archive.SaveTo fileStream|>ignore
 if isWindows then
     compress()
