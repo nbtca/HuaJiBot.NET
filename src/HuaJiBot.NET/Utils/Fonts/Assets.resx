@@ -121,9 +121,6 @@
   <data name="COMIC" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Assets\COMIC.TTF;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="FluentUIEmoji" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Assets\FluentUIEmoji.ttf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="MaoKenTangYuan" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Assets\MaoKenTangYuan.ttf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>

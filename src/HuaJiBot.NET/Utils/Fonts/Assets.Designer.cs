@@ -73,16 +73,6 @@ namespace HuaJiBot.NET.Utils.Fonts {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] FluentUIEmoji {
-            get {
-                object obj = ResourceManager.GetObject("FluentUIEmoji", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
         internal static byte[] MaoKenTangYuan {
             get {
                 object obj = ResourceManager.GetObject("MaoKenTangYuan", resourceCulture);
