@@ -123,7 +123,12 @@ public static class Internal
         if (!Directory.Exists(libsDir))
             Directory.CreateDirectory(libsDir);
         var libs = Directory.GetFiles(libsDir, "*.dll", SearchOption.AllDirectories); //获取所有依赖库
-        foreach (var lib in libs)
+        foreach (
+            var lib in libs.OrderBy(
+                x => x.EndsWith(".Abstractions.dll", StringComparison.InvariantCultureIgnoreCase),
+                Comparer<bool>.Create((x, y) => y.CompareTo(x)) //抽象dll最后加载，优先加载完整版
+            )
+        )
         {
             api.Log("加载依赖库：" + Path.GetRelativePath(Environment.CurrentDirectory, lib));
             Assembly.LoadFrom(lib); //加载依赖库
