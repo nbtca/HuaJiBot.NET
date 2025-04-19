@@ -1,10 +1,13 @@
 ﻿using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Text;
+using Azure;
+using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.DataBase;
 using HuaJiBot.NET.Logger;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using OpenAI;
 using OpenAI.Chat;
 using OpenAI.Models;
@@ -17,6 +20,8 @@ public class PluginConfig : ConfigBase
     public string Endpoint = "";
     public string ApiKey = "";
     public string Model = "huihui_ai/qwen2.5-1m-abliterated:14b";
+    public string SystemPrompt = "你是一个有用的AI助手";
+    public bool OpenAILogging = false;
 }
 
 public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
@@ -44,7 +49,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         Endpoint = new Uri(Config.Endpoint),
                         ClientLoggingOptions = new()
                         {
-                            EnableLogging = true,
+                            EnableLogging = Config.OpenAILogging,
                             LoggerFactory = LoggerFactory.Create(logger =>
                             {
                                 logger.AddProvider(new PluginLoggerProvider(this));
@@ -70,6 +75,53 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         Info("启动成功");
     }
 
+    private async Task InvokeLlmMessage(
+        IEnumerable<ChatMessage> messages,
+        Events.GroupMessageEventArgs e
+    )
+    {
+        Info(
+            "调用AI消息\n\t"
+                + JsonConvert
+                    .SerializeObject(
+                        messages,
+                        new JsonSerializerSettings
+                        {
+                            Formatting = Formatting.Indented,
+                            NullValueHandling = NullValueHandling.Ignore,
+                        }
+                    )
+                    .Replace("\n", "\n\t")
+        );
+        var response = await ChatClient.CompleteChatAsync(messages);
+        foreach (var content in response.Value.Content)
+        {
+            switch (content.Kind)
+            {
+                case ChatMessageContentPartKind.Text:
+                    var text = content.Text;
+                    var messageIds = await e.Reply(content.Text);
+                    //机器人回复后把自己的消息添加到数据库
+                    foreach (var msgId in messageIds)
+                    {
+                        _history.StoreMessage( //AI回复记录
+                            new GroupMessage
+                            {
+                                Content = text,
+                                GroupId = e.GroupId,
+                                MessageId = msgId,
+                                SenderId = null,
+                                SenderName = "bot",
+                                IsBot = true,
+                                ReplyToMessageId = e.MessageId,
+                            }
+                        );
+                    }
+                    break;
+            }
+        }
+    }
+
     private async Task Events_OnGroupMessageReceived(Events.GroupMessageEventArgs e)
     {
         var reader = e.CommandReader;
@@ -84,7 +136,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     //收到at机器人的消息则处理
                     Info($"收到At消息@{atId}:{restText}");
                     //把消息存到数据中以便多轮会话查阅
-                    _history.StoreMessage(
+                    _history.StoreMessage( // 收到消息记录
                         new GroupMessage
                         {
                             Content = restText,
@@ -92,39 +144,18 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             MessageId = e.MessageId,
                             SenderId = e.SenderId,
                             SenderName = await e.GetGroupNameAsync(),
+                            IsBot = false,
+                            ReplyToMessageId = null,
                         }
                     );
                     //调用LLM回复
-                    var response = await ChatClient.CompleteChatAsync(
+                    await InvokeLlmMessage(
                         [
-                            ChatMessage.CreateSystemMessage("你是一个有用的AI助手"),
+                            ChatMessage.CreateSystemMessage(Config.SystemPrompt),
                             ChatMessage.CreateUserMessage(restText),
-                        ]
+                        ],
+                        e
                     );
-                    foreach (var content in response.Value.Content)
-                    {
-                        switch (content.Kind)
-                        {
-                            case ChatMessageContentPartKind.Text:
-                                var text = content.Text;
-                                var messageIds = await e.Reply(content.Text);
-                                //机器人回复后把自己的消息添加到数据库
-                                foreach (var msgId in messageIds)
-                                {
-                                    _history.StoreMessage(
-                                        new GroupMessage
-                                        {
-                                            Content = text,
-                                            GroupId = e.GroupId,
-                                            MessageId = msgId,
-                                            SenderId = null,
-                                            SenderName = "bot",
-                                        }
-                                    );
-                                }
-                                break;
-                        }
-                    }
                 }
                 catch (Exception exception)
                 {
@@ -135,8 +166,86 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         reader = e.CommandReader;
         if (reader.Reply(out var data))
         {
+            _ = reader.Input(out var text);
+            text ??= "";
+            SortedList<DateTime, GroupMessage> messageList = [];
+            void PrependMessage(GroupMessage message)
+            {
+                messageList.Add(message.Timestamp, message);
+                if (messageList.Count > 100)
+                { //限制最大数量
+                    return;
+                }
+                //如果有父消息，则继续提取
+                if (message.ReplyToMessageId is { } parentReplyMessageId)
+                {
+                    FetchReply(parentReplyMessageId);
+                }
+            }
             Info("Reply -> messageId: " + data);
-            //Service.SendGroupMessageAsync(robot)
+
+            void FetchReply(string replyId)
+            {
+                var replyMessage = _history.GetMessage(replyId);
+                if (replyMessage is not null)
+                { //获取到被回复的消息
+                    PrependMessage(replyMessage);
+                }
+            }
+
+            string? replyMessageId = null;
+            if (data.messageId is not null)
+            { //有messageId 直接提取
+                replyMessageId = data.messageId;
+                FetchReply(replyMessageId);
+            }
+            else
+            { //没messageId，根据内容模糊匹配
+                if (data is { content: { } replyContent })
+                {
+                    var replyMessage =
+                        _history.GetGroupMessageLastEndWith(e.GroupId, replyContent)
+                        ?? _history.GetGroupMessageLastSimilar(e.GroupId, replyContent);
+                    if (replyMessage is not null)
+                    { //获取到被回复的消息
+                        replyMessageId = replyMessage.MessageId;
+                        PrependMessage(replyMessage);
+                    }
+                }
+            }
+
+            List<ChatMessage> prompts = [ChatMessage.CreateSystemMessage(Config.SystemPrompt)];
+            foreach (var (_, message) in messageList)
+            {
+                prompts.Add(
+                    message.IsBot
+                        ? ChatMessage.CreateAssistantMessage(message.Content)
+                        : ChatMessage.CreateUserMessage(message.Content)
+                );
+            }
+            prompts.Add(ChatMessage.CreateUserMessage(text));
+            try
+            {
+                //收到回复消息记录
+                _history.StoreMessage(
+                    new GroupMessage
+                    {
+                        Content = text,
+                        GroupId = e.GroupId,
+                        MessageId = e.MessageId,
+                        SenderId = e.SenderId,
+                        SenderName = await e.GetGroupNameAsync(),
+                        IsBot = false,
+                        ReplyToMessageId = replyMessageId,
+                    }
+                );
+                //调用LLM回复
+                await InvokeLlmMessage(prompts, e);
+            }
+            catch (Exception exception)
+            {
+                Error("调用AI失败", exception);
+            }
         }
     }
 

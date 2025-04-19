@@ -12,6 +12,8 @@ public class GroupMessage
     public required string SenderName { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.Now;
     public required string Content { get; set; }
+    public required bool IsBot { get; set; } = false;
+    public required string? ReplyToMessageId { get; set; } = null;
 }
 
 public class MessageHistory : IDisposable
@@ -19,9 +21,11 @@ public class MessageHistory : IDisposable
     private readonly LiteDatabase _db;
     private readonly ILiteCollection<GroupMessage> _messages;
     private bool _disposed = false;
+    private BotService _service;
 
     public MessageHistory(BotService service, string dbName = "messages.db")
     {
+        _service = service;
         var dbPath = Path.Combine(service.GetPluginDataPath(), "database", dbName);
         // Ensure directory exists
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
@@ -39,16 +43,67 @@ public class MessageHistory : IDisposable
         if (message == null)
             throw new ArgumentNullException(nameof(message));
         _messages.Insert(message);
+        _service.LogDebug($"[LiteDB] [+] {message.MessageId}: {message.Content}");
     }
 
-    public GroupMessage GetMessage(string messageId)
+    public GroupMessage? GetMessage(string messageId)
     {
-        return _messages.FindById(messageId);
+        return _messages.FindOne(x => x.MessageId == messageId);
     }
 
     public IEnumerable<GroupMessage> GetGroupMessages(string groupId, int limit = 100, int skip = 0)
     {
         return _messages.Find(x => x.GroupId == groupId, skip, limit);
+    }
+
+    public GroupMessage? GetGroupMessageLastEndWith(string groupId, string text)
+    {
+        var messages =
+            from m in _messages.FindAll()
+            orderby m.Timestamp descending
+            where m.GroupId == groupId && m.Content.EndsWith(text)
+            select m;
+        return messages.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Levenshtein 距离用于衡量两个字符串之间的差异，常用于实现模糊匹配。
+    /// </summary>
+    /// <param name="source"></param>
+    /// <param name="target"></param>
+    /// <returns></returns>
+    private static int LevenshteinDistance(string source, string target)
+    {
+        var n = source.Length;
+        var m = target.Length;
+        var d = new int[n + 1, m + 1];
+
+        for (var i = 0; i <= n; d[i, 0] = i++)
+            ;
+        for (var j = 0; j <= m; d[0, j] = j++)
+            ;
+        for (var i = 1; i <= n; i++)
+        {
+            for (var j = 1; j <= m; j++)
+            {
+                var cost = (target[j - 1] == source[i - 1]) ? 0 : 1;
+                d[i, j] = Math.Min(
+                    Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
+                    d[i - 1, j - 1] + cost
+                );
+            }
+        }
+        return d[n, m];
+    }
+
+    public GroupMessage? GetGroupMessageLastSimilar(string groupId, string text)
+    {
+        var messages =
+            from m in _messages.FindAll()
+            orderby m.Timestamp descending
+            where m.GroupId == groupId && LevenshteinDistance(m.Content, text) <= text.Length / 10 //差异小于10%
+            select m;
+        return messages.FirstOrDefault();
     }
 
     public IEnumerable<GroupMessage> GetUserMessages(string userId, int limit = 100, int skip = 0)
@@ -78,7 +133,7 @@ public class MessageHistory : IDisposable
 
     public void DeleteMessage(string messageId)
     {
-        _messages.Delete(messageId);
+        _messages.DeleteMany(x => x.MessageId == messageId);
     }
 
     public bool UpdateMessage(GroupMessage message)

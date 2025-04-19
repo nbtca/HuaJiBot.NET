@@ -11,10 +11,10 @@ public class PluginMain : PluginBase
 
     private void Events_OnGroupMessageReceived(object? sender, Events.GroupMessageEventArgs e)
     {
-        if (e.TextMessage.Contains("你好"))
-        {
-            e.Reply("你好");
-        }
+        //if (e.TextMessage.Contains("你好"))
+        //{
+        //    e.Reply("你好");
+        //}
     }
 
     protected override void Unload() { }
