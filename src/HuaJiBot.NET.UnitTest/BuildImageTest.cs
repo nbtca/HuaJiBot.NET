@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using HuaJiBot.NET.Plugin.GitHubBridge.Utils;
 using HuaJiBot.NET.Utils;
-using HuaJiBot.NET.Utils.Fonts;
 using SixLabors.ImageSharp;
 using Path = System.IO.Path;
 

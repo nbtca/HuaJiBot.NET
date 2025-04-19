@@ -1,5 +1,5 @@
-﻿using HuaJiBot.NET.Adapter.OneBot.Message;
-using HuaJiBot.NET.Bot;
+﻿using System.Reflection;
+using HuaJiBot.NET.Adapter.OneBot.Message;
 using HuaJiBot.NET.Events;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -254,8 +254,6 @@ internal class OneBotMessageHandler(OneBotApi api, OneBotAdapter service)
                                 //  "operator_id": 1,
                                 //  "user_id": 1
                                 //}
-
-
 
                                 var selfId = json.Value<string>("self_id");
                                 var groupId = json.Value<string>("group_id");

@@ -1,6 +1,4 @@
-﻿using System.Net.Http.Headers;
-
-namespace HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
+﻿namespace HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
 
 public sealed class ActiveBroadcastPacket()
     : DataPacket<ActiveBroadcastPacketData>(PacketType.ActiveClientsChange);

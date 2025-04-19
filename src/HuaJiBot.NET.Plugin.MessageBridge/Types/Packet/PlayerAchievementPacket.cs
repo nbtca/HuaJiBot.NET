@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
+﻿namespace HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
 
 public sealed class PlayerAchievementPacket()
     : DataPacket<PlayerAchievementPacketData>(PacketType.PlayerAchievement);

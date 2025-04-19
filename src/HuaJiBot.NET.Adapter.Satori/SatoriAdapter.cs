@@ -2,7 +2,6 @@
 using HuaJiBot.NET.Adapter.Satori.Protocol.Elements;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Logger;
-using Newtonsoft.Json;
 
 namespace HuaJiBot.NET.Adapter.Satori;
 

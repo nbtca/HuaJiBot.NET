@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-
-namespace HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
+﻿namespace HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
 
 public sealed class GetPlayerListResponsePacket()
     : DataPacket<GetPlayerListResponsePacketData>(PacketType.GetPlayerListResponse);

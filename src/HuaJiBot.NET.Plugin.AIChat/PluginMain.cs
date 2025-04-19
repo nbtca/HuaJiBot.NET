@@ -1,11 +1,6 @@
 ﻿using System.ClientModel;
-using System.ClientModel.Primitives;
-using System.Text;
-using Azure;
-using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.DataBase;
 using HuaJiBot.NET.Logger;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using OpenAI;

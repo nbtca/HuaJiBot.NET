@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
-using HuaJiBot.NET.Utils;
 using Ical.Net.CalendarComponents;
 using Ical.Net.DataTypes;
 

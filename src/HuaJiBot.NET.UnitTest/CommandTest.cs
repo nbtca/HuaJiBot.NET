@@ -1,7 +1,6 @@
 using System.Reflection;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
-using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Logger;
 
 namespace HuaJiBot.NET.UnitTest;

@@ -1,6 +1,4 @@
-﻿using System.Runtime;
-using System.Text;
-using HuaJiBot.NET.Bot;
+﻿using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssueCommentEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssuesEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Utils;
@@ -48,45 +46,44 @@ internal static class IssuesEventDispatcher
             ) //not plan
             ,
         };
-        CardBuilder card =
-            new()
+        CardBuilder card = new()
+        {
+            Title = repoInfo,
+            Subtitle = new Func<IEnumerable<TextRun>>(() =>
             {
-                Title = repoInfo,
-                Subtitle = new Func<IEnumerable<TextRun>>(() =>
+                var lang = body.Repository.Language;
+                var titleColor = Color.Azure;
+                var gray = Color.FromRgb(139, 148, 158);
+                var langColor =
+                    LangColorsHelper.GetColor(lang, out var color)
+                    && color is { r: var r, g: var g, b: var b }
+                        ? Color.FromRgb(r, g, b)
+                        : gray;
+                return new List<TextRun>
                 {
-                    var lang = body.Repository.Language;
-                    var titleColor = Color.Azure;
-                    var gray = Color.FromRgb(139, 148, 158);
-                    var langColor =
-                        LangColorsHelper.GetColor(lang, out var color)
-                        && color is { r: var r, g: var g, b: var b }
-                            ? Color.FromRgb(r, g, b)
-                            : gray;
-                    return new List<TextRun>
-                    {
-                        new("# ", langColor),
-                        new(
-                            issue.Title.Length > 50
-                                ? issue.Title.Substring(0, 50) + "..."
-                                : issue.Title,
-                            titleColor
-                        ),
-                        new("  by:", gray) { FontSize = 14 },
-                        new(issue.User.Login, gray) { FontSize = 14 },
-                    };
-                }).Invoke(),
-                Content = CardBuilder.MarkdownRender(comment.Body),
-                Footer = $"@{body.Sender.Login} {body.Action} comment.",
-                FooterIcon = avatar,
-                Icon = icon,
-                IconPlaceholder = "",
-                TopRightContent =
-                [
-                    //new TextRun(" +2", Color.ParseHex("#2cbe4e")),
-                    //new TextRun(" -3", Color.ParseHex("#eb2431")),
-                    //new TextRun(" ~4", Color.ParseHex("#ffc000")),
-                ],
-            }; // 保存图像到文件
+                    new("# ", langColor),
+                    new(
+                        issue.Title.Length > 50
+                            ? issue.Title.Substring(0, 50) + "..."
+                            : issue.Title,
+                        titleColor
+                    ),
+                    new("  by:", gray) { FontSize = 14 },
+                    new(issue.User.Login, gray) { FontSize = 14 },
+                };
+            }).Invoke(),
+            Content = CardBuilder.MarkdownRender(comment.Body),
+            Footer = $"@{body.Sender.Login} {body.Action} comment.",
+            FooterIcon = avatar,
+            Icon = icon,
+            IconPlaceholder = "",
+            TopRightContent =
+            [
+                //new TextRun(" +2", Color.ParseHex("#2cbe4e")),
+                //new TextRun(" -3", Color.ParseHex("#eb2431")),
+                //new TextRun(" ~4", Color.ParseHex("#ffc000")),
+            ],
+        }; // 保存图像到文件
         using var tempImage = card.SaveTempAutoDelete(true);
         var issueUrl = issue.HtmlUrl.ToString();
         try
@@ -164,45 +161,44 @@ internal static class IssuesEventDispatcher
             ) //not plan
             ,
         };
-        CardBuilder card =
-            new()
+        CardBuilder card = new()
+        {
+            Title = repoInfo,
+            Subtitle = new Func<IEnumerable<TextRun>>(() =>
             {
-                Title = repoInfo,
-                Subtitle = new Func<IEnumerable<TextRun>>(() =>
+                var lang = body.Repository.Language;
+                var titleColor = Color.Azure;
+                var gray = Color.FromRgb(139, 148, 158);
+                var langColor =
+                    LangColorsHelper.GetColor(lang, out var color)
+                    && color is { r: var r, g: var g, b: var b }
+                        ? Color.FromRgb(r, g, b)
+                        : gray;
+                return new List<TextRun>
                 {
-                    var lang = body.Repository.Language;
-                    var titleColor = Color.Azure;
-                    var gray = Color.FromRgb(139, 148, 158);
-                    var langColor =
-                        LangColorsHelper.GetColor(lang, out var color)
-                        && color is { r: var r, g: var g, b: var b }
-                            ? Color.FromRgb(r, g, b)
-                            : gray;
-                    return new List<TextRun>
-                    {
-                        new("# ", langColor),
-                        new(
-                            issue.Title.Length > 50
-                                ? issue.Title.Substring(0, 50) + "..."
-                                : issue.Title,
-                            titleColor
-                        ),
-                        new("  by:", gray) { FontSize = 14 },
-                        new(issue.User.Login, gray) { FontSize = 14 },
-                    };
-                }).Invoke(),
-                Content = CardBuilder.MarkdownRender(issue.Body),
-                Footer = $"@{body.Sender.Login} {body.Action} issue",
-                FooterIcon = avatar,
-                Icon = icon,
-                IconPlaceholder = "",
-                TopRightContent =
-                [
-                    //new TextRun(" +2", Color.ParseHex("#2cbe4e")),
-                    //new TextRun(" -3", Color.ParseHex("#eb2431")),
-                    //new TextRun(" ~4", Color.ParseHex("#ffc000")),
-                ],
-            }; // 保存图像到文件
+                    new("# ", langColor),
+                    new(
+                        issue.Title.Length > 50
+                            ? issue.Title.Substring(0, 50) + "..."
+                            : issue.Title,
+                        titleColor
+                    ),
+                    new("  by:", gray) { FontSize = 14 },
+                    new(issue.User.Login, gray) { FontSize = 14 },
+                };
+            }).Invoke(),
+            Content = CardBuilder.MarkdownRender(issue.Body),
+            Footer = $"@{body.Sender.Login} {body.Action} issue",
+            FooterIcon = avatar,
+            Icon = icon,
+            IconPlaceholder = "",
+            TopRightContent =
+            [
+                //new TextRun(" +2", Color.ParseHex("#2cbe4e")),
+                //new TextRun(" -3", Color.ParseHex("#eb2431")),
+                //new TextRun(" ~4", Color.ParseHex("#ffc000")),
+            ],
+        }; // 保存图像到文件
         using var tempImage = card.SaveTempAutoDelete(true);
         var issueUrl = issue.HtmlUrl.ToString();
         try

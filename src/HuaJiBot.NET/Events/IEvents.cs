@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-
-namespace HuaJiBot.NET.Events;
+﻿namespace HuaJiBot.NET.Events;
 
 /// <summary>
 /// 静态事件

@@ -1,5 +1,4 @@
 ﻿#nullable disable
-using HuaJiBot;
 using Newtonsoft.Json;
 
 namespace HuaJiBot.NET.Plugin.GitHubBridge.Types.Generic;

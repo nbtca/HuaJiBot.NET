@@ -3,7 +3,6 @@ using System.ClientModel.Primitives;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OpenAI;
-using OpenAI.Chat;
 using ChatMessage = OpenAI.Chat.ChatMessage;
 using ILoggerFactory = Microsoft.Extensions.Logging.ILoggerFactory;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;

@@ -1,12 +1,10 @@
 ﻿using System.Numerics;
 using System.Text;
-using System.Text.RegularExpressions;
 using HuaJiBot.NET.Utils.Fonts;
 using Markdig;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using SixLabors.Fonts;
-using SixLabors.Fonts.Tables.AdvancedTypographic;
 using SixLabors.Fonts.Unicode;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing;
