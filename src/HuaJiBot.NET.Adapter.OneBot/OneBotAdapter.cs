@@ -67,9 +67,14 @@ public class OneBotAdapter : BotServiceBase
         throw new NotImplementedException();
     }
 
-    public override void FeedbackAt(string? robotId, string targetGroup, string msgId, string text)
+    public override async Task<string[]> FeedbackAt(
+        string? robotId,
+        string targetGroup,
+        string msgId,
+        string text
+    )
     {
-        _ = SendGroupMessageAsync(
+        return await SendGroupMessageAsync(
             robotId,
             targetGroup,
             new ReplyMessage(msgId),

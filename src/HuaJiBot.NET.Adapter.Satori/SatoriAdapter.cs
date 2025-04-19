@@ -2,6 +2,7 @@
 using HuaJiBot.NET.Adapter.Satori.Protocol.Elements;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Logger;
+using Newtonsoft.Json;
 
 namespace HuaJiBot.NET.Adapter.Satori;
 
@@ -57,7 +58,7 @@ public class SatoriAdapter : BotServiceBase
         var msgIds = new List<string>();
         foreach (var robot in robots)
         {
-            var msg = await _apiClient.SendGroupMessageAsync(
+            var msgList = await _apiClient.SendGroupMessageAsync(
                 robot,
                 targetGroup,
                 (
@@ -80,7 +81,7 @@ public class SatoriAdapter : BotServiceBase
                     )
                 ).ToArray()
             );
-            msgIds.AddRange(msg.Select(x => x.Id));
+            msgIds.AddRange(msgList.Select(x => x.Id));
         }
         return msgIds.ToArray();
     }

@@ -58,7 +58,7 @@ public abstract class BotService
 
     public void LogError(
         object message,
-        object detail,
+        object? detail,
         [CallerFilePath] string? file = null,
         [CallerLineNumber] int? line = null
     ) => Logger.LogError(AppendSourceInfo(message, file, line), detail);
@@ -87,9 +87,19 @@ public abstract class BotService
     public abstract void RecallMessage(string? robotId, string targetGroup, string msgId);
     public abstract void SetGroupName(string? robotId, string targetGroup, string groupName);
 
-    public virtual void FeedbackAt(string? robotId, string targetGroup, string msgId, string text)
+    public virtual async Task<string[]> FeedbackAt(
+        string? robotId,
+        string targetGroup,
+        string msgId,
+        string text
+    )
     {
-        SendGroupMessageAsync(robotId, targetGroup, new ReplyMessage(msgId), new TextMessage(text));
+        return await SendGroupMessageAsync(
+            robotId,
+            targetGroup,
+            new ReplyMessage(msgId),
+            new TextMessage(text)
+        );
     }
 
     public abstract MemberType GetMemberType(string robotId, string targetGroup, string userId);

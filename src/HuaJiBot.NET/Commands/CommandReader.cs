@@ -46,7 +46,15 @@ public abstract class CommandReader
 
     public abstract bool Input([NotNullWhen(true)] out string? text, bool lastOne = false);
     public abstract bool At([NotNullWhen(true)] out string? id);
-    public abstract bool Reply([NotNullWhen(true)] out string? messageId);
+
+    public record ReplyInfo(
+        string? messageId = null,
+        string? seqId = null,
+        string? senderId = null,
+        string? content = null
+    );
+
+    public abstract bool Reply([NotNullWhen(true)] out ReplyInfo? data);
 }
 
 public class DefaultCommandReader(IEnumerable<ReaderEntity> msg) : CommonCommandReader
@@ -77,7 +85,7 @@ public abstract class CommonCommandReader : CommandReader
         public string AtText { get; init; } = $"@{AtTarget}";
     }
 
-    public record ReaderReply(string MessageId, bool? IsForward = null) : ReaderEntity;
+    public record ReaderReply(ReplyInfo Data) : ReaderEntity;
 
     private abstract record MatchResult
     {
@@ -88,7 +96,7 @@ public abstract class CommonCommandReader : CommandReader
 
     private record MatchAt(string AtTarget, string AtText) : MatchResult;
 
-    private record MatchReply(string MessageId, bool? IsForward) : MatchResult;
+    private record MatchReply(ReplyInfo Data) : MatchResult;
 
     private IEnumerable<string>? _currentExpected = null;
     public abstract IEnumerable<ReaderEntity> Msg { get; }
@@ -181,9 +189,9 @@ public abstract class CommonCommandReader : CommandReader
                         yield return new MatchAt(atTarget, atText);
                         break;
                     }
-                    case ReaderReply { IsForward: var forward, MessageId: var messageId }:
+                    case ReaderReply { Data: var data }:
                     {
-                        yield return new MatchReply(messageId, forward);
+                        yield return new MatchReply(data);
                         break;
                     }
                 }
@@ -247,14 +255,14 @@ public abstract class CommonCommandReader : CommandReader
         return false;
     }
 
-    public override bool Reply([NotNullWhen(true)] out string? messageId)
+    public override bool Reply([NotNullWhen(true)] out ReplyInfo? data)
     {
-        if (_seq.MoveNext() && _seq.Current is MatchReply { MessageId: var v }) //向下匹配一个参数
+        if (_seq.MoveNext() && _seq.Current is MatchReply { Data: var v }) //向下匹配一个参数
         {
-            messageId = v;
+            data = v;
             return true;
         }
-        messageId = null;
+        data = null;
         return false;
     }
 }

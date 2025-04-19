@@ -8,9 +8,9 @@ public class GroupMessage
     [BsonId]
     public required string MessageId { get; set; }
     public required string GroupId { get; set; }
-    public required string SenderId { get; set; }
+    public required string? SenderId { get; set; } //null表示机器人自己
     public required string SenderName { get; set; }
-    public required DateTime Timestamp { get; set; } = DateTime.Now;
+    public DateTime Timestamp { get; set; } = DateTime.Now;
     public required string Content { get; set; }
 }
 
@@ -20,9 +20,9 @@ public class MessageHistory : IDisposable
     private readonly ILiteCollection<GroupMessage> _messages;
     private bool _disposed = false;
 
-    public MessageHistory(BotService service, string? dbPath = null)
+    public MessageHistory(BotService service, string dbName = "messages.db")
     {
-        dbPath ??= Path.Combine(service.GetPluginDataPath(), "database", "messages.db");
+        var dbPath = Path.Combine(service.GetPluginDataPath(), "database", dbName);
         // Ensure directory exists
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
         _db = new LiteDatabase(dbPath);

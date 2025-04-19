@@ -24,6 +24,8 @@ public class Login
     /// 登陆状态
     /// </summary>
     public Status Status { get; set; }
+
+    public string[] Features { get; set; } = [];
 }
 
 public enum Status
@@ -51,5 +53,5 @@ public enum Status
     /// <summary>
     /// 重新连接
     /// </summary>
-    Reconnect = 4
+    Reconnect = 4,
 }

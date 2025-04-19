@@ -138,10 +138,43 @@ internal class SatoriEventClient
                                             targetName
                                         );
                                         break;
-                                    case QuoteElement { Id: var id, Forward: var forward }:
+                                    case QuoteElement { Id: var id, Forward: var forward } quote:
+                                        quote.Attributes.TryGetValue(
+                                            "chronocat:seq",
+                                            out var messageSeq
+                                        );
+                                        string? senderId = null;
+                                        string? senderName = null;
+                                        string? content = null;
+                                        foreach (var child in quote.ChildElements)
+                                        {
+                                            if (child is AuthorElement author)
+                                            {
+                                                senderId = author.UserId;
+                                                senderName = author.Nickname;
+                                                if (senderId is null)
+                                                    author.Attributes.TryGetValue(
+                                                        "id",
+                                                        out senderId
+                                                    );
+                                                if (senderName is null)
+                                                    author.Attributes.TryGetValue(
+                                                        "name",
+                                                        out senderId
+                                                    );
+                                            }
+                                            else if (child is TextElement text)
+                                            {
+                                                content = text.Text;
+                                            }
+                                        }
                                         yield return new CommonCommandReader.ReaderReply(
-                                            id ?? "-1",
-                                            forward
+                                            new CommandReader.ReplyInfo(
+                                                messageId: id,
+                                                seqId: messageSeq,
+                                                senderId: senderId,
+                                                content: content
+                                            )
                                         );
                                         break;
                                     default:
@@ -194,6 +227,9 @@ internal class SatoriEventClient
                     _service.Accounts = (from x in readyBody.Logins select x.User!.Id).ToArray();
                     var account = readyBody.Logins.First();
                     var appName = account.Platform ?? "unknown";
+                    _service.Log(
+                        $"{appName} {account.Status} Features: {string.Join(",", account.Features)}"
+                    );
                     _service.Events.CallOnBotLogin(
                         new BotLoginEventArgs
                         {

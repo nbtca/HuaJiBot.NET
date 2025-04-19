@@ -19,13 +19,13 @@ public class ConsoleLogger : ILogger
         Console.WriteLine($"[{Utils.NetworkTime.Now:yyyy-MM-dd HH:mm:ss}] [DEBUG] {message}");
     }
 
-    public void LogError(object message, object detail)
+    public void LogError(object message, object? detail)
     {
         var detailStr = detail switch
         {
             TargetInvocationException e => e.ToString(),
             Exception e => e.ToString(),
-            _ => detail.ToString()
+            _ => detail?.ToString(),
         };
         Console.WriteLine(
             $"[{Utils.NetworkTime.Now:yyyy-MM-dd HH:mm:ss}] [ERROR] {message}"

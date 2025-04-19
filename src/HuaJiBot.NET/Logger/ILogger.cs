@@ -25,5 +25,5 @@ public interface ILogger
     /// </summary>
     /// <param name="message">消息</param>
     /// <param name="detail">错误信息</param>
-    void LogError(object message, object detail);
+    void LogError(object message, object? detail);
 }

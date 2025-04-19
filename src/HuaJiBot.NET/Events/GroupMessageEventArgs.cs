@@ -51,9 +51,9 @@ public class GroupMessageEventArgs(
     /// 返回消息给发送者（at发送者）
     /// </summary>
     /// <param name="message"></param>
-    public void Reply(string message)
+    public async Task<string[]> Reply(string message)
     {
-        Service.FeedbackAt(RobotId, GroupId, MessageId, message);
+        return await Service.FeedbackAt(RobotId, GroupId, MessageId, message);
     }
 
     /// <summary>群名称</summary>

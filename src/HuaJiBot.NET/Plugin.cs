@@ -38,14 +38,14 @@ public abstract class PluginBase
 
     public void Warn(
         object msg,
-        object detail,
+        object? detail,
         [CallerFilePath] string? file = null,
         [CallerLineNumber] int? line = null
     ) => Service.Warn($"[{Name}] {msg}" + detail, file, line);
 
     public void Error(
         object msg,
-        object detail,
+        object? detail,
         [CallerFilePath] string? file = null,
         [CallerLineNumber] int? line = null
     ) => Service.LogError($"[{Name}] {msg}", detail, file, line);

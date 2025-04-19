@@ -6,6 +6,7 @@ using HuaJiBot.NET.Adapter.Satori.Protocol.Elements;
 using HuaJiBot.NET.Adapter.Satori.Protocol.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace HuaJiBot.NET.Adapter.Satori.Protocol;
 
@@ -48,6 +49,24 @@ internal class SatoriApiClient
         );
     }
 
+    public async Task<JObject> GetMessage(string selfId, string channelId, string messageId)
+    {
+        return await HttpPostAsync<JObject>(
+            selfId,
+            "/v1/message.get",
+            new JObject { ["channel_id"] = channelId, ["message_id"] = messageId }
+        );
+    }
+
+    public async Task<JObject> GetMessageList(string selfId, string channelId)
+    {
+        return await HttpPostAsync<JObject>(
+            selfId,
+            "/v1/message.list",
+            new JObject { ["channel_id"] = channelId }
+        );
+    }
+
     public async Task<TData> HttpPostAsync<TData>(string selfId, string endpoint, JObject body)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
@@ -58,7 +77,13 @@ internal class SatoriApiClient
             MediaTypeHeaderValue.Parse("application/json")
         );
         var response = await _http.SendAsync(request);
+#if DEBUG
+        var text = await response.Content.ReadAsStringAsync();
+        Console.WriteLine(text);
+        var data = JsonSerializer.Deserialize<TData>(text, JsonOptions);
+#else
         var data = await response.Content.ReadFromJsonAsync<TData>(JsonOptions);
+#endif
         return data!;
     }
 

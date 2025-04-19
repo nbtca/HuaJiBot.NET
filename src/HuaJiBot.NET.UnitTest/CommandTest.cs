@@ -1,11 +1,12 @@
 using System.Reflection;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
+using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Logger;
 
 namespace HuaJiBot.NET.UnitTest;
 
-internal class TestAdapter : BotService
+internal class TestAdapter : BotServiceBase
 {
     public override ILogger Logger { get; init; } = new ConsoleLogger();
 
@@ -40,7 +41,12 @@ internal class TestAdapter : BotService
         throw new NotImplementedException();
     }
 
-    public override void FeedbackAt(string? robotId, string targetGroup, string msgId, string text)
+    public override async Task<string[]> FeedbackAt(
+        string? robotId,
+        string targetGroup,
+        string msgId,
+        string text
+    )
     {
         throw new NotImplementedException();
     }

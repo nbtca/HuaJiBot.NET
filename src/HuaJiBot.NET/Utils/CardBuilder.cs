@@ -42,8 +42,6 @@ public abstract class ImageBuilder
             //}
             //Console.WriteLine(graphemeEnumerator.Current.);
         }
-        Console.WriteLine(text + " >>> " + chars);
-
         return chars;
     }
 

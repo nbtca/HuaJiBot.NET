@@ -1,5 +1,8 @@
 ﻿using System.ClientModel;
 using System.ClientModel.Primitives;
+using System.Text;
+using HuaJiBot.NET.DataBase;
+using HuaJiBot.NET.Logger;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OpenAI;
@@ -21,6 +24,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private OpenAIClient? _client = null;
     private string _clientApiKey = "";
     private string _clientModel = "";
+
     private OpenAIClient Client
     {
         get
@@ -35,7 +39,18 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     new ApiKeyCredential(
                         string.IsNullOrEmpty(Config.ApiKey) ? "null" : Config.ApiKey
                     ),
-                    new OpenAIClientOptions { Endpoint = new Uri(Config.Endpoint) }
+                    new OpenAIClientOptions
+                    {
+                        Endpoint = new Uri(Config.Endpoint),
+                        ClientLoggingOptions = new()
+                        {
+                            EnableLogging = true,
+                            LoggerFactory = LoggerFactory.Create(logger =>
+                            {
+                                logger.AddProvider(new PluginLoggerProvider(this));
+                            }),
+                        },
+                    }
                 );
                 _clientApiKey = Config.ApiKey;
                 _clientModel = Config.Model;
@@ -46,8 +61,11 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private ChatClient ChatClient => Client.GetChatClient(Config.Model);
     private OpenAIModelClient ModelClient => Client.GetOpenAIModelClient();
 
+    private MessageHistory _history = null!;
+
     protected override void Initialize()
     {
+        _history = new MessageHistory(Service, "ai_messages.db");
         Service.Events.OnGroupMessageReceived += (s, e) => _ = Events_OnGroupMessageReceived(e);
         Info("启动成功");
     }
@@ -63,7 +81,20 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             {
                 try
                 {
+                    //收到at机器人的消息则处理
                     Info($"收到At消息@{atId}:{restText}");
+                    //把消息存到数据中以便多轮会话查阅
+                    _history.StoreMessage(
+                        new GroupMessage
+                        {
+                            Content = restText,
+                            GroupId = e.GroupId,
+                            MessageId = e.MessageId,
+                            SenderId = e.SenderId,
+                            SenderName = await e.GetGroupNameAsync(),
+                        }
+                    );
+                    //调用LLM回复
                     var response = await ChatClient.CompleteChatAsync(
                         [
                             ChatMessage.CreateSystemMessage("你是一个有用的AI助手"),
@@ -75,7 +106,22 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         switch (content.Kind)
                         {
                             case ChatMessageContentPartKind.Text:
-                                e.Reply(content.Text);
+                                var text = content.Text;
+                                var messageIds = await e.Reply(content.Text);
+                                //机器人回复后把自己的消息添加到数据库
+                                foreach (var msgId in messageIds)
+                                {
+                                    _history.StoreMessage(
+                                        new GroupMessage
+                                        {
+                                            Content = text,
+                                            GroupId = e.GroupId,
+                                            MessageId = msgId,
+                                            SenderId = null,
+                                            SenderName = "bot",
+                                        }
+                                    );
+                                }
                                 break;
                         }
                     }
@@ -87,9 +133,10 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             }
         }
         reader = e.CommandReader;
-        if (reader.Reply(out var messageId))
+        if (reader.Reply(out var data))
         {
-            Info(messageId);
+            Info("Reply -> messageId: " + data);
+            //Service.SendGroupMessageAsync(robot)
         }
     }
 
