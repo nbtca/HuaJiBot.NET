@@ -1,4 +1,5 @@
 ﻿using System.ClientModel;
+using System.Text;
 using HuaJiBot.NET.DataBase;
 using HuaJiBot.NET.Logger;
 using Microsoft.Extensions.Logging;
@@ -68,6 +69,12 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         _history = new MessageHistory(Service, "ai_messages.db");
         Service.Events.OnGroupMessageReceived += (s, e) => _ = Events_OnGroupMessageReceived(e);
         Info("启动成功");
+        Task.Run(async () =>
+        {
+            var models = await ModelClient.GetModelsAsync();
+            var s = new StringBuilder("模型列表：");
+            foreach (var model in models.Value) { }
+        });
     }
 
     private async Task InvokeLlmMessage(
@@ -188,6 +195,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 }
             }
 
+            #region 提取相关的消息记录
             string? replyMessageId = null;
             if (data.messageId is not null)
             { //有messageId 直接提取
@@ -208,7 +216,13 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     }
                 }
             }
-
+            #endregion
+            //如果所有回复上下文都与bot无关，则不处理
+            if (messageList.All(x => !x.Value.IsBot))
+            {
+                return;
+            }
+            #region 调用大模型回复（多轮对话）
             List<ChatMessage> prompts = [ChatMessage.CreateSystemMessage(Config.SystemPrompt)];
             foreach (var (_, message) in messageList)
             {
@@ -241,6 +255,8 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             {
                 Error("调用AI失败", exception);
             }
+
+            #endregion
         }
     }
 
