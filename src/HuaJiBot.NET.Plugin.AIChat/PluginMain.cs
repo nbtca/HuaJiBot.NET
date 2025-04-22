@@ -4,6 +4,7 @@ using HuaJiBot.NET.DataBase;
 using HuaJiBot.NET.Logger;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using OpenAI;
 using OpenAI.Chat;
 using OpenAI.Models;
@@ -13,11 +14,25 @@ namespace HuaJiBot.NET.Plugin.AIChat;
 
 public class PluginConfig : ConfigBase
 {
-    public string Endpoint = "";
-    public string ApiKey = "";
-    public string Model = "huihui_ai/qwen2.5-1m-abliterated:14b";
     public string SystemPrompt = "你是一个有用的AI助手";
-    public bool OpenAILogging = false;
+    public ModelConfig Model = new();
+}
+
+[JsonConverter(typeof(StringEnumConverter))]
+public enum ModelProvider
+{
+    // ReSharper disable once InconsistentNaming
+    OpenAI,
+    Google,
+}
+
+public class ModelConfig
+{
+    public ModelProvider Provider = ModelProvider.OpenAI;
+    public string Endpoint = "";
+    public string Id = "";
+    public string ApiKey = "";
+    public bool Logging = false;
 }
 
 public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
@@ -32,20 +47,20 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             if (
                 _client is null //首次获取
-                || _clientApiKey != Config.ApiKey
-                || _clientModel != Config.Model //模型设置有变动
+                || _clientApiKey != Config.Model.ApiKey
+                || _clientModel != Config.Model.Id //模型设置有变动
             )
             {
                 _client = new OpenAIClient(
                     new ApiKeyCredential(
-                        string.IsNullOrEmpty(Config.ApiKey) ? "null" : Config.ApiKey
+                        string.IsNullOrEmpty(Config.Model.ApiKey) ? "null" : Config.Model.ApiKey
                     ),
                     new OpenAIClientOptions
                     {
-                        Endpoint = new Uri(Config.Endpoint),
+                        Endpoint = new Uri(Config.Model.Endpoint),
                         ClientLoggingOptions = new()
                         {
-                            EnableLogging = Config.OpenAILogging,
+                            EnableLogging = Config.Model.Logging,
                             LoggerFactory = LoggerFactory.Create(logger =>
                             {
                                 logger.AddProvider(new PluginLoggerProvider(this));
@@ -53,13 +68,13 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         },
                     }
                 );
-                _clientApiKey = Config.ApiKey;
-                _clientModel = Config.Model;
+                _clientApiKey = Config.Model.ApiKey;
+                _clientModel = Config.Model.Id;
             }
             return _client;
         }
     }
-    private ChatClient ChatClient => Client.GetChatClient(Config.Model);
+    private ChatClient ChatClient => Client.GetChatClient(Config.Model.Id);
     private OpenAIModelClient ModelClient => Client.GetOpenAIModelClient();
 
     private MessageHistory _history = null!;
@@ -72,8 +87,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         Task.Run(async () =>
         {
             var models = await ModelClient.GetModelsAsync();
-            var s = new StringBuilder("模型列表：");
-            foreach (var model in models.Value) { }
+            Info("模型列表：" + string.Join(", ", models.Value.Select(x => x.Id)));
         });
     }
 
@@ -168,7 +182,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         reader = e.CommandReader;
         if (reader.Reply(out var data))
         {
-            _ = reader.Input(out var text);
+            _ = reader.Input(out var text, true);
             text ??= "";
             SortedList<DateTime, GroupMessage> messageList = [];
             void PrependMessage(GroupMessage message)

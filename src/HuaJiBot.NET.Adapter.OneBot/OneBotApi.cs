@@ -34,7 +34,7 @@ internal class OneBotApi(BotService service, Action<string> send)
         var req = new ActionRequest<T>(action, data, id);
         var str = JsonConvert.SerializeObject(req);
 
-#if DEBUGs
+#if DEBUG
         Console.WriteLine("Sending: " + str);
 #endif
         var tcs = new TaskCompletionSource<JToken>();

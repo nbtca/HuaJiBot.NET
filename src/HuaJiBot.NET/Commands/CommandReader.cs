@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using static HuaJiBot.NET.Commands.CommonCommandReader;
 
 namespace HuaJiBot.NET.Commands;
@@ -69,7 +70,10 @@ public abstract class CommonCommandReader : CommandReader
         public static implicit operator ReaderEntity(string text) => new ReaderText(text);
     }
 
-    public record ReaderText(string Text) : ReaderEntity;
+    public record ReaderText(string Text) : ReaderEntity
+    {
+        public override string ToString() => Text;
+    };
 
     public record ReaderAt(string AtTarget) : ReaderEntity
     {
@@ -83,6 +87,9 @@ public abstract class CommonCommandReader : CommandReader
         }
 
         public string AtText { get; init; } = $"@{AtTarget}";
+
+        public override string ToString() =>
+            AtText.StartsWith("@") ? AtText.TrimEnd() + " " : "@" + AtText.TrimEnd() + " ";
     }
 
     public record ReaderReply(ReplyInfo Data) : ReaderEntity;
@@ -94,7 +101,11 @@ public abstract class CommonCommandReader : CommandReader
 
     private record MatchText(string Text) : MatchResult;
 
-    private record MatchAt(string AtTarget, string AtText) : MatchResult;
+    private record MatchAt(string AtTarget, string AtText) : MatchResult
+    {
+        public override string ToString() =>
+            AtText.StartsWith("@") ? AtText.TrimEnd() + " " : "@" + AtText.TrimEnd() + " ";
+    };
 
     private record MatchReply(ReplyInfo Data) : MatchResult;
 
@@ -108,8 +119,15 @@ public abstract class CommonCommandReader : CommandReader
         _seq = BuildReadSeq().GetEnumerator();
         IEnumerable<MatchResult> BuildReadSeq()
         {
+            StringBuilder? lastTextBuffer = null;
+            bool previousIsReply = false; //上一个是回复
             foreach (var s in Msg)
             {
+                if (previousIsReply && s is ReaderAt)
+                { //上一个是回复，则忽略本次的At
+                    continue;
+                }
+                previousIsReply = false;
                 switch (s)
                 {
                     case ReaderText { Text: var _text }:
@@ -119,9 +137,8 @@ public abstract class CommonCommandReader : CommandReader
                         {
                             if (_lastOne) //如果是最后一个参数
                             {
-                                yield return text; //返回剩下的整个文本
-                                //todo 处理并合并剩下的elements
-                                yield break; //结束
+                                (lastTextBuffer ??= new StringBuilder()).Append(text); //返回剩下的整个文本，加到buffer
+                                break; //跳出循环
                             }
                             else if (
                                 //当前有期望的文本，如匹配枚举
@@ -184,17 +201,33 @@ public abstract class CommonCommandReader : CommandReader
                         }
                         break;
                     }
-                    case ReaderAt { AtTarget: var atTarget, AtText: var atText }:
+                    case ReaderAt { AtTarget: var atTarget, AtText: var atText } at:
                     {
+                        if (_lastOne)
+                        {
+                            (lastTextBuffer ??= new StringBuilder()).Append(at); //返回剩下的整个文本，加到buffer
+                            continue;
+                        }
                         yield return new MatchAt(atTarget, atText);
                         break;
                     }
-                    case ReaderReply { Data: var data }:
+                    case ReaderReply { Data: var data } reply:
                     {
+                        if (_lastOne)
+                        {
+                            (lastTextBuffer ??= new StringBuilder()).Append(reply); //返回剩下的整个文本，加到buffer
+                            continue;
+                        }
                         yield return new MatchReply(data);
+                        previousIsReply = true;
                         break;
                     }
                 }
+            }
+
+            if (lastTextBuffer is { } anyLastText)
+            { //如果有剩下的文本buffer
+                yield return new MatchText(anyLastText.ToString()); //返回剩下的整个文本
             }
         }
     }

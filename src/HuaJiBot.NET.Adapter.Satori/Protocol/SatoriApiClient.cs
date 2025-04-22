@@ -78,7 +78,7 @@ internal class SatoriApiClient
         var response = await _http.SendAsync(request);
 #if DEBUG
         var text = await response.Content.ReadAsStringAsync();
-        Console.WriteLine(text);
+        Console.WriteLine("HttpPostAsync: " + text);
         var data = JsonSerializer.Deserialize<TData>(text, JsonOptions);
 #else
         var data = await response.Content.ReadFromJsonAsync<TData>(JsonOptions);
