@@ -182,73 +182,74 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         reader = e.CommandReader;
         if (reader.Reply(out var data))
         {
-            _ = reader.Input(out var text, true);
-            text ??= "";
-            SortedList<DateTime, GroupMessage> messageList = [];
-            void PrependMessage(GroupMessage message)
+            try
             {
-                messageList.Add(message.Timestamp, message);
-                if (messageList.Count > 100)
-                { //限制最大数量
-                    return;
-                }
-                //如果有父消息，则继续提取
-                if (message.ReplyToMessageId is { } parentReplyMessageId)
+                _ = reader.Input(out var text, true);
+                text ??= "";
+                SortedList<DateTime, GroupMessage> messageList = [];
+                void PrependMessage(GroupMessage message)
                 {
-                    FetchReply(parentReplyMessageId);
+                    messageList.Add(message.Timestamp, message);
+                    if (messageList.Count > 100)
+                    { //限制最大数量
+                        return;
+                    }
+                    //如果有父消息，则继续提取
+                    if (message.ReplyToMessageId is { } parentReplyMessageId)
+                    {
+                        FetchReply(parentReplyMessageId);
+                    }
                 }
-            }
-            Info("Reply -> messageId: " + data);
+                Info("Reply -> messageId: " + data);
 
-            void FetchReply(string replyId)
-            {
-                var replyMessage = _history.GetMessage(replyId);
-                if (replyMessage is not null)
-                { //获取到被回复的消息
-                    PrependMessage(replyMessage);
-                }
-            }
-
-            #region 提取相关的消息记录
-            string? replyMessageId = null;
-            if (data.messageId is not null)
-            { //有messageId 直接提取
-                replyMessageId = data.messageId;
-                FetchReply(replyMessageId);
-            }
-            else
-            { //没messageId，根据内容模糊匹配
-                if (data is { content: { } replyContent })
+                void FetchReply(string replyId)
                 {
-                    var replyMessage =
-                        _history.GetGroupMessageLastEndWith(e.GroupId, replyContent)
-                        ?? _history.GetGroupMessageLastSimilar(e.GroupId, replyContent);
+                    var replyMessage = _history.GetMessage(replyId);
                     if (replyMessage is not null)
                     { //获取到被回复的消息
-                        replyMessageId = replyMessage.MessageId;
                         PrependMessage(replyMessage);
                     }
                 }
-            }
-            #endregion
-            //如果所有回复上下文都与bot无关，则不处理
-            if (messageList.All(x => !x.Value.IsBot))
-            {
-                return;
-            }
-            #region 调用大模型回复（多轮对话）
-            List<ChatMessage> prompts = [ChatMessage.CreateSystemMessage(Config.SystemPrompt)];
-            foreach (var (_, message) in messageList)
-            {
-                prompts.Add(
-                    message.IsBot
-                        ? ChatMessage.CreateAssistantMessage(message.Content)
-                        : ChatMessage.CreateUserMessage(message.Content)
-                );
-            }
-            prompts.Add(ChatMessage.CreateUserMessage(text));
-            try
-            {
+
+                #region 提取相关的消息记录
+                string? replyMessageId = null;
+                if (data.messageId is not null)
+                { //有messageId 直接提取
+                    replyMessageId = data.messageId;
+                    FetchReply(replyMessageId);
+                }
+                else
+                { //没messageId，根据内容模糊匹配
+                    if (data is { content: { } replyContent })
+                    {
+                        var replyMessage =
+                            _history.GetGroupMessageLastEndWith(e.GroupId, replyContent)
+                            ?? _history.GetGroupMessageLastSimilar(e.GroupId, replyContent);
+                        if (replyMessage is not null)
+                        { //获取到被回复的消息
+                            replyMessageId = replyMessage.MessageId;
+                            PrependMessage(replyMessage);
+                        }
+                    }
+                }
+                #endregion
+                //如果所有回复上下文都与bot无关，则不处理
+                if (messageList.All(x => !x.Value.IsBot))
+                {
+                    return;
+                }
+                #region 调用大模型回复（多轮对话）
+                List<ChatMessage> prompts = [ChatMessage.CreateSystemMessage(Config.SystemPrompt)];
+                foreach (var (_, message) in messageList)
+                {
+                    prompts.Add(
+                        message.IsBot
+                            ? ChatMessage.CreateAssistantMessage(message.Content)
+                            : ChatMessage.CreateUserMessage(message.Content)
+                    );
+                }
+                prompts.Add(ChatMessage.CreateUserMessage(text));
+
                 //收到回复消息记录
                 _history.StoreMessage(
                     new GroupMessage
@@ -264,13 +265,12 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 );
                 //调用LLM回复
                 await InvokeLlmMessage(prompts, e);
+                #endregion
             }
             catch (Exception exception)
             {
-                Error("调用AI失败", exception);
+                Error("多轮对话调用失败", exception);
             }
-
-            #endregion
         }
     }
 

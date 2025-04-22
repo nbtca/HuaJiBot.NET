@@ -6,12 +6,12 @@ namespace HuaJiBot.NET.DataBase;
 public class GroupMessage
 {
     [BsonId]
-    public required string MessageId { get; set; }
-    public required string GroupId { get; set; }
+    public required string MessageId { get; set; } = "";
+    public required string GroupId { get; set; } = "";
     public required string? SenderId { get; set; } //null表示机器人自己
-    public required string SenderName { get; set; }
+    public required string SenderName { get; set; } = "";
     public DateTime Timestamp { get; set; } = DateTime.Now;
-    public required string Content { get; set; }
+    public required string? Content { get; set; } = "";
     public required bool IsBot { get; set; } = false;
     public required string? ReplyToMessageId { get; set; } = null;
 }
@@ -61,7 +61,7 @@ public class MessageHistory : IDisposable
         var messages =
             from m in _messages.FindAll()
             orderby m.Timestamp descending
-            where m.GroupId == groupId && m.Content.EndsWith(text)
+            where m.GroupId == groupId && (m.Content ?? "").EndsWith(text)
             select m;
         return messages.FirstOrDefault();
     }
@@ -72,8 +72,12 @@ public class MessageHistory : IDisposable
     /// <param name="source"></param>
     /// <param name="target"></param>
     /// <returns></returns>
-    private static int LevenshteinDistance(string source, string target)
+    private static int LevenshteinDistance(string? source, string? target)
     {
+        if (source is null || target is null)
+        {
+            return int.MaxValue;
+        }
         var n = source.Length;
         var m = target.Length;
         var d = new int[n + 1, m + 1];
