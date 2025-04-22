@@ -3,6 +3,7 @@ using System.Text;
 using HuaJiBot.NET.DataBase;
 using HuaJiBot.NET.Logger;
 using Microsoft.Extensions.Logging;
+using Microsoft.SemanticKernel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using OpenAI;
