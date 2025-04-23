@@ -1,83 +1,13 @@
-﻿using System.ClientModel;
-using System.Text;
-using HuaJiBot.NET.DataBase;
-using HuaJiBot.NET.Logger;
-using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel;
+﻿using HuaJiBot.NET.DataBase;
+using HuaJiBot.NET.Plugin.AIChat.Config;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using OpenAI;
 using OpenAI.Chat;
-using OpenAI.Models;
 using ChatMessage = OpenAI.Chat.ChatMessage;
 
 namespace HuaJiBot.NET.Plugin.AIChat;
 
-public class PluginConfig : ConfigBase
-{
-    public string SystemPrompt = "你是一个有用的AI助手";
-    public ModelConfig Model = new();
-}
-
-[JsonConverter(typeof(StringEnumConverter))]
-public enum ModelProvider
-{
-    // ReSharper disable once InconsistentNaming
-    OpenAI,
-    Google,
-}
-
-public class ModelConfig
-{
-    public ModelProvider Provider = ModelProvider.OpenAI;
-    public string Endpoint = "";
-    public string Id = "";
-    public string ApiKey = "";
-    public bool Logging = false;
-}
-
 public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
-    private OpenAIClient? _client = null;
-    private string _clientApiKey = "";
-    private string _clientModel = "";
-
-    private OpenAIClient Client
-    {
-        get
-        {
-            if (
-                _client is null //首次获取
-                || _clientApiKey != Config.Model.ApiKey
-                || _clientModel != Config.Model.Id //模型设置有变动
-            )
-            {
-                _client = new OpenAIClient(
-                    new ApiKeyCredential(
-                        string.IsNullOrEmpty(Config.Model.ApiKey) ? "null" : Config.Model.ApiKey
-                    ),
-                    new OpenAIClientOptions
-                    {
-                        Endpoint = new Uri(Config.Model.Endpoint),
-                        ClientLoggingOptions = new()
-                        {
-                            EnableLogging = Config.Model.Logging,
-                            LoggerFactory = LoggerFactory.Create(logger =>
-                            {
-                                logger.AddProvider(new PluginLoggerProvider(this));
-                            }),
-                        },
-                    }
-                );
-                _clientApiKey = Config.Model.ApiKey;
-                _clientModel = Config.Model.Id;
-            }
-            return _client;
-        }
-    }
-    private ChatClient ChatClient => Client.GetChatClient(Config.Model.Id);
-    private OpenAIModelClient ModelClient => Client.GetOpenAIModelClient();
-
     private MessageHistory _history = null!;
 
     protected override void Initialize()
@@ -85,10 +15,9 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         _history = new MessageHistory(Service, "ai_messages.db");
         Service.Events.OnGroupMessageReceived += (s, e) => _ = Events_OnGroupMessageReceived(e);
         Info("启动成功");
-        Task.Run(async () =>
-        {
-            var models = await ModelClient.GetModelsAsync();
-            Info("模型列表：" + string.Join(", ", models.Value.Select(x => x.Id)));
+        Task.Run(async () => {
+            //var models = await ModelClient.GetModelsAsync();
+            //Info("模型列表：" + string.Join(", ", models.Value.Select(x => x.ModelId)));
         });
     }
 

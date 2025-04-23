@@ -54,26 +54,18 @@ internal class AIChat
     public async Task TestChatUsingSemanticKernel()
     {
         var builder = Kernel.CreateBuilder();
-        //string modelId,
-        //    OpenAIClient? openAIClient = null,
-        //string? serviceId = null);
         builder.AddOpenAIChatCompletion("huihui_ai/qwen2.5-1m-abliterated:14b", _client);
-
         var kernel = builder.Build();
 
         ChatCompletionAgent agent = new()
         {
             Name = "NBTCA-Agent",
-            Instructions = "You are a helpful assistant.",
+            Instructions = "你是一个有用的AI助手。",
             Kernel = kernel,
         };
         await foreach (
             AgentResponseItem<ChatMessageContent> response in agent.InvokeAsync(
-                new ChatMessageContent[]
-                {
-                    new(AuthorRole.System, "你是一个有用的AI助手。"),
-                    new(AuthorRole.User, "你是谁？"),
-                }
+                new ChatMessageContent[] { new(AuthorRole.User, "你是谁？") }
             )
         )
         {
