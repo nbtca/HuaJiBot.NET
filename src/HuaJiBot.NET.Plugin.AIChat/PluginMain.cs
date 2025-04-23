@@ -1,5 +1,6 @@
 ﻿using HuaJiBot.NET.DataBase;
 using HuaJiBot.NET.Plugin.AIChat.Config;
+using HuaJiBot.NET.Plugin.AIChat.Service;
 using Newtonsoft.Json;
 using OpenAI.Chat;
 using ChatMessage = OpenAI.Chat.ChatMessage;
@@ -9,6 +10,25 @@ namespace HuaJiBot.NET.Plugin.AIChat;
 public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
     private MessageHistory _history = null!;
+
+    private KernelConnector Connector
+    {
+        get
+        {
+            return Config.Model switch
+            {
+                { Provider: ModelProvider.OpenAI } => new OpenAIKernelConnector(
+                    Service,
+                    Config.Model
+                ),
+                { Provider: ModelProvider.Google } => new GoogleKernelConnector(
+                    Service,
+                    Config.Model
+                ),
+                _ => throw new ArgumentOutOfRangeException(nameof(Config.Model.Provider)),
+            };
+        }
+    }
 
     protected override void Initialize()
     {
@@ -39,33 +59,33 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     )
                     .Replace("\n", "\n\t")
         );
-        var response = await ChatClient.CompleteChatAsync(messages);
-        foreach (var content in response.Value.Content)
-        {
-            switch (content.Kind)
-            {
-                case ChatMessageContentPartKind.Text:
-                    var text = content.Text;
-                    var messageIds = await e.Reply(content.Text);
-                    //机器人回复后把自己的消息添加到数据库
-                    foreach (var msgId in messageIds)
-                    {
-                        _history.StoreMessage( //AI回复记录
-                            new GroupMessage
-                            {
-                                Content = text,
-                                GroupId = e.GroupId,
-                                MessageId = msgId,
-                                SenderId = null,
-                                SenderName = "bot",
-                                IsBot = true,
-                                ReplyToMessageId = e.MessageId,
-                            }
-                        );
-                    }
-                    break;
-            }
-        }
+        //var response = await ChatClient.CompleteChatAsync(messages);
+        //foreach (var content in response.Value.Content)
+        //{
+        //    switch (content.Kind)
+        //    {
+        //        case ChatMessageContentPartKind.Text:
+        //            var text = content.Text;
+        //            var messageIds = await e.Reply(content.Text);
+        //            //机器人回复后把自己的消息添加到数据库
+        //            foreach (var msgId in messageIds)
+        //            {
+        //                _history.StoreMessage( //AI回复记录
+        //                    new GroupMessage
+        //                    {
+        //                        Content = text,
+        //                        GroupId = e.GroupId,
+        //                        MessageId = msgId,
+        //                        SenderId = null,
+        //                        SenderName = "bot",
+        //                        IsBot = true,
+        //                        ReplyToMessageId = e.MessageId,
+        //                    }
+        //                );
+        //            }
+        //            break;
+        //    }
+        //}
     }
 
     private async Task Events_OnGroupMessageReceived(Events.GroupMessageEventArgs e)

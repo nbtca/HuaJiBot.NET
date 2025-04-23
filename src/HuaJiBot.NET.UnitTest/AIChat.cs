@@ -1,6 +1,8 @@
 ﻿using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Diagnostics;
+using HuaJiBot.NET.Plugin.AIChat.Config;
+using HuaJiBot.NET.Plugin.AIChat.Service;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
@@ -14,8 +16,8 @@ namespace HuaJiBot.NET.UnitTest;
 
 internal class AIChat
 {
-    private ILoggerFactory _loggerFactory = null!;
     private OpenAIClient _client;
+    private TestAdapter _api = new();
 
     [SetUp]
     public void Setup()
@@ -53,16 +55,44 @@ internal class AIChat
     [Test]
     public async Task TestChatUsingSemanticKernel()
     {
-        var builder = Kernel.CreateBuilder();
-        builder.AddOpenAIChatCompletion("huihui_ai/qwen2.5-1m-abliterated:14b", _client);
-        var kernel = builder.Build();
+        KernelConnector connector = new OpenAIKernelConnector(
+            _api,
+            new ModelConfig(
+                ModelProvider.OpenAI,
+                ModelId: "huihui_ai/qwen2.5-1m-abliterated:14b",
+                Endpoint: "http://localhost:11434/v1",
+                AgentName: "Test Bot",
+                Logging: true
+            )
+        );
 
-        ChatCompletionAgent agent = new()
+        ChatCompletionAgent agent = connector.CreateChatCompletionAgent();
+        await foreach (
+            AgentResponseItem<ChatMessageContent> response in agent.InvokeAsync(
+                new ChatMessageContent[] { new(AuthorRole.User, "你是谁？") }
+            )
+        )
         {
-            Name = "NBTCA-Agent",
-            Instructions = "你是一个有用的AI助手。",
-            Kernel = kernel,
-        };
+            Console.WriteLine(response.Message);
+        }
+    }
+
+    [Test]
+    public async Task TestChatGeminiUsingSemanticKernel()
+    {
+        KernelConnector connector = new GoogleKernelConnector(
+            _api,
+            new ModelConfig(
+                ModelProvider.Google,
+                ModelId: "gemini-2.0-flash-lite",
+                Endpoint: "https://generativelanguage.googleapis.com/",
+                ApiKey: "*",
+                AgentName: "Test Bot",
+                Logging: true
+            )
+        );
+
+        ChatCompletionAgent agent = connector.CreateChatCompletionAgent();
         await foreach (
             AgentResponseItem<ChatMessageContent> response in agent.InvokeAsync(
                 new ChatMessageContent[] { new(AuthorRole.User, "你是谁？") }

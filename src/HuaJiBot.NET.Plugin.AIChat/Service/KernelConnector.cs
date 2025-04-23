@@ -1,86 +1,41 @@
-﻿using System;
-using System.ClientModel;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Logger;
 using HuaJiBot.NET.Plugin.AIChat.Config;
-using Markdig.Helpers;
+using HuaJiBot.NET.Plugin.AIChat.Plugins;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
-using Microsoft.SemanticKernel.ChatCompletion;
-using OpenAI;
 
 namespace HuaJiBot.NET.Plugin.AIChat.Service;
 
-internal abstract class KernelConnector(PluginMain plugin, ModelConfig modelConfig)
+public abstract class KernelConnector(BotService service, ModelConfig modelConfig)
 {
-    private PluginMain _plugin = plugin;
-    private ModelConfig _modelConfig = modelConfig;
+    protected readonly BotService Service = service;
+    protected readonly ModelConfig ModelConfig = modelConfig;
 
-    public ChatCompletionAgent CreateChatCompletionAgent()
+    private void EnableBotFunctions(IKernelBuilder builder)
     {
-        var kernel = CreateKernel();
-        ChatCompletionAgent agent = new()
-        {
-            Name = "NBTCA-Agent",
-            Instructions = "你是一个有用的AI助手。",
-            Kernel = kernel,
-        };
-        return agent;
+        builder.Plugins.AddFromType<BasicPlugin>();
     }
 
-    protected abstract Kernel CreateKernel();
-}
-
-internal class OpenAIKernelConnector(PluginMain plugin, ModelConfig modelConfig)
-    : KernelConnector(plugin, modelConfig)
-{
-    private OpenAIClient? _client;
-
     public ChatCompletionAgent CreateChatCompletionAgent()
     {
-        var builder = Kernel.CreateBuilder();
-        builder.AddOpenAIChatCompletion(_modelConfig.ModelId, Client);
+        var builder = CreateKernel();
+#if DEBUG
+        builder.Services.AddLogging(services =>
+            services.AddProvider(new PluginLoggerProvider(Service))
+        );
+#endif
         var kernel = builder.Build();
         ChatCompletionAgent agent = new()
         {
-            Name = "NBTCA-Agent",
-            Instructions = "你是一个有用的AI助手。",
+            Name = ModelConfig.AgentName,
+            Instructions = ModelConfig.ModelId,
             Kernel = kernel,
         };
         return agent;
     }
 
-    private OpenAIClient Client
-    {
-        get
-        {
-            if (_client is null //首次获取
-            //TODO : || _modelConfig //模型设置有变动自动重新加载
-            )
-            {
-                _client = new OpenAIClient(
-                    new ApiKeyCredential(
-                        string.IsNullOrEmpty(_modelConfig.ApiKey) ? "null" : _modelConfig.ApiKey
-                    ),
-                    new OpenAIClientOptions
-                    {
-                        Endpoint = new Uri(_modelConfig.Endpoint),
-                        ClientLoggingOptions = new()
-                        {
-                            EnableLogging = _modelConfig.Logging,
-                            LoggerFactory = LoggerFactory.Create(logger =>
-                            {
-                                logger.AddProvider(new PluginLoggerProvider(_plugin));
-                            }),
-                        },
-                    }
-                );
-            }
-            return _client;
-        }
-    }
+    protected abstract IKernelBuilder CreateKernel();
 }

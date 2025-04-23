@@ -5,5 +5,6 @@ public record ModelConfig(
     string Endpoint = "",
     string ModelId = "",
     string ApiKey = "",
+    string? AgentName = "Bot",
     bool Logging = false
 );
