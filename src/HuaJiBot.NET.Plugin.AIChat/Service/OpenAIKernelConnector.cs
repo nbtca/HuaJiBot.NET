@@ -4,7 +4,6 @@ using HuaJiBot.NET.Logger;
 using HuaJiBot.NET.Plugin.AIChat.Config;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI;
 

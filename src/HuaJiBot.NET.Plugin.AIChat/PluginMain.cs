@@ -2,7 +2,6 @@
 using HuaJiBot.NET.Plugin.AIChat.Config;
 using HuaJiBot.NET.Plugin.AIChat.Service;
 using Newtonsoft.Json;
-using OpenAI.Chat;
 using ChatMessage = OpenAI.Chat.ChatMessage;
 
 namespace HuaJiBot.NET.Plugin.AIChat;
