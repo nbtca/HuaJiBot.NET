@@ -6,6 +6,9 @@ using HuaJiBot.NET.Adapter.Satori.Protocol.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using JsonSerializer = System.Text.Json.JsonSerializer;
+#if !DEBUG
+using System.Net.Http.Json;
+#endif
 
 namespace HuaJiBot.NET.Adapter.Satori.Protocol;
 
