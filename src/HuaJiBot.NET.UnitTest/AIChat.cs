@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI;
 using ChatMessage = OpenAI.Chat.ChatMessage;
 using ILoggerFactory = Microsoft.Extensions.Logging.ILoggerFactory;
@@ -66,10 +67,10 @@ internal class AIChat
             )
         );
 
-        ChatCompletionAgent agent = connector.CreateChatCompletionAgent();
+        var agent = connector.CreateChatCompletionAgent("你是一个有用的人工智能助手。");
         await foreach (
-            AgentResponseItem<ChatMessageContent> response in agent.InvokeAsync(
-                new ChatMessageContent[] { new(AuthorRole.User, "你是谁？") }
+            var response in agent.InvokeAsync(
+                new ChatMessageContent[] { new(AuthorRole.User, "今天的日期是？") }
             )
         )
         {
@@ -92,10 +93,12 @@ internal class AIChat
             )
         );
 
-        ChatCompletionAgent agent = connector.CreateChatCompletionAgent();
+        ChatCompletionAgent agent = connector.CreateChatCompletionAgent(
+            "你是一个有用的人工智能助手。"
+        );
         await foreach (
-            AgentResponseItem<ChatMessageContent> response in agent.InvokeAsync(
-                new ChatMessageContent[] { new(AuthorRole.User, "你是谁？") }
+            var response in agent.InvokeAsync(
+                new ChatMessageContent[] { new(AuthorRole.User, "show me the date") }
             )
         )
         {

@@ -2,6 +2,7 @@
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Plugin.AIChat.Config;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.Google;
 
 namespace HuaJiBot.NET.Plugin.AIChat.Service;
 
@@ -11,12 +12,13 @@ public class GoogleKernelConnector(BotService service, ModelConfig modelConfig)
     [Experimental("SKEXP0070")]
     protected override IKernelBuilder CreateKernel()
     {
-        var httpClient = new HttpClient(new HttpWithLogHandler(Service, ModelConfig));
+        var httpClient = new HttpClient(
+            modelConfig.Logging ? new HttpWithLogHandler(Service) : new HttpClientHandler()
+        );
         if (ModelConfig.Endpoint is { Length: > 1 } address)
         {
             httpClient.BaseAddress = new Uri(address);
         }
-
         var builder = Kernel.CreateBuilder();
         builder.AddGoogleAIGeminiChatCompletion(
             ModelConfig.ModelId,
@@ -25,4 +27,11 @@ public class GoogleKernelConnector(BotService service, ModelConfig modelConfig)
         );
         return builder;
     }
+
+    [Experimental("SKEXP0070")]
+    protected override PromptExecutionSettings GetPromptExecutionSettings() =>
+        new GeminiPromptExecutionSettings()
+        {
+            ToolCallBehavior = GeminiToolCallBehavior.AutoInvokeKernelFunctions,
+        };
 }

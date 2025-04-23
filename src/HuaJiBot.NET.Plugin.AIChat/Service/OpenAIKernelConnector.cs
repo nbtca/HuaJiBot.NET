@@ -5,6 +5,7 @@ using HuaJiBot.NET.Plugin.AIChat.Config;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.Google;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI;
 
 namespace HuaJiBot.NET.Plugin.AIChat.Service;
@@ -38,9 +39,13 @@ public class OpenAIKernelConnector(BotService service, ModelConfig modelConfig)
                         ClientLoggingOptions = new()
                         {
                             EnableLogging = ModelConfig.Logging,
+                            EnableMessageLogging = true,
+                            EnableMessageContentLogging = true,
                             LoggerFactory = LoggerFactory.Create(logger =>
                             {
-                                logger.AddProvider(new PluginLoggerProvider(Service));
+                                logger
+                                    .SetMinimumLevel(LogLevel.Trace)
+                                    .AddProvider(new PluginLoggerProvider(Service));
                             }),
                         },
                     }
@@ -49,4 +54,10 @@ public class OpenAIKernelConnector(BotService service, ModelConfig modelConfig)
             return _client;
         }
     }
+
+    protected override PromptExecutionSettings GetPromptExecutionSettings() =>
+        new OpenAIPromptExecutionSettings()
+        {
+            ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions,
+        };
 }

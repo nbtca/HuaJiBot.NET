@@ -1,41 +1,60 @@
-﻿using HuaJiBot.NET.Bot;
+﻿using System.Diagnostics.CodeAnalysis;
+using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Logger;
 using HuaJiBot.NET.Plugin.AIChat.Config;
-using HuaJiBot.NET.Plugin.AIChat.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
+using Microsoft.SemanticKernel.Connectors.Google;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace HuaJiBot.NET.Plugin.AIChat.Service;
 
-public abstract class KernelConnector(BotService service, ModelConfig modelConfig)
+public abstract class KernelConnector
 {
-    protected readonly BotService Service = service;
-    protected readonly ModelConfig ModelConfig = modelConfig;
-
-    private void EnableBotFunctions(IKernelBuilder builder)
+    protected KernelConnector(BotService service, ModelConfig modelConfig)
     {
-        builder.Plugins.AddFromType<BasicPlugin>();
+        Service = service;
+        ModelConfig = modelConfig;
+        _kernel = new(() =>
+        {
+            var builder = CreateKernel();
+            builder.AddBotFunctions();
+#if DEBUG
+            builder.Services.AddLogging(services =>
+                services
+                    .SetMinimumLevel(LogLevel.Trace)
+                    .AddProvider(new PluginLoggerProvider(Service))
+            );
+#endif
+            var kernel = builder.Build();
+            return kernel;
+        });
     }
 
-    public ChatCompletionAgent CreateChatCompletionAgent()
+    protected readonly BotService Service;
+    protected readonly ModelConfig ModelConfig;
+    private readonly Lazy<Kernel> _kernel;
+    public Kernel Kernel => _kernel.Value;
+
+    public ChatCompletionAgent CreateChatCompletionAgent(string systemPrompt)
     {
-        var builder = CreateKernel();
-#if DEBUG
-        builder.Services.AddLogging(services =>
-            services.AddProvider(new PluginLoggerProvider(Service))
-        );
-#endif
-        var kernel = builder.Build();
+        //return Kernel.GetRequiredService<IChatCompletionService>();
+
         ChatCompletionAgent agent = new()
         {
             Name = ModelConfig.AgentName,
-            Instructions = ModelConfig.ModelId,
-            Kernel = kernel,
+            Instructions = systemPrompt,
+            Kernel = Kernel,
+            Arguments = new KernelArguments(GetPromptExecutionSettings()),
+#if DEBUG
+            LoggerFactory = new LoggerFactory([new PluginLoggerProvider(Service)]),
+#endif
         };
         return agent;
     }
 
     protected abstract IKernelBuilder CreateKernel();
+    protected abstract PromptExecutionSettings GetPromptExecutionSettings();
 }

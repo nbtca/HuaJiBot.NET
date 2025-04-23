@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using System.Globalization;
-using HuaJiBot.NET.Bot;
 using Microsoft.SemanticKernel;
 
 namespace HuaJiBot.NET.Plugin.AIChat.Plugins;
@@ -9,10 +8,8 @@ namespace HuaJiBot.NET.Plugin.AIChat.Plugins;
 /// A basic plugin that provides utility functions like getting the current time
 /// to be used by Semantic Kernel.
 /// </summary>
-internal class BasicPlugin(BotService botService)
+public sealed class DateTimeUtils
 {
-    private readonly BotService _botService = botService;
-
     [KernelFunction]
     [Description("Get the current date and time")]
     public string GetCurrentDateTime()
