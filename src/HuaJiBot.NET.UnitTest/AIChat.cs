@@ -7,10 +7,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI;
 using ChatMessage = OpenAI.Chat.ChatMessage;
-using ILoggerFactory = Microsoft.Extensions.Logging.ILoggerFactory;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace HuaJiBot.NET.UnitTest;
@@ -70,7 +68,7 @@ internal class AIChat
         var agent = connector.CreateChatCompletionAgent("你是一个有用的人工智能助手。");
         await foreach (
             var response in agent.InvokeAsync(
-                new ChatMessageContent[] { new(AuthorRole.User, "今天的日期是？") }
+                new ChatMessageContent[] { new(AuthorRole.User, "现在的日期和时间？") }
             )
         )
         {
@@ -98,7 +96,7 @@ internal class AIChat
         );
         await foreach (
             var response in agent.InvokeAsync(
-                new ChatMessageContent[] { new(AuthorRole.User, "show me the date") }
+                new ChatMessageContent[] { new(AuthorRole.User, "现在的日期和时间") }
             )
         )
         {

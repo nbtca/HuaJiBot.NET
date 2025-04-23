@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using HuaJiBot.NET.Agent;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Logger;
@@ -79,6 +80,8 @@ public abstract class BotService
     public Config.ConfigWrapper Config { get; internal set; } = null!;
     public abstract IEvents Events { get; }
     public abstract string[] AllRobots { get; }
+    public List<AgentFunctionInfo> ExportFunctions { get; } = new();
+
     public abstract Task<string[]> SendGroupMessageAsync(
         string? robotId,
         string targetGroup,

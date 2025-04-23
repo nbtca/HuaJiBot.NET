@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 
-namespace HuaJiBot.NET.Plugin.AIChat.Service;
+namespace HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 
 public abstract class KernelConnector
 {
@@ -17,7 +17,7 @@ public abstract class KernelConnector
         _kernel = new(() =>
         {
             var builder = CreateKernel();
-            builder.AddBotFunctions();
+            builder.AddBotFunctions(service);
 #if DEBUG
             builder.Services.AddLogging(services =>
                 services
