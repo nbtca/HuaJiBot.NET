@@ -1,25 +1,25 @@
-name: Deploy
+# name: Deploy
 
-on:
-  workflow_run:
-    workflows:
-      - "Docker Image CI"
-    types:
-      - completed
+# on:
+#   workflow_run:
+#     workflows:
+#       - "Docker Image CI"
+#     types:
+#       - completed
 
-jobs:
-  deploy:
-    runs-on: self-hosted
-    steps:
-      - name: ssh pipelines
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          port: ${{ secrets.REMOTE_PORT }}
-          key: ${{ secrets.REMOTE_SSHKEY }}
-          script: |
-            cd /home/nbtca/docker/huajibot
-            docker compose down
-            docker compose pull
-            docker compose up -d
+# jobs:
+#   deploy:
+#     runs-on: self-hosted
+#     steps:
+#       - name: ssh pipelines
+#         uses: appleboy/ssh-action@v1.0.3
+#         with:
+#           host: ${{ secrets.REMOTE_HOST }}
+#           username: ${{ secrets.REMOTE_USER }}
+#           port: ${{ secrets.REMOTE_PORT }}
+#           key: ${{ secrets.REMOTE_SSHKEY }}
+#           script: |
+#             cd /home/nbtca/docker/huajibot
+#             docker compose down
+#             docker compose pull
+#             docker compose up -d

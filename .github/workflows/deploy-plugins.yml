@@ -1,41 +1,41 @@
-name: Deploy
+# name: Deploy
 
-on:
-  workflow_run:
-    workflows:
-      - "Build Plugins"
-    types:
-      - completed
+# on:
+#   workflow_run:
+#     workflows:
+#       - "Build Plugins"
+#     types:
+#       - completed
 
-jobs:
-  deploy:
-    runs-on: self-hosted
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: plugins
-          path: dist
-          run-id: ${{ github.event.workflow_run.id}}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload files
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          port: ${{ secrets.REMOTE_PORT }}
-          key: ${{ secrets.REMOTE_SSHKEY }}
-          source: "dist/*"
-          target: "/home/nbtca/docker/huajibot"
-      - name: ssh pipelines
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          port: ${{ secrets.REMOTE_PORT }}
-          key: ${{ secrets.REMOTE_SSHKEY }}
-          script: |
-            cd /home/nbtca/docker/huajibot
-            docker compose down
-            cp -r dist/plugins/* data/plugins/
-            docker compose up -d
+# jobs:
+#   deploy:
+#     runs-on: self-hosted
+#     steps:
+#       - name: Download artifacts
+#         uses: actions/download-artifact@v4
+#         with:
+#           name: plugins
+#           path: dist
+#           run-id: ${{ github.event.workflow_run.id}}
+#           github-token: ${{ secrets.GITHUB_TOKEN }}
+#       - name: Upload files
+#         uses: appleboy/scp-action@v0.1.7
+#         with:
+#           host: ${{ secrets.REMOTE_HOST }}
+#           username: ${{ secrets.REMOTE_USER }}
+#           port: ${{ secrets.REMOTE_PORT }}
+#           key: ${{ secrets.REMOTE_SSHKEY }}
+#           source: "dist/*"
+#           target: "/home/nbtca/docker/huajibot"
+#       - name: ssh pipelines
+#         uses: appleboy/ssh-action@v1.0.3
+#         with:
+#           host: ${{ secrets.REMOTE_HOST }}
+#           username: ${{ secrets.REMOTE_USER }}
+#           port: ${{ secrets.REMOTE_PORT }}
+#           key: ${{ secrets.REMOTE_SSHKEY }}
+#           script: |
+#             cd /home/nbtca/docker/huajibot
+#             docker compose down
+#             cp -r dist/plugins/* data/plugins/
+#             docker compose up -d
