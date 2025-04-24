@@ -1,3 +1,3 @@
 ﻿namespace HuaJiBot.NET.Agent;
 
-public class AgentFunctionInfo { }
+public record AgentFunctionInfo(Delegate Function, string Name = null, string? Description = null);

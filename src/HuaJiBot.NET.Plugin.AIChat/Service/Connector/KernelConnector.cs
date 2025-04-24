@@ -1,10 +1,13 @@
-﻿using HuaJiBot.NET.Bot;
+﻿using System;
+using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Logger;
 using HuaJiBot.NET.Plugin.AIChat.Config;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Services;
 
 namespace HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 
@@ -17,7 +20,7 @@ public abstract class KernelConnector
         _kernel = new(() =>
         {
             var builder = CreateKernel();
-            builder.AddBotFunctions(service);
+            builder.AddBotFunctions(service.ExportFunctions);
 #if DEBUG
             builder.Services.AddLogging(services =>
                 services
@@ -37,8 +40,6 @@ public abstract class KernelConnector
 
     public ChatCompletionAgent CreateChatCompletionAgent(string systemPrompt)
     {
-        //return Kernel.GetRequiredService<IChatCompletionService>();
-
         ChatCompletionAgent agent = new()
         {
             Name = ModelConfig.AgentName,
@@ -50,6 +51,11 @@ public abstract class KernelConnector
 #endif
         };
         return agent;
+    }
+
+    public IChatCompletionService GetChatCompletionService()
+    {
+        return Kernel.GetRequiredService<IChatCompletionService>();
     }
 
     protected abstract IKernelBuilder CreateKernel();

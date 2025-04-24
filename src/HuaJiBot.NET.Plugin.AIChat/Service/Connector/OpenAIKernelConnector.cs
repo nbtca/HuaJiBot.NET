@@ -7,7 +7,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI;
 
-namespace HuaJiBot.NET.Plugin.AIChat.Service;
+namespace HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 
 // ReSharper disable once InconsistentNaming
 public class OpenAIKernelConnector(BotService service, ModelConfig modelConfig)
@@ -38,8 +38,8 @@ public class OpenAIKernelConnector(BotService service, ModelConfig modelConfig)
                         ClientLoggingOptions = new()
                         {
                             EnableLogging = ModelConfig.Logging,
-                            EnableMessageLogging = true,
-                            EnableMessageContentLogging = true,
+                            EnableMessageLogging = ModelConfig.Logging,
+                            EnableMessageContentLogging = ModelConfig.Logging,
                             LoggerFactory = LoggerFactory.Create(logger =>
                             {
                                 logger

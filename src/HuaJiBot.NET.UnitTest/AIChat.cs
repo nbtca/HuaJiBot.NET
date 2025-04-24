@@ -3,6 +3,7 @@ using System.ClientModel.Primitives;
 using System.Diagnostics;
 using HuaJiBot.NET.Plugin.AIChat.Config;
 using HuaJiBot.NET.Plugin.AIChat.Service;
+using HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;

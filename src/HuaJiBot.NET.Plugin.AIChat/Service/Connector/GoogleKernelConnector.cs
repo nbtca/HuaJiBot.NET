@@ -4,7 +4,7 @@ using HuaJiBot.NET.Plugin.AIChat.Config;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.Google;
 
-namespace HuaJiBot.NET.Plugin.AIChat.Service;
+namespace HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 
 public class GoogleKernelConnector(BotService service, ModelConfig modelConfig)
     : KernelConnector(service, modelConfig)

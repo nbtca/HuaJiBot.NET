@@ -1,4 +1,5 @@
-﻿using HuaJiBot.NET.Commands;
+﻿using HuaJiBot.NET.Agent;
+using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -150,6 +151,29 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         var output = Calendar.GetEvents(start, end).BuildTextOutput(now);
         e.Reply($"近{week}周的日程：\n{output}");
         //Service.LogDebug(JsonConvert.SerializeObject(e));
+    }
+
+    public override IEnumerable<AgentFunctionInfo>? ExportFunctions
+    {
+        get
+        {
+            yield return new AgentFunctionInfo(
+                () =>
+                {
+                    var now = Utils.NetworkTime.Now; //当前时间
+                    var start = now; //开始于当前时间
+                    var end = start.AddDays(7); //当前时间加上周数
+                    if (Calendar is null)
+                    {
+                        return "日历获取失败";
+                    }
+                    var output = Calendar.GetEvents(start, end).BuildTextOutput(now);
+                    return $"近一周的日程：\n{output}";
+                },
+                "GetCalendarOfWeek",
+                "获取最近一周的日程"
+            );
+        }
     }
 
     protected override void Unload() { }

@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Runtime.CompilerServices;
+using HuaJiBot.NET.Agent;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using Newtonsoft.Json;
@@ -122,4 +123,6 @@ public abstract class PluginBase
             }
         }
     }
+
+    public virtual IEnumerable<AgentFunctionInfo>? ExportFunctions => null;
 }
