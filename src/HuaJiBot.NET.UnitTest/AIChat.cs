@@ -1,18 +1,23 @@
 ﻿using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Diagnostics;
+using HuaJiBot.NET.Plugin.AIChat.Config;
+using HuaJiBot.NET.Plugin.AIChat.Service;
+using HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 using Microsoft.Extensions.Logging;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Agents;
+using Microsoft.SemanticKernel.ChatCompletion;
 using OpenAI;
 using ChatMessage = OpenAI.Chat.ChatMessage;
-using ILoggerFactory = Microsoft.Extensions.Logging.ILoggerFactory;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace HuaJiBot.NET.UnitTest;
 
 internal class AIChat
 {
-    private ILoggerFactory _loggerFactory = null!;
     private OpenAIClient _client;
+    private TestAdapter _api = new();
 
     [SetUp]
     public void Setup()
@@ -44,6 +49,59 @@ internal class AIChat
         foreach (var openAiModel in models.Value)
         {
             Console.WriteLine(openAiModel.Id);
+        }
+    }
+
+    [Test]
+    public async Task TestChatUsingSemanticKernel()
+    {
+        KernelConnector connector = new OpenAIKernelConnector(
+            _api,
+            new ModelConfig(
+                ModelProvider.OpenAI,
+                ModelId: "huihui_ai/qwen2.5-1m-abliterated:14b",
+                Endpoint: "http://localhost:11434/v1",
+                AgentName: "Test Bot",
+                Logging: true
+            )
+        );
+
+        var agent = connector.CreateChatCompletionAgent("你是一个有用的人工智能助手。");
+        await foreach (
+            var response in agent.InvokeAsync(
+                new ChatMessageContent[] { new(AuthorRole.User, "现在的日期和时间？") }
+            )
+        )
+        {
+            Console.WriteLine(response.Message);
+        }
+    }
+
+    [Test]
+    public async Task TestChatGeminiUsingSemanticKernel()
+    {
+        KernelConnector connector = new GoogleKernelConnector(
+            _api,
+            new ModelConfig(
+                ModelProvider.Google,
+                ModelId: "gemini-2.0-flash-lite",
+                Endpoint: "https://generativelanguage.googleapis.com/",
+                ApiKey: "*",
+                AgentName: "Test Bot",
+                Logging: true
+            )
+        );
+
+        ChatCompletionAgent agent = connector.CreateChatCompletionAgent(
+            "你是一个有用的人工智能助手。"
+        );
+        await foreach (
+            var response in agent.InvokeAsync(
+                new ChatMessageContent[] { new(AuthorRole.User, "现在的日期和时间") }
+            )
+        )
+        {
+            Console.WriteLine(response.Message);
         }
     }
 

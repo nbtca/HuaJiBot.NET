@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using HuaJiBot.NET.Adapter.OneBot.Message;
+﻿using HuaJiBot.NET.Adapter.OneBot.Message;
 using HuaJiBot.NET.Events;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;

@@ -92,7 +92,7 @@ public static class Internal
             }
             api.Log($"开始加载插件 {entryPoint.Name} 描述：{entryPoint.Description}");
             var sw = Stopwatch.StartNew(); //计时
-            api.LoadAddCommand(plugin); //加载命令
+            api.SetupCommands(plugin); //加载命令
             // ReSharper disable once MethodHasAsyncOverload
             plugin.Initialize(); //同步初始化
             await plugin.InitializeAsync(); //异步初始化

@@ -1,98 +1,52 @@
-﻿using System.ClientModel;
-using System.Text;
-using HuaJiBot.NET.DataBase;
-using HuaJiBot.NET.Logger;
-using Microsoft.Extensions.Logging;
+﻿using HuaJiBot.NET.DataBase;
+using HuaJiBot.NET.Plugin.AIChat.Config;
+using HuaJiBot.NET.Plugin.AIChat.Service;
+using HuaJiBot.NET.Plugin.AIChat.Service.Connector;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using OpenAI;
-using OpenAI.Chat;
-using OpenAI.Models;
 using ChatMessage = OpenAI.Chat.ChatMessage;
 
 namespace HuaJiBot.NET.Plugin.AIChat;
 
-public class PluginConfig : ConfigBase
-{
-    public string SystemPrompt = "你是一个有用的AI助手";
-    public ModelConfig Model = new();
-}
-
-[JsonConverter(typeof(StringEnumConverter))]
-public enum ModelProvider
-{
-    // ReSharper disable once InconsistentNaming
-    OpenAI,
-    Google,
-}
-
-public class ModelConfig
-{
-    public ModelProvider Provider = ModelProvider.OpenAI;
-    public string Endpoint = "";
-    public string Id = "";
-    public string ApiKey = "";
-    public bool Logging = false;
-}
-
 public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
-    private OpenAIClient? _client = null;
-    private string _clientApiKey = "";
-    private string _clientModel = "";
+    private MessageHistory _history = null!;
 
-    private OpenAIClient Client
+    private KernelConnector Connector
     {
         get
         {
-            if (
-                _client is null //首次获取
-                || _clientApiKey != Config.Model.ApiKey
-                || _clientModel != Config.Model.Id //模型设置有变动
-            )
+            return Config.Model switch
             {
-                _client = new OpenAIClient(
-                    new ApiKeyCredential(
-                        string.IsNullOrEmpty(Config.Model.ApiKey) ? "null" : Config.Model.ApiKey
-                    ),
-                    new OpenAIClientOptions
-                    {
-                        Endpoint = new Uri(Config.Model.Endpoint),
-                        ClientLoggingOptions = new()
-                        {
-                            EnableLogging = Config.Model.Logging,
-                            LoggerFactory = LoggerFactory.Create(logger =>
-                            {
-                                logger.AddProvider(new PluginLoggerProvider(this));
-                            }),
-                        },
-                    }
-                );
-                _clientApiKey = Config.Model.ApiKey;
-                _clientModel = Config.Model.Id;
-            }
-            return _client;
+                { Provider: ModelProvider.OpenAI } => new OpenAIKernelConnector(
+                    Service,
+                    Config.Model
+                ),
+                { Provider: ModelProvider.Google } => new GoogleKernelConnector(
+                    Service,
+                    Config.Model
+                ),
+                _ => throw new ArgumentOutOfRangeException(nameof(Config.Model.Provider)),
+            };
         }
     }
-    private ChatClient ChatClient => Client.GetChatClient(Config.Model.Id);
-    private OpenAIModelClient ModelClient => Client.GetOpenAIModelClient();
-
-    private MessageHistory _history = null!;
 
     protected override void Initialize()
     {
         _history = new MessageHistory(Service, "ai_messages.db");
         Service.Events.OnGroupMessageReceived += (s, e) => _ = Events_OnGroupMessageReceived(e);
         Info("启动成功");
-        Task.Run(async () =>
-        {
-            var models = await ModelClient.GetModelsAsync();
-            Info("模型列表：" + string.Join(", ", models.Value.Select(x => x.Id)));
-        });
+        //Task.Run(async () =>
+        //{
+        //    //var models = await ModelClient.GetModelsAsync();
+        //    //Info("模型列表：" + string.Join(", ", models.Value.Select(x => x.ModelId)));
+        //});
     }
 
     private async Task InvokeLlmMessage(
-        IEnumerable<ChatMessage> messages,
+        string systemPrompt,
+        ICollection<ChatMessageContent> messages,
         Events.GroupMessageEventArgs e
     )
     {
@@ -109,31 +63,26 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     )
                     .Replace("\n", "\n\t")
         );
-        var response = await ChatClient.CompleteChatAsync(messages);
-        foreach (var content in response.Value.Content)
+        var agent = Connector.CreateChatCompletionAgent(systemPrompt);
+        await foreach (var content in agent.InvokeAsync(messages))
         {
-            switch (content.Kind)
+            var text = content.Message.Content ?? "null";
+            var messageIds = await e.Reply(text);
+            //机器人回复后把自己的消息添加到数据库
+            foreach (var msgId in messageIds)
             {
-                case ChatMessageContentPartKind.Text:
-                    var text = content.Text;
-                    var messageIds = await e.Reply(content.Text);
-                    //机器人回复后把自己的消息添加到数据库
-                    foreach (var msgId in messageIds)
+                _history.StoreMessage( //AI回复记录
+                    new GroupMessage
                     {
-                        _history.StoreMessage( //AI回复记录
-                            new GroupMessage
-                            {
-                                Content = text,
-                                GroupId = e.GroupId,
-                                MessageId = msgId,
-                                SenderId = null,
-                                SenderName = "bot",
-                                IsBot = true,
-                                ReplyToMessageId = e.MessageId,
-                            }
-                        );
+                        Content = text,
+                        GroupId = e.GroupId,
+                        MessageId = msgId,
+                        SenderId = null,
+                        SenderName = "bot",
+                        IsBot = true,
+                        ReplyToMessageId = e.MessageId,
                     }
-                    break;
+                );
             }
         }
     }
@@ -166,10 +115,8 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     );
                     //调用LLM回复
                     await InvokeLlmMessage(
-                        [
-                            ChatMessage.CreateSystemMessage(Config.SystemPrompt),
-                            ChatMessage.CreateUserMessage(restText),
-                        ],
+                        Config.SystemPrompt,
+                        [new ChatMessageContent(AuthorRole.User, restText)],
                         e
                     );
                 }
@@ -239,16 +186,16 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     return;
                 }
                 #region 调用大模型回复（多轮对话）
-                List<ChatMessage> prompts = [ChatMessage.CreateSystemMessage(Config.SystemPrompt)];
+                List<ChatMessageContent> prompts = [];
                 foreach (var (_, message) in messageList)
                 {
                     prompts.Add(
                         message.IsBot
-                            ? ChatMessage.CreateAssistantMessage(message.Content)
-                            : ChatMessage.CreateUserMessage(message.Content)
+                            ? new ChatMessageContent(AuthorRole.Assistant, message.Content)
+                            : new ChatMessageContent(AuthorRole.User, message.Content)
                     );
                 }
-                prompts.Add(ChatMessage.CreateUserMessage(text));
+                prompts.Add(new ChatMessageContent(AuthorRole.User, text));
 
                 //收到回复消息记录
                 _history.StoreMessage(
@@ -264,7 +211,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     }
                 );
                 //调用LLM回复
-                await InvokeLlmMessage(prompts, e);
+                await InvokeLlmMessage(Config.SystemPrompt, prompts, e);
                 #endregion
             }
             catch (Exception exception)

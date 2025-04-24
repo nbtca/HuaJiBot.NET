@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using HuaJiBot.NET.Agent;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Logger;
@@ -79,6 +80,7 @@ public abstract class BotService
     public Config.ConfigWrapper Config { get; internal set; } = null!;
     public abstract IEvents Events { get; }
     public abstract string[] AllRobots { get; }
+
     public abstract Task<string[]> SendGroupMessageAsync(
         string? robotId,
         string targetGroup,
@@ -242,7 +244,12 @@ public abstract class BotService
         (string description, Action<object?[]?> method, PluginBase.CommandArgumentInfo[] info)
     > _commands = new();
 
-    public void LoadAddCommand(PluginBase plugin)
+    private readonly Dictionary<string, IEnumerable<AgentFunctionInfo>> _exportFunctions = new();
+
+    public IReadOnlyDictionary<string, IEnumerable<AgentFunctionInfo>> ExportFunctions =>
+        _exportFunctions;
+
+    public void SetupCommands(PluginBase plugin)
     {
         foreach (var (name, description, method, info) in plugin.GetAllCommands())
         {
@@ -259,6 +266,11 @@ public abstract class BotService
             Events.OnGroupMessageReceived -= ProcessCommandInternal;
             Events.OnGroupMessageReceived += ProcessCommandInternal;
             Log($"从插件 {plugin.Name} 加载了 {_commands.Count} 条命令");
+        }
+        if (plugin.ExportFunctions is { } exportFunctions)
+        {
+            var pluginName = plugin.Name;
+            _exportFunctions[pluginName] = exportFunctions;
         }
     }
 }

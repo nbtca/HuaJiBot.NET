@@ -1,9 +1,10 @@
 ﻿using System.Text;
+using HuaJiBot.NET.Bot;
 using Microsoft.Extensions.Logging;
 
 namespace HuaJiBot.NET.Logger;
 
-public class PluginLogger(PluginBase plugin, string categoryName)
+public class PluginLogger(BotService service, string categoryName)
     : Microsoft.Extensions.Logging.ILogger
 {
     public void Log<TState>(
@@ -21,15 +22,15 @@ public class PluginLogger(PluginBase plugin, string categoryName)
             case LogLevel.Trace:
             case LogLevel.Debug:
             case LogLevel.Information:
-                plugin.Info(fullText);
+                service.Log(fullText);
                 break;
             case LogLevel.Warning:
-                plugin.Warn(fullText, exception);
+                service.Warn($"{fullText}\n{exception}");
                 break;
             case LogLevel.Error:
             case LogLevel.Critical:
             case LogLevel.None:
-                plugin.Error(fullText, exception);
+                service.LogError(fullText, exception);
                 break;
         }
     }
