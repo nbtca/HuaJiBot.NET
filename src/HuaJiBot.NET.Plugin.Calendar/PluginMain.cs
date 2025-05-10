@@ -1,4 +1,5 @@
-﻿using HuaJiBot.NET.Agent;
+﻿using System.Text;
+using HuaJiBot.NET.Agent;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using Newtonsoft.Json;
@@ -73,7 +74,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             var diff = (now - lastTime).TotalMilliseconds;
             if (diff < coldDown)
             {
-                e.Reply($"我知道你很急，但是你先别急，{(coldDown - diff) / 1000:F0}秒后再逝");
+                await e.Reply($"我知道你很急，但是你先别急，{(coldDown - diff) / 1000:F0}秒后再逝");
                 return;
             }
         }
@@ -81,17 +82,17 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         _ = Task.Delay(coldDown).ContinueWith(_ => _cache.Remove(e.SenderId));
         if (Calendar is null)
         {
-            e.Reply("日历获取失败");
+            await e.Reply("日历获取失败");
             return;
         }
         var all = Calendar.GetEvents(now, now.AddDays(14)).ToArray();
         if (all.Length == 0)
         {
-            e.Reply("没有日程");
+            await e.Reply("没有日程");
             return;
         }
         var output = all.First().BuildTextOutput(now);
-        e.Reply(output);
+        await e.Reply(output);
     }
 
     [Command("日程", "查看近期日程")]
@@ -110,7 +111,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             var diff = (now - lastTime).TotalMilliseconds; //计算时间差
             if (diff < coldDown) //如果小于冷却时间
             {
-                e.Reply($"我知道你很急，但是你先别急，{(coldDown - diff) / 1000:F0}秒后再逝");
+                await e.Reply($"我知道你很急，但是你先别急，{(coldDown - diff) / 1000:F0}秒后再逝");
                 return;
             }
         }
@@ -121,14 +122,14 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             if (!int.TryParse(content, out week)) //尝试转换为数字表示周数
             {
-                e.Reply("参数错误");
+                await e.Reply("参数错误");
                 return;
             }
         }
 
         if (week < Config.MinRange || week > Config.MaxRange) //进行一个输入范围合法性检查
         {
-            e.Reply($"超出范围 [{Config.MinRange},{Config.MaxRange}] ");
+            await e.Reply($"超出范围 [{Config.MinRange},{Config.MaxRange}] ");
             return;
         }
         DateTimeOffset start,
@@ -145,11 +146,11 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
         if (Calendar is null)
         {
-            e.Reply("日历获取失败");
+            await e.Reply("日历获取失败");
             return;
         }
         var output = Calendar.GetEvents(start, end).BuildTextOutput(now);
-        e.Reply($"近{week}周的日程：\n{output}");
+        await e.Reply($"近{week}周的日程：\n{output}");
         //Service.LogDebug(JsonConvert.SerializeObject(e));
     }
 
@@ -161,17 +162,41 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 () =>
                 {
                     var now = Utils.NetworkTime.Now; //当前时间
-                    var start = now; //开始于当前时间
-                    var end = start.AddDays(7); //当前时间加上周数
                     if (Calendar is null)
-                    {
                         return "日历获取失败";
+                    var sb = new StringBuilder($"当前时间：{now}");
+                    {
+                        var start = now; //开始于当前时间
+                        var end = start.AddDays(7); //当前时间加上周数
+                        var output = Calendar.GetEvents(start, end).BuildTextOutput(now);
+                        sb.AppendLine($"近一周的日程：\n{output}");
                     }
-                    var output = Calendar.GetEvents(start, end).BuildTextOutput(now);
-                    return $"近一周的日程：\n{output}";
+                    {
+                        var start = now.AddDays(7); //开始于当前时间
+                        var end = start.AddDays(30); //当前时间加上周数
+                        var output = Calendar.GetEvents(start, end).BuildTextOutput(now);
+                        sb.AppendLine($"一周后一个月内的日程：\n{output}");
+                    }
+                    return sb.ToString();
                 },
-                "GetCalendarOfWeek",
-                "获取最近一周的日程"
+                "GetCalendar",
+                "获取最近一个月的所有日程"
+            );
+            yield return new AgentFunctionInfo(
+                () =>
+                {
+                    if (Calendar is null)
+                        return "日历获取失败";
+                    var events = Calendar.GetEvents(
+                        Utils.NetworkTime.Now,
+                        Utils.NetworkTime.Now.AddDays(30)
+                    );
+                    if (events.FirstOrDefault() is { e: not null, period: not null } e)
+                        return e.BuildTextOutput(Utils.NetworkTime.Now);
+                    return "没有找到最近30天内的日程";
+                },
+                "GetRecentlyOneCalendarEvent",
+                "仅获取最近一条日程"
             );
         }
     }

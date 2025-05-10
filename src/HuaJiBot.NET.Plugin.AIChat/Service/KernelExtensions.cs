@@ -16,10 +16,8 @@ public static class KernelExtensions
         // https://github.com/microsoft/semantic-kernel/tree/main/dotnet/src/Plugins/Plugins.Core
         builder.Plugins.AddFromType<ConversationSummaryPlugin>(nameof(ConversationSummaryPlugin));
         builder.Plugins.AddFromType<HttpPlugin>(nameof(HttpPlugin));
-        builder.Plugins.AddFromType<MathPlugin>(nameof(MathPlugin));
         builder.Plugins.AddFromType<TextPlugin>(nameof(TextPlugin));
         builder.Plugins.AddFromType<TimePlugin>(nameof(TimePlugin));
-        builder.Plugins.AddFromType<WaitPlugin>(nameof(WaitPlugin));
 #pragma warning restore SKEXP0050
 
         foreach (var (pluginName, functions) in extraFunctions)
