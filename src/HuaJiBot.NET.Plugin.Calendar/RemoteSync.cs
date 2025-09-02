@@ -30,6 +30,11 @@ internal class RemoteSync(
             var resp = await client.GetAsync(icalUrl); //从Url获取
             resp.EnsureSuccessStatusCode();
             Calendar = Ical.Net.Calendar.Load(await resp.Content.ReadAsStringAsync());
+            if (Calendar is null)
+            {
+                service.LogError(nameof(UpdateCalendarAsync), "日历加载失败");
+                return;
+            }
             service.Log(
                 $"日历更新成功 当前时间 {NetworkTime.Now} 网络时间差分 {NetworkTime.Diff:g}"
             );

@@ -33,7 +33,7 @@ public static partial class ElementSerializer
 
             var attrName = ConvertPascalToKebab(prop.Name);
 
-            htmlElement.SetAttributeValue(attrName, attrVal.ToString());
+            htmlElement.SetAttributeValue(attrName, attrVal.ToString() ?? "");
         }
 
         return htmlElement;
@@ -48,7 +48,7 @@ public static partial class ElementSerializer
             {
                 OmitXmlDeclaration = true,
                 ConformanceLevel = ConformanceLevel.Fragment,
-                Indent = false
+                Indent = false,
             }
         );
 

@@ -13,7 +13,7 @@ public class GoogleKernelConnector(BotService service, ModelConfig modelConfig)
     protected override IKernelBuilder CreateKernel()
     {
         var httpClient = new HttpClient(
-            modelConfig.Logging ? new HttpWithLogHandler(Service) : new HttpClientHandler()
+            ModelConfig.Logging ? new HttpWithLogHandler(Service) : new HttpClientHandler()
         );
         if (ModelConfig.Endpoint is { Length: > 1 } address)
         {

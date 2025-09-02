@@ -10,7 +10,7 @@
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="PureNSQSharp" Version="1.0.1-beta" />
-		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
 	</ItemGroup>
 
 	<ItemGroup>

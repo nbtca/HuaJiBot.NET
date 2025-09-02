@@ -54,14 +54,14 @@ internal class ReminderTask : IDisposable
                     PluginConfig.ReminderFilterConfig.FilterMode.Default => true,
                     // 检查白名单
                     PluginConfig.ReminderFilterConfig.FilterMode.WhiteList => list.Any(x =>
-                        e.Summary.Contains(x)
-                        || e.Description.Contains(x)
+                        (e.Summary?.Contains(x) ?? false)
+                        || (e.Description?.Contains(x) ?? false)
                         || (e.Location ?? "").Contains(x)
                     ),
                     // 检查黑名单
                     PluginConfig.ReminderFilterConfig.FilterMode.BlackList => !list.Any(x =>
-                        e.Summary.Contains(x)
-                        || e.Description.Contains(x)
+                        (e.Summary?.Contains(x) ?? false)
+                        || (e.Description?.Contains(x) ?? false)
                         || (e.Location ?? "").Contains(x)
                     ),
                     _ => false,
@@ -173,7 +173,7 @@ internal class ReminderTask : IDisposable
                         ev =>
                         {
                             Service.Log(
-                                $"[日程] {RemindBeforeEndMinutes} 分钟后开始日程：{ev.Summary}({ev.Start.ToLocalNetworkTime()})"
+                                $"[日程] {RemindBeforeEndMinutes} 分钟后开始日程：{ev.Summary}({ev.Start?.ToLocalNetworkTime()})"
                             );
                             ForEachMatchedGroup(
                                 ev,
@@ -206,13 +206,13 @@ internal class ReminderTask : IDisposable
     {
         Task.Delay(waiting).ContinueWith(_ => SendReminder(e, start));
         Service.Log(
-            $"[日程] 计划发送提醒：{e.Summary}({e.Start.ToLocalNetworkTime()}) ({waiting.TotalMinutes:F1}分钟后发送)"
+            $"[日程] 计划发送提醒：{e.Summary}({e.Start?.ToLocalNetworkTime()}) ({waiting.TotalMinutes:F1}分钟后发送)"
         );
     }
 
     private void SendReminder(CalendarEvent e, Action<CalendarEvent> start)
     {
-        Service.Log($"[日程] 发送提醒：{e.Summary}({e.Start.ToLocalNetworkTime()})");
+        Service.Log($"[日程] 发送提醒：{e.Summary}({e.Start?.ToLocalNetworkTime()})");
         start(e);
     }
 

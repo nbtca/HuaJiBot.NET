@@ -27,7 +27,7 @@ partial class PluginMain
             {
                 if (!item.Data.Players.Any())
                 {
-                    e.Reply($"{item.Source?.DisplayName} 没有玩家在线！");
+                    _ = e.Reply($"{item.Source?.DisplayName} 没有玩家在线！");
                     return ValueTask.CompletedTask;
                 }
                 var s = new StringBuilder();
@@ -36,12 +36,12 @@ partial class PluginMain
                 {
                     s.AppendLine($"{player.Name} {player.Ping}ms {player.World}");
                 }
-                e.Reply(s.ToString());
+                _ = e.Reply(s.ToString());
                 return ValueTask.CompletedTask;
             }
         );
         if (list.Length == 0)
-            e.Reply("查询超时！");
+            _ = e.Reply("查询超时！");
     }
 
     private async Task<GetPlayerListResponsePacket[]> InvokeQueryAsync(

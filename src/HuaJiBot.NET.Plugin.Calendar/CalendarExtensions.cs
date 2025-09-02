@@ -1,7 +1,9 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
+using Ical.Net;
 using Ical.Net.CalendarComponents;
 using Ical.Net.DataTypes;
+using Ical.Net.Evaluation;
 
 namespace HuaJiBot.NET.Plugin.Calendar;
 
@@ -65,10 +67,9 @@ internal static class CalendarExtensions
             select tuple;
         //映射
         */
-        var allOcc = @this.GetOccurrences(
-            new CalDateTime(start.UtcDateTime, "UTC"),
-            new CalDateTime(end.UtcDateTime, "UTC")
-        );
+        var startArg = new CalDateTime(start.UtcDateTime, "UTC");
+        var endArg = new CalDateTime(end.UtcDateTime, "UTC");
+        var allOcc = @this.GetOccurrences(startArg).TakeWhileBefore(endArg);
         return from occurrence in allOcc
             select //选择
             occurrence.Source switch
