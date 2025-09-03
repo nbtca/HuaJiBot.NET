@@ -1,0 +1,13 @@
+{
+  "Service": "OneBot",
+  "OneBot": {
+    "Url": "",
+    "Token": ""
+  },
+  "Satori": {
+    "Url": "",
+    "Token": ""
+  },
+  "Plugins": {},
+  "ExtraPlugins": []
+}

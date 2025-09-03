@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine3.18 AS build-env
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build-env
 
 COPY . /root/build
 
@@ -10,10 +10,10 @@ RUN dotnet publish src/HuaJiBot.NET.CLI \
         -a $TARGETARCH \
         --no-self-contained \
         -p:PublishSingleFile=true \
-        --framework net8.0 \
+        --framework net9.0 \
         -o /root/out
 
-FROM mcr.microsoft.com/dotnet/runtime:8.0-alpine3.18
+FROM mcr.microsoft.com/dotnet/runtime:9.0-alpine
 
 ENV TZ=Asia/Shanghai
 
