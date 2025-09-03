@@ -44,6 +44,13 @@ public static class Internal
             [MethodImpl(MethodImplOptions.Synchronized)]
             bool TryGetPluginConfig([NotNullWhen(true)] out ConfigBase? cfg)
             {
+                // Try fast generated accessor first
+                if (HuaJiBot.NET.Plugin.PluginConfigAccessor.TryGetPluginConfigFast(plugin, out cfg))
+                {
+                    return true;
+                }
+                
+                // Fallback to original reflection implementation
                 foreach (var it in plugin.GetType().GetInterfaces())
                 {
                     foreach (var m in it.GetProperties())
