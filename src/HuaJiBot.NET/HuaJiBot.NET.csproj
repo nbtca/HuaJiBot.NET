@@ -18,6 +18,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\HuaJiBot.NET.SourceGenerator\HuaJiBot.NET.SourceGenerator.csproj" 
+	                    OutputItemType="Analyzer" 
+	                    ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <Compile Update="Utils\Fonts\Assets.Designer.cs">
 	    <DependentUpon>Assets.resx</DependentUpon>
 	    <DesignTime>True</DesignTime>

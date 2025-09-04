@@ -19,7 +19,7 @@ public interface IPluginWithConfig<out T>
     T Config { get; }
 }
 
-public abstract class PluginBase
+public abstract partial class PluginBase
 {
     public bool Enabled { get; internal set; } = true;
     public string Name { get; internal set; } = null!;
@@ -80,7 +80,7 @@ public abstract class PluginBase
         object? DefaultValue
     );
 
-    public IEnumerable<CommandInfo> GetAllCommands()
+    public virtual IEnumerable<CommandInfo> GetAllCommands()
     {
         var methods = GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
