@@ -71,28 +71,31 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     .ToArray();
                 Info("当前在线客户端：" + string.Join(", ", clients));
             }
-            return;
-        }
-        var e = JsonConvert.DeserializeObject<Event>(msg)!;
-        {
-            switch (e.Body)
+            else if (pktType == "webhook")
             {
-                case PushEventBody body: //推送事件
-                    await this.DispatchPushEventAsync(body);
-                    break;
-                case IssuesEventBody body: //issue事件
-                    await this.DispatchIssuesEventAsync(body);
-                    break;
-                case IssueCommentEventBody body: //issue comment事件
-                    await this.DispatchIssueCommentEventAsync(body);
-                    break;
-                case WorkflowRunEventBody body: //actions构建事件
-                    await this.DispatchWorkflowRunEventAsync(body);
-                    break;
-                case UnknownEventBody body:
-                    Info("收到未实现的事件！" + e.Headers.XGithubEvent[0]);
-                    break;
+                var e = jsonObject["data"]!.ToObject<Event>()!;
+                {
+                    switch (e.Body)
+                    {
+                        case PushEventBody body: //推送事件
+                            await this.DispatchPushEventAsync(body);
+                            break;
+                        case IssuesEventBody body: //issue事件
+                            await this.DispatchIssuesEventAsync(body);
+                            break;
+                        case IssueCommentEventBody body: //issue comment事件
+                            await this.DispatchIssueCommentEventAsync(body);
+                            break;
+                        case WorkflowRunEventBody body: //actions构建事件
+                            await this.DispatchWorkflowRunEventAsync(body);
+                            break;
+                        case UnknownEventBody body:
+                            Info("收到未实现的事件！" + e.Headers.XGithubEvent[0]);
+                            break;
+                    }
+                }
             }
+            return;
         }
     }
 
@@ -100,25 +103,24 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     protected override async Task InitializeAsync()
     {
         ShortLinkApi = new ShortLinkApi(Config.ShortLinkToken);
-        WebsocketClient client =
-            new(
-                new Uri(Config.Address),
-                () =>
-                {
-                    var client = new ClientWebSocket
-                    {
-                        Options = { CollectHttpResponseDetails = true },
-                    };
-                    client.Options.SetRequestHeader("Authorization", $"Bearer {Config.AuthBearer}");
-                    return client;
-                }
-            )
+        WebsocketClient client = new(
+            new Uri(Config.Address),
+            () =>
             {
-                IsReconnectionEnabled = true,
-                ReconnectTimeout = null,
-                MessageEncoding = Encoding.UTF8,
-                IsTextMessageConversionEnabled = true,
-            };
+                var client = new ClientWebSocket
+                {
+                    Options = { CollectHttpResponseDetails = true },
+                };
+                client.Options.SetRequestHeader("Authorization", $"Bearer {Config.AuthBearer}");
+                return client;
+            }
+        )
+        {
+            IsReconnectionEnabled = true,
+            ReconnectTimeout = null,
+            MessageEncoding = Encoding.UTF8,
+            IsTextMessageConversionEnabled = true,
+        };
         client.MessageReceived.Subscribe(msg =>
         {
             if (msg.MessageType == WebSocketMessageType.Text)
