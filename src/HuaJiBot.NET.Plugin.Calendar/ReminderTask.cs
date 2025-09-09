@@ -98,7 +98,11 @@ internal class ReminderTask : IDisposable
     private static string GetEventKey(CalendarEvent e, DateTimeOffset remindTime, string type)
     {
         // Create unique key combining event summary, start time, and reminder type
-        return $"{type}_{e.Summary}_{e.Start?.ToLocalNetworkTime():yyyy-MM-dd HH:mm}_{remindTime:yyyy-MM-dd HH:mm}";
+        // Use | as separator to avoid conflicts with underscores in event names
+        var startTime = e.Start?.ToLocalNetworkTime().ToString("yyyy-MM-dd HH:mm") ?? "unknown";
+        var remindTimeStr = remindTime.ToString("yyyy-MM-dd HH:mm");
+        var summary = e.Summary?.Replace("|", "_") ?? "nosummary"; // 替换可能的分隔符
+        return $"{type}|{summary}|{startTime}|{remindTimeStr}";
     }
 
     private void CleanupOldScheduledEvents(DateTimeOffset now)
@@ -108,10 +112,24 @@ internal class ReminderTask : IDisposable
         var keysToRemove = _scheduledEvents
             .Where(key =>
             {
-                var parts = key.Split('_');
-                if (parts.Length >= 4 && DateTime.TryParse($"{parts[3]}_{parts[4]}", out var eventTime))
+                var parts = key.Split('|');
+                // 事件键格式: {type}|{summary}|{startTime}|{remindTime}
+                if (parts.Length >= 4)
                 {
-                    return eventTime < cutoffTime;
+                    try
+                    {
+                        // 最后一部分是提醒时间
+                        var remindTimeStr = parts[3];
+                        if (DateTime.TryParse(remindTimeStr, out var eventTime))
+                        {
+                            return eventTime < cutoffTime;
+                        }
+                    }
+                    catch
+                    {
+                        // 如果解析失败，保守地保留这个记录
+                        return false;
+                    }
                 }
                 return false;
             })
