@@ -12,9 +12,10 @@ internal class ReminderTask : IDisposable
     private readonly Func<Ical.Net.Calendar?> _getCalendar;
     private Ical.Net.Calendar? Calendar => _getCalendar();
     private readonly Timer _timer;
-    private const int CheckDurationInMinutes = 15;
-    private const int RemindBeforeStartMinutes = 60;
-    private const int RemindBeforeEndMinutes = 5;
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private int CheckDurationInMinutes => Config.CheckIntervalMinutes;
+    private int RemindBeforeStartMinutes => Config.ReminderBeforeStartMinutes;
+    private int RemindBeforeEndMinutes => Config.ReminderBeforeEndMinutes;
 
     public ReminderTask(
         BotService service,
@@ -25,13 +26,14 @@ internal class ReminderTask : IDisposable
         Service = service;
         Config = config;
         _getCalendar = getCalendar;
-        _timer = new(TimeSpan.FromMinutes(CheckDurationInMinutes)); //每15分钟检查一次
+        _timer = new(TimeSpan.FromMinutes(CheckDurationInMinutes)); //使用可配置的检查间隔
         _timer.Elapsed += (_, _) => InvokeCheck();
-        Task.Delay(10_000)
+        Task.Delay(10_000, _cancellationTokenSource.Token)
             .ContinueWith(_ =>
             {
-                InvokeCheck();
-            }); //10秒后检查第一次
+                if (!_cancellationTokenSource.Token.IsCancellationRequested)
+                    InvokeCheck();
+            }, TaskContinuationOptions.OnlyOnRanToCompletion); //10秒后检查第一次
         _timer.AutoReset = true;
     }
 
@@ -41,6 +43,7 @@ internal class ReminderTask : IDisposable
     }
 
     private DateTimeOffset _scheduledTimeEnd = Utils.NetworkTime.Now; //截止到该时间点的日程已经在Task队列中列入计划了
+    private readonly HashSet<string> _scheduledEvents = new(); //已经计划的事件，防止重复提醒
 
     private void ForEachMatchedGroup(CalendarEvent e, Action<Action<string>> callback)
     {
@@ -92,6 +95,39 @@ internal class ReminderTask : IDisposable
     //    }
     //}
 
+    private static string GetEventKey(CalendarEvent e, DateTimeOffset remindTime, string type)
+    {
+        // Create unique key combining event summary, start time, and reminder type
+        return $"{type}_{e.Summary}_{e.Start?.ToLocalNetworkTime():yyyy-MM-dd HH:mm}_{remindTime:yyyy-MM-dd HH:mm}";
+    }
+
+    private void CleanupOldScheduledEvents(DateTimeOffset now)
+    {
+        // 清理1小时前的已计划事件记录，防止内存无限增长
+        var cutoffTime = now.AddHours(-1);
+        var keysToRemove = _scheduledEvents
+            .Where(key =>
+            {
+                var parts = key.Split('_');
+                if (parts.Length >= 4 && DateTime.TryParse($"{parts[3]}_{parts[4]}", out var eventTime))
+                {
+                    return eventTime < cutoffTime;
+                }
+                return false;
+            })
+            .ToList();
+
+        foreach (var key in keysToRemove)
+        {
+            _scheduledEvents.Remove(key);
+        }
+        
+        if (keysToRemove.Count > 0)
+        {
+            Service.LogDebug($"清理了 {keysToRemove.Count} 个过时的事件记录");
+        }
+    }
+
     [MethodImpl(MethodImplOptions.Synchronized)] //防止多线程同时更新时间节点
     private void InvokeCheck()
     {
@@ -102,12 +138,16 @@ internal class ReminderTask : IDisposable
                 Service.Log("日历为空，跳过检查。（日历未成功同步）");
                 return;
             }
-            Service.LogDebug("Invoke Check");
+            Service.LogDebug($"Invoke Check - 检查间隔: {CheckDurationInMinutes}分钟");
             var now = Utils.NetworkTime.Now; //现在
             var nextEnd = now.AddMinutes(CheckDurationInMinutes); //下次检查的结束时间（避免检查过的时间被重复添加进队列）
             var start = _scheduledTimeEnd; //从上次结束的时间点开始检查
             var end = nextEnd; //到下次结束的时间点结束检查
             _scheduledTimeEnd = nextEnd; //更新时间节点
+            
+            // 清理已经过时的计划事件记录，防止内存增长
+            CleanupOldScheduledEvents(now);
+            
             #region 开始提醒
             {
                 //RemindBeforeStartMinutes 事件发生前 提前 _ 分钟提醒
@@ -124,6 +164,12 @@ internal class ReminderTask : IDisposable
                     var timeRemained = remindTime - now; //计算距离提醒时间还有多久
                     if (timeRemained < TimeSpan.Zero) //如果已经开始了
                         continue; //跳过
+                    
+                    var eventKey = GetEventKey(e, remindTime, "start");
+                    if (_scheduledEvents.Contains(eventKey)) //如果已经计划过了
+                        continue; //跳过
+                    
+                    _scheduledEvents.Add(eventKey); //添加到已计划列表
                     ScheduleStartReminder(
                         timeRemained,
                         e,
@@ -167,6 +213,11 @@ internal class ReminderTask : IDisposable
                     if (e.End is null) //跳过没有结束时间的事件
                         continue;
 
+                    var eventKey = GetEventKey(e, remindTime, "end");
+                    if (_scheduledEvents.Contains(eventKey)) //如果已经计划过了
+                        continue; //跳过
+                    
+                    _scheduledEvents.Add(eventKey); //添加到已计划列表
                     ScheduleStartReminder(
                         timeRemained,
                         e,
@@ -204,7 +255,11 @@ internal class ReminderTask : IDisposable
         Action<CalendarEvent> start
     )
     {
-        Task.Delay(waiting).ContinueWith(_ => SendReminder(e, start));
+        Task.Delay(waiting, _cancellationTokenSource.Token)
+            .ContinueWith(_ => SendReminder(e, start), 
+                _cancellationTokenSource.Token,
+                TaskContinuationOptions.OnlyOnRanToCompletion,
+                TaskScheduler.Default);
         Service.Log(
             $"[日程] 计划发送提醒：{e.Summary}({e.Start?.ToLocalNetworkTime()}) ({waiting.TotalMinutes:F1}分钟后发送)"
         );
@@ -212,12 +267,21 @@ internal class ReminderTask : IDisposable
 
     private void SendReminder(CalendarEvent e, Action<CalendarEvent> start)
     {
-        Service.Log($"[日程] 发送提醒：{e.Summary}({e.Start?.ToLocalNetworkTime()})");
-        start(e);
+        try
+        {
+            Service.Log($"[日程] 发送提醒：{e.Summary}({e.Start?.ToLocalNetworkTime()})");
+            start(e);
+        }
+        catch (Exception ex)
+        {
+            Service.LogError($"发送提醒失败：{e.Summary}", ex);
+        }
     }
 
     public void Dispose()
     {
+        _cancellationTokenSource.Cancel();
         _timer.Dispose();
+        _cancellationTokenSource.Dispose();
     }
 }
