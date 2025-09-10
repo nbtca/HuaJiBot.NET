@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace HuaJiBot.NET.SourceGenerator;
 
@@ -85,6 +86,7 @@ public class CommandSourceGenerator : IIncrementalGenerator
         sb.AppendLine("using System;");
         sb.AppendLine("using System.Collections.Generic;");
         sb.AppendLine("using System.Threading.Tasks;");
+        sb.AppendLine("using System.Text.RegularExpressions;");
         sb.AppendLine("using HuaJiBot.NET.Commands;");
         sb.AppendLine("using HuaJiBot.NET.Events;");
         sb.AppendLine();
@@ -219,26 +221,79 @@ public class CommandSourceGenerator : IIncrementalGenerator
         // Find command argument attribute
         var argAttr = param.AttributeLists
             .SelectMany(al => al.Attributes)
-            .FirstOrDefault(a => a.Name.ToString().Contains("CommandArgument"));
+            .FirstOrDefault(a => IsCommandArgumentAttribute(a));
 
+        string attributeCreation;
         if (argAttr != null)
         {
-            sb.AppendLine($"                new CommandArgumentInfo(");
-            sb.AppendLine($"                    new CommandArgumentUnknownAttribute(typeof({typeForTypeof})),");
-            sb.AppendLine($"                    typeof({typeForTypeof}),");
-            sb.AppendLine($"                    {isOptional},");
-            sb.AppendLine($"                    {defaultValue}");
-            sb.AppendLine($"                ),");
+            attributeCreation = GenerateCommandArgumentAttribute(argAttr, typeForTypeof);
         }
         else
         {
-            sb.AppendLine($"                new CommandArgumentInfo(");
-            sb.AppendLine($"                    new CommandArgumentUnknownAttribute(typeof({typeForTypeof})),");
-            sb.AppendLine($"                    typeof({typeForTypeof}),");
-            sb.AppendLine($"                    {isOptional},");
-            sb.AppendLine($"                    {defaultValue}");
-            sb.AppendLine($"                ),");
+            // If no attribute found, use CommandArgumentUnknownAttribute as fallback
+            attributeCreation = $"new CommandArgumentUnknownAttribute(typeof({typeForTypeof}))";
         }
+
+        sb.AppendLine($"                new CommandArgumentInfo(");
+        sb.AppendLine($"                    {attributeCreation},");
+        sb.AppendLine($"                    typeof({typeForTypeof}),");
+        sb.AppendLine($"                    {isOptional},");
+        sb.AppendLine($"                    {defaultValue}");
+        sb.AppendLine($"                ),");
+    }
+
+    private static string GenerateCommandArgumentAttribute(AttributeSyntax attribute, string typeForTypeof)
+    {
+        var name = attribute.Name.ToString();
+        
+        // Handle CommandArgumentString
+        if (name == "CommandArgumentString" || name == "CommandArgumentStringAttribute" || name.EndsWith(".CommandArgumentStringAttribute"))
+        {
+            var description = GetAttributeArgument(attribute, 0) ?? "\"\"";
+            return $"new CommandArgumentStringAttribute({description})";
+        }
+        
+        // Handle CommandArgumentStringMatch
+        if (name == "CommandArgumentStringMatch" || name == "CommandArgumentStringMatchAttribute" || name.EndsWith(".CommandArgumentStringMatchAttribute"))
+        {
+            var pattern = GetAttributeArgument(attribute, 0) ?? "\".*\"";
+            var options = GetAttributeArgument(attribute, 1) ?? "RegexOptions.None";
+            var description = GetAttributeArgument(attribute, 2) ?? "\"\"";
+            return $"new CommandArgumentStringMatchAttribute({pattern}, {options}, {description})";
+        }
+        
+        // Handle CommandArgumentEnum
+        if (name == "CommandArgumentEnum" || name == "CommandArgumentEnumAttribute" || name.EndsWith(".CommandArgumentEnumAttribute"))
+        {
+            var description = GetAttributeArgument(attribute, 0) ?? "\"\"";
+            // For generic enum attributes, we need to preserve the type parameter
+            if (attribute.Name is GenericNameSyntax genericName)
+            {
+                var typeArg = genericName.TypeArgumentList.Arguments.FirstOrDefault()?.ToString() ?? typeForTypeof;
+                return $"new CommandArgumentEnumAttribute<{typeArg}>({description})";
+            }
+            return $"new CommandArgumentEnumAttribute<{typeForTypeof}>({description})";
+        }
+        
+        // Fallback to CommandArgumentUnknownAttribute
+        return $"new CommandArgumentUnknownAttribute(typeof({typeForTypeof}))";
+    }
+
+    private static string? GetAttributeArgument(AttributeSyntax attribute, int index)
+    {
+        if (attribute.ArgumentList?.Arguments.Count > index)
+        {
+            var arg = attribute.ArgumentList.Arguments[index];
+            return arg.Expression.ToString();
+        }
+        return null;
+    }
+
+    private static bool IsCommandArgumentAttribute(AttributeSyntax attribute)
+    {
+        var name = attribute.Name.ToString();
+        return name.Contains("CommandArgument") && 
+               !name.Contains("CommandArgumentUnknown");
     }
 
     private static string GetStringLiteralValue(ExpressionSyntax expression)

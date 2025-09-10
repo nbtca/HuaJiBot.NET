@@ -29,7 +29,7 @@ public class PluginConfig : ConfigBase
     }
 }
 
-public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
+public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
     public PluginConfig Config { get; } = new();
 
