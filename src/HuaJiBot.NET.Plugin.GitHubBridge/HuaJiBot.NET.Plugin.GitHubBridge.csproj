@@ -1,25 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
     <PackageReference Include="Websocket.Client" Version="5.2.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />
+    <ProjectReference
+      Include="..\HuaJiBot.NET.SourceGenerator\HuaJiBot.NET.SourceGenerator.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false"
+    />
   </ItemGroup>
-
   <ItemGroup>
     <Folder Include="Utils\Assets\" />
   </ItemGroup>
-
   <ItemGroup>
     <Compile Update="Utils\Assets.Designer.cs">
       <DesignTime>True</DesignTime>
@@ -27,12 +27,10 @@
       <DependentUpon>Assets.resx</DependentUpon>
     </Compile>
   </ItemGroup>
-
   <ItemGroup>
     <EmbeddedResource Update="Utils\Assets.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Assets.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-
 </Project>
