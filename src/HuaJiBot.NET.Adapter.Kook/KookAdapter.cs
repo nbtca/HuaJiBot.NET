@@ -223,9 +223,31 @@ public class KookAdapter : BotServiceBase
         if (channel == null)
             return [];
 
-        // TODO: Get the original message sender and @them
-        var sentMessage = await channel.SendTextAsync(text);
-        return [sentMessage.Id.ToString()];
+        try
+        {
+            // Try to get the original message to find the sender
+            if (Guid.TryParse(msgId, out var messageId))
+            {
+                var originalMessage = await channel.GetMessageAsync(messageId);
+                if (originalMessage != null)
+                {
+                    // Create a mention for the original sender
+                    var mention = $"(met){originalMessage.Author.Id}(met)";
+                    var replyText = $"{mention} {text}";
+                    var sentMessage = await channel.SendTextAsync(replyText);
+                    return [sentMessage.Id.ToString()];
+                }
+            }
+
+            // Fallback: just send the text without mention
+            var fallbackMessage = await channel.SendTextAsync(text);
+            return [fallbackMessage.Id.ToString()];
+        }
+        catch (Exception ex)
+        {
+            LogError("发送回复消息失败", ex);
+            return [];
+        }
     }
 
     public override string GetNick(string robotId, string userId)

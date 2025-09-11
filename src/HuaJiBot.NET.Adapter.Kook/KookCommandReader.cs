@@ -18,23 +18,38 @@ internal class KookCommandReader(BotService service, IMessage message) : CommonC
 
             IEnumerable<ReaderEntity> Parse()
             {
-                // Parse the message content
+                // Parse the message content - Kook uses KMarkdown format
                 var content = message.Content;
                 
-                // For now, just return the text content
-                // TODO: Parse mentions, replies, and other Kook-specific content
-                if (!string.IsNullOrEmpty(content))
+                if (string.IsNullOrEmpty(content))
+                    yield break;
+
+                // Parse mentions in the format (met)userId(met)
+                var mentionPattern = @"\(met\)(\d+)\(met\)";
+                var matches = System.Text.RegularExpressions.Regex.Matches(content, mentionPattern);
+                
+                var processedContent = content;
+                foreach (System.Text.RegularExpressions.Match match in matches)
                 {
-                    yield return content;
+                    var userId = match.Groups[1].Value;
+                    processedContent = processedContent.Replace(match.Value, "");
+                    
+                    // Get the username if possible
+                    var username = "";
+                    if (message is IUserMessage userMessage && userMessage.MentionedUsers.Any())
+                    {
+                        var mentionedUser = userMessage.MentionedUsers.FirstOrDefault(u => u.Id.ToString() == userId);
+                        username = mentionedUser?.Username ?? "";
+                    }
+                    
+                    yield return new ReaderAt(userId, username);
                 }
 
-                // Handle mentions
-                if (message is IUserMessage userMessage && userMessage.MentionedUsers.Any())
+                // Return the text content without mentions
+                var trimmedContent = processedContent.Trim();
+                if (!string.IsNullOrEmpty(trimmedContent))
                 {
-                    foreach (var mentionedUser in userMessage.MentionedUsers)
-                    {
-                        yield return new ReaderAt(mentionedUser.Id.ToString(), mentionedUser.Username);
-                    }
+                    yield return trimmedContent;
                 }
 
                 // Handle quote/reply if reference exists
@@ -49,7 +64,8 @@ internal class KookCommandReader(BotService service, IMessage message) : CommonC
                     ));
                 }
 
-                // TODO: Handle other Kook-specific message types like cards, embeds, etc.
+                // TODO: Handle other Kook-specific message types like cards, embeds, attachments, etc.
+                // Kook supports rich KMarkdown content that could be parsed here
             }
         }
     }
