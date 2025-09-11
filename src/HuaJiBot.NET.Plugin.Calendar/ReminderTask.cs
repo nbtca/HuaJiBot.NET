@@ -43,7 +43,7 @@ internal class ReminderTask : IDisposable
     }
 
     private DateTimeOffset _scheduledTimeEnd = Utils.NetworkTime.Now; //截止到该时间点的日程已经在Task队列中列入计划了
-    private readonly HashSet<string> _scheduledEvents = new(); //已经计划的事件，防止重复提醒
+    private readonly Dictionary<string, DateTimeOffset> _scheduledEvents = new(); //已经计划的事件，防止重复提醒，值为提醒时间
 
     private void ForEachMatchedGroup(CalendarEvent e, Action<Action<string>> callback)
     {
@@ -97,42 +97,26 @@ internal class ReminderTask : IDisposable
 
     private static string GetEventKey(CalendarEvent e, DateTimeOffset remindTime, string type)
     {
-        // Create unique key combining event summary, start time, and reminder type
-        // Use | as separator to avoid conflicts with underscores in event names
-        var startTime = e.Start?.ToLocalNetworkTime().ToString("yyyy-MM-dd HH:mm") ?? "unknown";
-        var remindTimeStr = remindTime.ToString("yyyy-MM-dd HH:mm");
-        var summary = e.Summary?.Replace("|", "_") ?? "nosummary"; // 替换可能的分隔符
-        return $"{type}|{summary}|{startTime}|{remindTimeStr}";
+        // Create unique key combining event details to prevent collisions
+        // Include event UID if available for better uniqueness
+        var startTime = e.Start?.ToLocalNetworkTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "unknown";
+        var endTime = e.End?.ToLocalNetworkTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "none";
+        var summary = e.Summary?.Replace("|", "").Replace(":", "") ?? "nosummary";
+        var location = e.Location?.Replace("|", "").Replace(":", "") ?? "";
+        var uid = e.Uid ?? "";
+        
+        // Use a more robust key format that's less prone to collisions
+        return $"{type}:{uid}:{summary}:{startTime}:{endTime}:{location}:{remindTime:yyyy-MM-dd-HH-mm-ss}";
     }
 
     private void CleanupOldScheduledEvents(DateTimeOffset now)
     {
-        // 清理1小时前的已计划事件记录，防止内存无限增长
+        // 清理已经过时的计划事件记录，防止内存无限增长
+        // 只移除提醒时间已经过去超过1小时的事件
         var cutoffTime = now.AddHours(-1);
         var keysToRemove = _scheduledEvents
-            .Where(key =>
-            {
-                var parts = key.Split('|');
-                // 事件键格式: {type}|{summary}|{startTime}|{remindTime}
-                if (parts.Length >= 4)
-                {
-                    try
-                    {
-                        // 最后一部分是提醒时间
-                        var remindTimeStr = parts[3];
-                        if (DateTime.TryParse(remindTimeStr, out var eventTime))
-                        {
-                            return eventTime < cutoffTime;
-                        }
-                    }
-                    catch
-                    {
-                        // 如果解析失败，保守地保留这个记录
-                        return false;
-                    }
-                }
-                return false;
-            })
+            .Where(kvp => kvp.Value < cutoffTime)
+            .Select(kvp => kvp.Key)
             .ToList();
 
         foreach (var key in keysToRemove)
@@ -184,13 +168,14 @@ internal class ReminderTask : IDisposable
                         continue; //跳过
                     
                     var eventKey = GetEventKey(e, remindTime, "start");
-                    if (_scheduledEvents.Contains(eventKey)) //如果已经计划过了
+                    if (_scheduledEvents.ContainsKey(eventKey)) //如果已经计划过了
                         continue; //跳过
                     
-                    _scheduledEvents.Add(eventKey); //添加到已计划列表
+                    _scheduledEvents[eventKey] = remindTime; //添加到已计划列表，记录提醒时间
                     ScheduleStartReminder(
                         timeRemained,
                         e,
+                        eventKey,
                         ev =>
                         {
                             Service.Log(
@@ -232,13 +217,14 @@ internal class ReminderTask : IDisposable
                         continue;
 
                     var eventKey = GetEventKey(e, remindTime, "end");
-                    if (_scheduledEvents.Contains(eventKey)) //如果已经计划过了
+                    if (_scheduledEvents.ContainsKey(eventKey)) //如果已经计划过了
                         continue; //跳过
                     
-                    _scheduledEvents.Add(eventKey); //添加到已计划列表
+                    _scheduledEvents[eventKey] = remindTime; //添加到已计划列表，记录提醒时间
                     ScheduleStartReminder(
                         timeRemained,
                         e,
+                        eventKey,
                         ev =>
                         {
                             Service.Log(
@@ -270,11 +256,12 @@ internal class ReminderTask : IDisposable
     private void ScheduleStartReminder(
         TimeSpan waiting,
         CalendarEvent e,
+        string eventKey,
         Action<CalendarEvent> start
     )
     {
         Task.Delay(waiting, _cancellationTokenSource.Token)
-            .ContinueWith(_ => SendReminder(e, start), 
+            .ContinueWith(_ => SendReminder(e, eventKey, start), 
                 _cancellationTokenSource.Token,
                 TaskContinuationOptions.OnlyOnRanToCompletion,
                 TaskScheduler.Default);
@@ -283,16 +270,21 @@ internal class ReminderTask : IDisposable
         );
     }
 
-    private void SendReminder(CalendarEvent e, Action<CalendarEvent> start)
+    private void SendReminder(CalendarEvent e, string eventKey, Action<CalendarEvent> start)
     {
         try
         {
             Service.Log($"[日程] 发送提醒：{e.Summary}({e.Start?.ToLocalNetworkTime()})");
             start(e);
+            
+            // 提醒发送成功后，立即从计划列表中移除，防止内存泄漏
+            _scheduledEvents.Remove(eventKey);
         }
         catch (Exception ex)
         {
             Service.LogError($"发送提醒失败：{e.Summary}", ex);
+            // 即使发送失败也要清理，避免重试风暴
+            _scheduledEvents.Remove(eventKey);
         }
     }
 
