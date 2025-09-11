@@ -1,4 +1,6 @@
 using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Commands;
+using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Logger;
 using Kook;
 using Kook.WebSocket;
@@ -42,18 +44,63 @@ public class KookAdapter : BotServiceBase
 
     private Task OnReady()
     {
-        Events.CallOnBotLogin(this, new Events.BotLoginEventArgs
+        Events.CallOnBotLogin(this, new BotLoginEventArgs
         {
-            BotId = _client.CurrentUser?.Id.ToString() ?? "",
-            BotName = _client.CurrentUser?.Username ?? "",
-            ClientVersion = "Kook.Net"
+            Service = this,
+            Accounts = _client.CurrentUser is not null ? [_client.CurrentUser.Id.ToString()] : [],
+            ClientName = "Kook.Net",
+            ClientVersion = "0.0.45-alpha"
         });
+        Log($"Kook Bot 登录成功！账号：{_client.CurrentUser?.Username}({_client.CurrentUser?.Id})");
         return Task.CompletedTask;
     }
 
-    private Task OnMessageReceived(Cacheable<IMessage, Guid> arg1, ISocketMessageChannel arg2)
+    private Task OnMessageReceived(Cacheable<IMessage, Guid> cachedMessage, ISocketMessageChannel channel)
     {
-        // TODO: Implement message handling
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var message = cachedMessage.HasValue ? cachedMessage.Value : await cachedMessage.GetOrDownloadAsync();
+                
+                // Only process messages from guilds (servers)
+                if (channel is not ITextChannel textChannel || message is not IUserMessage userMessage)
+                    return;
+
+                // Ignore bot messages
+                if (message.Author.IsBot)
+                    return;
+
+                var guild = textChannel.Guild;
+                var author = message.Author;
+
+                // Create command reader for the message
+                var commandReader = new KookCommandReader(this, message);
+
+                // Create group message event args
+                var eventArgs = new GroupMessageEventArgs(
+                    () => commandReader,
+                    () => ValueTask.FromResult(textChannel.Name)
+                )
+                {
+                    Service = this,
+                    RobotId = _client.CurrentUser?.Id.ToString(),
+                    MessageId = message.Id.ToString(),
+                    GroupId = textChannel.Id.ToString(),
+                    SenderId = author.Id.ToString(),
+                    SenderMemberCard = author.Username,
+                    TextMessageLazy = new Lazy<string>(() => message.Content)
+                };
+
+                // Call the group message received event
+                Events.CallOnGroupMessageReceived(eventArgs);
+            }
+            catch (Exception ex)
+            {
+                LogError("处理消息时出错", ex);
+            }
+        });
+        
         return Task.CompletedTask;
     }
 
@@ -67,26 +114,99 @@ public class KookAdapter : BotServiceBase
         params SendingMessageBase[] messages
     )
     {
-        // TODO: Implement group message sending
-        throw new NotImplementedException();
+        if (!ulong.TryParse(targetGroup, out var channelId))
+            throw new ArgumentException("Invalid channel ID format", nameof(targetGroup));
+
+        var channel = await _client.GetChannelAsync(channelId) as ITextChannel;
+        if (channel == null)
+            throw new ArgumentException("Channel not found", nameof(targetGroup));
+
+        var messageIds = new List<string>();
+
+        foreach (var message in messages)
+        {
+            switch (message)
+            {
+                case TextMessage textMessage:
+                    var sentMessage = await channel.SendTextAsync(textMessage.Text);
+                    messageIds.Add(sentMessage.Id.ToString());
+                    break;
+                case AtMessage atMessage:
+                    if (ulong.TryParse(atMessage.Target, out var userId))
+                    {
+                        var sentAtMessage = await channel.SendTextAsync($"(met){userId}(met)");
+                        messageIds.Add(sentAtMessage.Id.ToString());
+                    }
+                    break;
+                case ImageMessage imageMessage:
+                    // TODO: Implement image sending
+                    LogDebug($"图片消息暂未实现: {imageMessage.ImagePath}");
+                    break;
+                case ReplyMessage replyMessage:
+                    // TODO: Implement reply message
+                    LogDebug($"回复消息暂未实现: {replyMessage.MessageId}");
+                    break;
+                default:
+                    LogDebug($"未支持的消息类型: {message.GetType().Name}");
+                    break;
+            }
+        }
+
+        return messageIds.ToArray();
     }
 
     public override void RecallMessage(string? robotId, string targetGroup, string msgId)
     {
-        // TODO: Implement message recall
-        throw new NotImplementedException();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (!ulong.TryParse(targetGroup, out var channelId) || !Guid.TryParse(msgId, out var messageId))
+                    return;
+
+                var channel = await _client.GetChannelAsync(channelId) as ITextChannel;
+                if (channel == null)
+                    return;
+
+                var message = await channel.GetMessageAsync(messageId);
+                if (message != null)
+                {
+                    await message.DeleteAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError("撤回消息失败", ex);
+            }
+        });
     }
 
     public override void SetGroupName(string? robotId, string targetGroup, string groupName)
     {
-        // TODO: Implement group name setting
-        throw new NotImplementedException();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (!ulong.TryParse(targetGroup, out var channelId))
+                    return;
+
+                var channel = await _client.GetChannelAsync(channelId) as ITextChannel;
+                if (channel == null)
+                    return;
+
+                await channel.ModifyAsync(x => x.Name = groupName);
+            }
+            catch (Exception ex)
+            {
+                LogError("修改频道名称失败", ex);
+            }
+        });
     }
 
     public override MemberType GetMemberType(string robotId, string targetGroup, string userId)
     {
-        // TODO: Implement member type retrieval
-        return MemberType.Unknown;
+        // TODO: Implement member type retrieval based on Kook roles
+        return MemberType.Member;
     }
 
     public override async Task<string[]> FeedbackAt(
@@ -96,8 +216,16 @@ public class KookAdapter : BotServiceBase
         string text
     )
     {
-        // TODO: Implement feedback at functionality
-        throw new NotImplementedException();
+        if (!ulong.TryParse(targetGroup, out var channelId))
+            return [];
+
+        var channel = await _client.GetChannelAsync(channelId) as ITextChannel;
+        if (channel == null)
+            return [];
+
+        // TODO: Get the original message sender and @them
+        var sentMessage = await channel.SendTextAsync(text);
+        return [sentMessage.Id.ToString()];
     }
 
     public override string GetNick(string robotId, string userId)
