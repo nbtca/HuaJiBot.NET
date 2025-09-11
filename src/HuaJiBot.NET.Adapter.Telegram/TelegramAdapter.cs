@@ -82,6 +82,7 @@ public class TelegramAdapter : BotServiceBase
                     TextMessage { Text: var text } => await _botClient.SendMessage(
                         chatId, 
                         text, 
+                        parseMode: ParseMode.Html, // Support HTML formatting
                         cancellationToken: _cancellationTokenSource.Token),
                         
                     ImageMessage { ImagePath: var path } => await _botClient.SendPhoto(
@@ -92,14 +93,16 @@ public class TelegramAdapter : BotServiceBase
                     ReplyMessage { MessageId: var msgId } when int.TryParse(msgId, out var replyToId) => 
                         await _botClient.SendMessage(
                             chatId,
-                            "Reply message", // This should be combined with text
+                            "↩️", // Reply indicator since we need content
                             replyToMessageId: replyToId,
                             cancellationToken: _cancellationTokenSource.Token),
                             
-                    AtMessage { Target: var target } => await _botClient.SendMessage(
-                        chatId,
-                        $"@{target}", // Simple mention format
-                        cancellationToken: _cancellationTokenSource.Token),
+                    AtMessage { Target: var target } when long.TryParse(target, out var userId) => 
+                        await _botClient.SendMessage(
+                            chatId,
+                            $"<a href=\"tg://user?id={userId}\">@{target}</a>", // Proper Telegram mention
+                            parseMode: ParseMode.Html,
+                            cancellationToken: _cancellationTokenSource.Token),
                         
                     _ => throw new NotSupportedException($"Message type {message.GetType()} is not supported")
                 };
@@ -208,24 +211,14 @@ public class TelegramAdapter : BotServiceBase
     {
         try
         {
-            var task = Task.Run(async () =>
+            // For Telegram, we typically get user info through chat member calls
+            // This is a simplified version - in practice you'd cache this information
+            if (long.TryParse(userId, out var telegramUserId))
             {
-                try
-                {
-                    var user = await _botClient.GetChatMember(
-                        new ChatId(userId), 
-                        long.Parse(userId), 
-                        _cancellationTokenSource.Token);
-                        
-                    return user.User.FirstName + (string.IsNullOrEmpty(user.User.LastName) ? "" : $" {user.User.LastName}");
-                }
-                catch
-                {
-                    return userId;
-                }
-            });
-            
-            return task.Result;
+                // Return the user ID as fallback since we can't easily get user info without a chat context
+                return userId;
+            }
+            return userId;
         }
         catch
         {
@@ -248,43 +241,71 @@ public class TelegramAdapter : BotServiceBase
             if (update.Message is not { } message)
                 return;
 
-            if (message.Text is not { } messageText)
-                return;
-
             var chatId = message.Chat.Id.ToString();
             var userId = message.From?.Id.ToString() ?? "";
             var userName = message.From?.FirstName ?? "";
 
+            // Handle different types of messages
+            string messageText = message.Text ?? 
+                               message.Caption ?? 
+                               (message.Photo?.Length > 0 ? "[Photo]" : "") ??
+                               (message.Document != null ? $"[Document: {message.Document.FileName}]" : "") ??
+                               (message.Sticker != null ? "[Sticker]" : "") ??
+                               (message.Voice != null ? "[Voice]" : "") ??
+                               (message.Audio != null ? "[Audio]" : "") ??
+                               (message.Video != null ? "[Video]" : "") ??
+                               "[Unknown message type]";
+
             LogDebug($"Received message from {userName} in chat {chatId}: {messageText}");
 
-            // Create GroupMessageEventArgs for compatibility
-            var eventArgs = new GroupMessageEventArgs(
-                () => new DefaultCommandReader([messageText]),
-                async () => 
-                {
-                    try
-                    {
-                        var chat = await _botClient.GetChat(new ChatId(chatId), _cancellationTokenSource.Token);
-                        return chat.Title ?? chat.FirstName ?? chatId;
-                    }
-                    catch
-                    {
-                        return chatId;
-                    }
-                }
-            )
+            // Determine if this is a group or private chat
+            if (message.Chat.Type == ChatType.Private)
             {
-                Service = this,
-                RobotId = _botUser?.Id.ToString(),
-                GroupId = chatId,
-                SenderId = userId,
-                SenderMemberCard = userName,
-                MessageId = message.MessageId.ToString(),
-                TextMessageLazy = new(() => messageText)
-            };
+                // Handle private message
+                var privateEventArgs = new PrivateMessageEventArgs(
+                    () => new DefaultCommandReader([messageText])
+                )
+                {
+                    Service = this,
+                    RobotId = _botUser?.Id.ToString(),
+                    GroupId = null, // Private chats don't have group ID
+                    SenderId = userId,
+                    MessageId = message.MessageId.ToString(),
+                    TextMessageLazy = new(() => messageText)
+                };
 
-            // Trigger the group message received event
-            Events.CallOnGroupMessageReceived(eventArgs);
+                Events.CallOnPrivateMessageReceived(privateEventArgs);
+            }
+            else
+            {
+                // Handle group message
+                var eventArgs = new GroupMessageEventArgs(
+                    () => new DefaultCommandReader([messageText]),
+                    async () => 
+                    {
+                        try
+                        {
+                            var chat = await _botClient.GetChat(new ChatId(chatId), _cancellationTokenSource.Token);
+                            return chat.Title ?? chat.FirstName ?? chatId;
+                        }
+                        catch
+                        {
+                            return chatId;
+                        }
+                    }
+                )
+                {
+                    Service = this,
+                    RobotId = _botUser?.Id.ToString(),
+                    GroupId = chatId,
+                    SenderId = userId,
+                    SenderMemberCard = userName,
+                    MessageId = message.MessageId.ToString(),
+                    TextMessageLazy = new(() => messageText)
+                };
+
+                Events.CallOnGroupMessageReceived(eventArgs);
+            }
         }
         catch (Exception ex)
         {
