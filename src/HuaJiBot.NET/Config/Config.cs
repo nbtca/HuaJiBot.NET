@@ -10,7 +10,8 @@ public partial class Config
     public enum ServiceType
     {
         OneBot,
-        Satori
+        Satori,
+        Kook
     }
 
     public ServiceType Service = ServiceType.OneBot;
@@ -30,6 +31,13 @@ public partial class Config
     }
 
     public SatoriConnectionInfo Satori = new();
+    
+    public class KookConnectionInfo
+    {
+        public string Token = "";
+    }
+
+    public KookConnectionInfo Kook = new();
     public string[] ExtraPlugins { get; set; } = [];
 
     public Dictionary<string, JObject> Plugins = new();

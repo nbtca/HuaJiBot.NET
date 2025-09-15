@@ -1,6 +1,7 @@
 ﻿using HuaJiBot.NET;
 using HuaJiBot.NET.Adapter.OneBot;
 using HuaJiBot.NET.Adapter.Satori;
+using HuaJiBot.NET.Adapter.Kook;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Config;
 using HuaJiBot.NET.Logger;
@@ -32,12 +33,19 @@ BotServiceBase CreateSatoriService(Config config)
     return api;
 }
 
+BotServiceBase CreateKookService(Config config)
+{
+    var api = new KookAdapter(config.Kook.Token) { Logger = logger }; //链接协议适配器
+    return api;
+}
+
 BotServiceBase CreateService(Config config)
 {
     return config.Service switch
     {
         Config.ServiceType.OneBot => CreateOneBotService(config),
         Config.ServiceType.Satori => CreateSatoriService(config),
+        Config.ServiceType.Kook => CreateKookService(config),
         _ => throw new NotSupportedException("不支持的协议类型"),
     };
 }
