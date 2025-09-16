@@ -11,6 +11,9 @@ public class PluginConfig : ConfigBase
 {
     public int MinRange = -128;
     public int MaxRange = 48;
+    public int ReminderBeforeStartMinutes = 60; // 可配置的开始前提醒时间
+    public int ReminderBeforeEndMinutes = 5; // 可配置的结束前提醒时间
+    public int CheckIntervalMinutes = 5; // 可配置的检查间隔，默认5分钟提高精度
     public ReminderFilterConfig[] ReminderGroups = [];
 
     public class ReminderFilterConfig
