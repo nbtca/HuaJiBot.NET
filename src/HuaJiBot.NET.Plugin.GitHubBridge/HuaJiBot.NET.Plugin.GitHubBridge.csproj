@@ -5,17 +5,13 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
-    <PackageReference Include="Websocket.Client" Version="5.2.0" />
+    <PackageReference Include="Websocket.Client" Version="5.3.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />
-    <ProjectReference
-      Include="..\HuaJiBot.NET.SourceGenerator\HuaJiBot.NET.SourceGenerator.csproj"
-      OutputItemType="Analyzer"
-      ReferenceOutputAssembly="false"
-    />
+    <ProjectReference Include="..\HuaJiBot.NET.SourceGenerator\HuaJiBot.NET.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Utils\Assets\" />

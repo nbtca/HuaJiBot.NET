@@ -8,16 +8,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 		<PackageReference Include="PureNSQSharp" Version="1.0.1-beta" />
 		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />
-		<ProjectReference Include="..\HuaJiBot.NET.SourceGenerator\HuaJiBot.NET.SourceGenerator.csproj" 
-		                  OutputItemType="Analyzer" 
-		                  ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\HuaJiBot.NET.SourceGenerator\HuaJiBot.NET.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 </Project>
