@@ -4,7 +4,7 @@ using System.Text;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
-using HuaJiBot.NET.MQ;
+using HuaJiBot.NET.Websocket;
 using HuaJiBot.NET.Plugin.MessageBridge.Types;
 using HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
 using Microsoft.Extensions.Logging;

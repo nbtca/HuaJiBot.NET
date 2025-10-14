@@ -1,4 +1,4 @@
-﻿using HuaJiBot.NET.MQ;
+﻿using HuaJiBot.NET.Websocket;
 using HuaJiBot.NET.Plugin.GitHubBridge.EventDispatch;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssueCommentEventBody;

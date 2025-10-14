@@ -1,4 +1,4 @@
-﻿namespace HuaJiBot.NET.MQ;
+﻿namespace HuaJiBot.NET.Websocket;
 
 public class ActiveBroadcastPacketData
 {

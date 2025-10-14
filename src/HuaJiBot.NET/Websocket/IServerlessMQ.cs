@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 
-namespace HuaJiBot.NET.MQ;
+namespace HuaJiBot.NET.Websocket;
 
 // ReSharper disable once InconsistentNaming
 public interface IServerlessMQ : IWebsocketClient

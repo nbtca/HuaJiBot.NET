@@ -1,5 +1,4 @@
-﻿using HuaJiBot.NET.Logger;
-using HuaJiBot.NET.MQ;
+﻿using HuaJiBot.NET.Websocket;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;

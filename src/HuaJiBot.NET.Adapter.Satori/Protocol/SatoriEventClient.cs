@@ -5,10 +5,10 @@ using HuaJiBot.NET.Adapter.Satori.Protocol.Elements;
 using HuaJiBot.NET.Adapter.Satori.Protocol.Events;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
+using HuaJiBot.NET.Websocket;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using Websocket.Client;
 using Timer = System.Timers.Timer;
 
 namespace HuaJiBot.NET.Adapter.Satori.Protocol;
@@ -26,66 +26,51 @@ internal class SatoriEventClient
     private readonly Timer _pingTimer;
     private readonly SatoriAdapter _service;
 
-    public Task ConnectAsync() => _client.Start();
+    public Task ConnectAsync() => Task.CompletedTask;
 
     public SatoriEventClient(SatoriAdapter service, Uri wsUrl, string token)
     {
-        _client = new WebsocketClient(wsUrl)
-        {
-            IsTextMessageConversionEnabled = true,
-            MessageEncoding = Encoding.UTF8,
-            ReconnectTimeout = null,
-        };
+        _client = new(wsUrl);
         _service = service;
-        _client
-            .MessageReceived.Where(m => m.MessageType == WebSocketMessageType.Text)
-            .Select(m => m.Text)
-            .Subscribe(msg =>
+
+        // 订阅消息接收事件
+        _client.OnMessage += async msg =>
+        {
+            try
             {
-                try
-                {
-                    ProcessMessageAsync(msg ?? throw new NullReferenceException("msg.Text"))
-                        .ContinueWith(
-                            task =>
-                            {
-                                var ex = task.Exception;
-                                if (ex is not null)
-                                    service.LogError(
-                                        "[SatoriEventClient] ProcessMessage 处理消息时出现异常：",
-                                        ex
-                                    );
-                            },
-                            TaskContinuationOptions.OnlyOnFaulted
-                        );
-                }
-                catch (Exception e)
-                {
-                    service.LogError("[SatoriEventClient] 处理消息时出现异常：", e);
-                }
-            });
-        _client.DisconnectionHappened.Subscribe(info =>
+                await ProcessMessageAsync(msg ?? throw new NullReferenceException("msg.Text"));
+            }
+            catch (Exception ex)
+            {
+                service.LogError("[SatoriEventClient] ProcessMessage 处理消息时出现异常：", ex);
+            }
+        };
+        // 订阅断开连接事件
+        _client.OnClosed += info =>
         {
             service.Log(
                 "[SatoriEventClient] Disconnection Happened. Type:"
                     + info.Type
                     + " Description:"
-                    + info.CloseStatusDescription
+                    + info.Reason
             );
             _pingTimer?.Stop();
-        });
-        _client.ReconnectionHappened.Subscribe(info =>
+        };
+
+        // 订阅重连事件
+        _client.OnConnected += info =>
         {
-            service.Log("[SatoriEventClient] Reconnection Happened " + info.Type);
+            service.Log("[SatoriEventClient] Reconnection Happened " + info.IsReconnect);
             var identify = new Signal<IdentifySignalBody> //鉴权
             {
                 Op = SignalOperation.Identify,
-                Body = new IdentifySignalBody { Token = token },
+                Body = new() { Token = token },
             };
             SendSignal(identify);
             _pingTimer?.Start();
-        });
+        };
 
-        _pingTimer = new Timer
+        _pingTimer = new()
         {
             AutoReset = true,
             Interval = TimeSpan.FromSeconds(10).TotalMilliseconds,
@@ -93,12 +78,11 @@ internal class SatoriEventClient
         _pingTimer.Elapsed += (_, _) => SendSignal(new Signal { Op = SignalOperation.Ping });
     }
 
-    private Task ProcessMessageAsync(string message)
+    private ValueTask ProcessMessageAsync(JToken json)
     {
         try
         {
             //_service.LogDebug($"WebSocket::Process {message}");
-            var json = JObject.Parse(message);
             var op = (SignalOperation)json.Value<int>("op");
             switch (op)
             {
@@ -169,7 +153,7 @@ internal class SatoriEventClient
                                             }
                                         }
                                         yield return new CommonCommandReader.ReaderReply(
-                                            new CommandReader.ReplyInfo(
+                                            new(
                                                 messageId: id,
                                                 seqId: messageSeq,
                                                 senderId: senderId,
@@ -203,7 +187,7 @@ internal class SatoriEventClient
                             }
                         }
                         _service.Events.CallOnGroupMessageReceived(
-                            new GroupMessageEventArgs(
+                            new(
                                 () => new DefaultCommandReader(Parse()),
                                 () => ValueTask.FromResult(groupName ?? string.Empty)
                             )
@@ -213,7 +197,7 @@ internal class SatoriEventClient
                                 GroupId = groupId,
                                 SenderId = senderId,
                                 SenderMemberCard = name ?? string.Empty,
-                                TextMessageLazy = new Lazy<string>(() => msg.Content),
+                                TextMessageLazy = new(() => msg.Content),
                                 Service = _service,
                             }
                         );
@@ -231,7 +215,7 @@ internal class SatoriEventClient
                         $"{appName} {account.Status} Features: {string.Join(",", account.Features)}"
                     );
                     _service.Events.CallOnBotLogin(
-                        new BotLoginEventArgs
+                        new()
                         {
                             Accounts = _service.AllRobots,
                             ClientName = appName,
@@ -253,7 +237,7 @@ internal class SatoriEventClient
             _service.Log(e);
         }
 
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     private void SendSignal<T>(T signal)
@@ -262,5 +246,12 @@ internal class SatoriEventClient
         var text = JsonConvert.SerializeObject(signal, _jsonSerializerSettings);
         //_service.LogDebug($"WebSocket::SendSignal {text}");
         _client.Send(text);
+    }
+
+    public void Dispose()
+    {
+        _pingTimer?.Stop();
+        _pingTimer?.Dispose();
+        _client?.Dispose();
     }
 }

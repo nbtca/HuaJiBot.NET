@@ -10,13 +10,12 @@ internal class OneBotMessageHandler(OneBotApi api, OneBotAdapter service)
     private string? _qq = null;
     public string? QQ => _qq;
 
-    public async Task ProcessMessageAsync(string data)
+    public async Task ProcessMessageAsync(JObject json)
     {
 #if !DEBUG
         try
         {
 #endif
-        var json = JObject.Parse(data);
         if (json.ContainsKey("echo"))
         {
             await api.ProcessMessageAsync(json);

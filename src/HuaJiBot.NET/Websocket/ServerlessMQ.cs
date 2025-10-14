@@ -1,8 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
-namespace HuaJiBot.NET.MQ;
+namespace HuaJiBot.NET.Websocket;
 
 // ReSharper disable once InconsistentNaming
 public class ServerlessMQ : IServerlessMQ

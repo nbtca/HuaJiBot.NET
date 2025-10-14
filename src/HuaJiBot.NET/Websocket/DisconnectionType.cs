@@ -1,4 +1,4 @@
-﻿namespace HuaJiBot.NET.MQ;
+﻿namespace HuaJiBot.NET.Websocket;
 
 /// <summary>
 /// 断开连接类型

@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 using WebsocketClientLite;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
-namespace HuaJiBot.NET.MQ;
+namespace HuaJiBot.NET.Websocket;
 
 public class WebsocketClient : IWebsocketClient
 {
@@ -17,11 +17,19 @@ public class WebsocketClient : IWebsocketClient
     private readonly ILogger? _logger;
     private readonly CancellationTokenSource _outerCancellationTokenSource = new();
     private readonly CompositeDisposable _disposables = new();
-    private bool _hasConnectedBefore = false;
+    private bool _hasConnectedBefore;
 
     public WebsocketClient(
         string url,
-        string token,
+        string? token = null,
+        ILogger? logger = null,
+        Dictionary<string, string>? headers = null
+    )
+        : this(new Uri(url), token, logger, headers) { }
+
+    public WebsocketClient(
+        Uri url,
+        string? token = null,
         ILogger? logger = null,
         Dictionary<string, string>? headers = null
     )
@@ -30,11 +38,12 @@ public class WebsocketClient : IWebsocketClient
 
         headers ??= new();
 
-        _client = new()
+        if (!string.IsNullOrEmpty(token))
         {
-            Headers = headers.Append(new("Authorization", $"Bearer {token}")).ToDictionary(),
-            TlsProtocolType = SslProtocols.Tls13,
-        };
+            headers = headers.Append(new("Authorization", $"Bearer {token}")).ToDictionary();
+        }
+
+        _client = new() { Headers = headers, TlsProtocolType = SslProtocols.Tls13 };
 
         IDisposable isConnectedDisposable = _client
             .IsConnectedObservable.Do(isConnected =>
@@ -66,7 +75,7 @@ public class WebsocketClient : IWebsocketClient
 
         Func<IObservable<(IDataframe dataframe, ConnectionStatus state)>> connect = () =>
             _client.WebsocketConnectWithStatusObservable(
-                uri: new(url),
+                uri: url,
                 hasClientPing: true,
                 clientPingInterval: TimeSpan.FromSeconds(10),
                 clientPingMessage: "ping message",

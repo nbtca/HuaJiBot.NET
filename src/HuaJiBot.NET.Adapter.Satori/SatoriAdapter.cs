@@ -23,8 +23,8 @@ public class SatoriAdapter : BotServiceBase
             new UriBuilder(httpUrl) { Scheme = baseUri.Scheme == "http" ? "ws" : "wss" }.Uri,
             new Uri("/v1/events", UriKind.Relative)
         );
-        _apiClient = new SatoriApiClient(this, httpUrl, token);
-        _eventClient = new SatoriEventClient(this, wsUrl, token);
+        _apiClient = new(this, httpUrl, token);
+        _eventClient = new(this, wsUrl, token);
     }
 
     public override void Reconnect() => _ = _eventClient.ConnectAsync();
