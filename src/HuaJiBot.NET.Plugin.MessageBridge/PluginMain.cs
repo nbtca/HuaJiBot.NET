@@ -1,15 +1,15 @@
 ﻿using System.Collections.Concurrent;
-using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
+using HuaJiBot.NET.MQ;
 using HuaJiBot.NET.Plugin.MessageBridge.Types;
 using HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Websocket.Client;
 using ClientEventType = HuaJiBot.NET.Plugin.MessageBridge.PluginConfig.GroupConfig.ClientEventType;
 
 namespace HuaJiBot.NET.Plugin.MessageBridge;
@@ -70,81 +70,61 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
     //配置
     public PluginConfig Config { get; } = new();
-    private readonly Dictionary<PluginConfig.ClientInfo, WebsocketClient> _clients = new();
+    private readonly Dictionary<PluginConfig.ClientInfo, IServerlessMQ> _clients = new();
 
     //初始化
     protected override async Task InitializeAsync()
     {
         foreach (var clientInfo in Config.Clients)
         {
-            WebsocketClient client =
-                new(
-                    new Uri(clientInfo.Address),
-                    () =>
-                    {
-                        var cfg = new ClientWebSocket
-                        {
-                            Options =
-                            {
-                                KeepAliveInterval = TimeSpan.FromSeconds(5),
-                                CollectHttpResponseDetails = true,
-                            },
-                        };
-                        if (!string.IsNullOrEmpty(clientInfo.Token))
-                        {
-                            cfg.Options.SetRequestHeader(
-                                "Authorization",
-                                "Bearer " + clientInfo.Token
-                            );
-                            cfg.Options.SetRequestHeader("client-type", "IM");
-                            cfg.Options.SetRequestHeader("client-subtype", "QQ");
-                            cfg.Options.SetRequestHeader(
-                                "client-name",
-                                BasePacket.DefaultInformation?.Name
-                            );
-                            cfg.Options.SetRequestHeader(
-                                "client-version",
-                                BasePacket.DefaultInformation?.Version
-                            );
-                            cfg.Options.SetRequestHeader("address", clientInfo.Address);
-                        }
-                        return cfg;
-                    }
-                )
-                {
-                    IsReconnectionEnabled = true,
-                    ReconnectTimeout = null,
-                    MessageEncoding = Encoding.UTF8,
-                    IsTextMessageConversionEnabled = true,
-                };
-            client.MessageReceived.Subscribe(msg =>
+            // 构建自定义请求头
+            var headers = new Dictionary<string, string>
             {
-                if (msg.MessageType == WebSocketMessageType.Text)
-                {
-                    try
-                    {
-                        _ = ProcessMessageFromClientAsync(
-                            msg.Text ?? throw new NullReferenceException("msg.Text"),
-                            clientInfo
-                        );
-                    }
-                    catch (Exception e)
-                    {
-                        Error("处理消息时出现异常：", e);
-                    }
-                }
-                else
-                {
-                    Info("收到非文本消息！");
-                }
-            });
-            client.DisconnectionHappened.Subscribe(info =>
-                Info("Disconnection Happened " + info.Type)
+                ["client-type"] = "IM",
+                ["client-subtype"] = "QQ",
+                ["client-name"] = BasePacket.DefaultInformation?.Name ?? "Unknown",
+                ["client-version"] = BasePacket.DefaultInformation?.Version ?? "Unknown",
+                ["address"] = clientInfo.Address,
+            };
+
+            // 创建 ILogger
+            ILogger logger = Service.Logger;
+
+            var client = new ServerlessMQ(
+                url: clientInfo.Address,
+                token: clientInfo.Token,
+                logger: logger,
+                headers: headers
             );
-            client.ReconnectionHappened.Subscribe(info =>
-                Info("Reconnection Happened " + info.Type)
-            );
-            await client.Start();
+
+            // 订阅连接事件
+            client.OnConnected += info =>
+            {
+                var status = info.IsReconnect ? "重新连接" : "连接";
+                Info($"[{clientInfo.Address}] {status}成功 - {info.Timestamp:HH:mm:ss}");
+            };
+
+            client.OnClosed += info =>
+            {
+                Info(
+                    $"[{clientInfo.Address}] 连接断开 - 类型: {info.Type}, 原因: {info.Reason ?? "未知"}"
+                );
+            };
+
+            // 订阅消息接收事件
+            client.OnPacket += async data =>
+            {
+                try
+                {
+                    var messageRaw = data.ToString();
+                    await ProcessMessageFromClientAsync(messageRaw, clientInfo);
+                }
+                catch (Exception e)
+                {
+                    Error($"[{clientInfo.Address}] 处理消息时出现异常：", e);
+                }
+            };
+
             _clients.Add(clientInfo, client);
         }
 
@@ -332,16 +312,10 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     {
         switch (input.ToLower())
         {
-            case "开"
-            or "开启"
-            or "on"
-            or "true":
+            case "开" or "开启" or "on" or "true":
                 result = true;
                 return true;
-            case "关"
-            or "关闭"
-            or "off"
-            or "false":
+            case "关" or "关闭" or "off" or "false":
                 result = false;
                 return true;
             default:
@@ -409,7 +383,8 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 Config
                     .Clients.SelectMany(x => x.Groups)
                     .FirstOrDefault(x => x is { Enabled: true })
-                    ?.ForwardFromClientDisabledEvent.Contains(type) ?? true;
+                    ?.ForwardFromClientDisabledEvent.Contains(type)
+                ?? true;
             e.Reply("状态 可选：true、false\n" + $"当前{name}状态：{!currentStatusDisabled}");
             return;
         }
@@ -432,5 +407,20 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         e.Reply($"未找到群 {e.GroupId} 的配置");
     }
 
-    protected override void Unload() { }
+    protected override void Unload()
+    {
+        // 释放所有 WebSocket 连接
+        foreach (var (_, client) in _clients)
+        {
+            try
+            {
+                client.Dispose();
+            }
+            catch (Exception e)
+            {
+                Warn("释放 WebSocket 连接时出现异常：", e);
+            }
+        }
+        _clients.Clear();
+    }
 }

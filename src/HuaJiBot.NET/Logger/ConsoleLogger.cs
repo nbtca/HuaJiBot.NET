@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Microsoft.Extensions.Logging;
 
 namespace HuaJiBot.NET.Logger;
 
@@ -33,5 +34,60 @@ public class ConsoleLogger : ILogger
                 + $"{detailStr}"
                 + $"{Environment.NewLine}---"
         );
+    }
+
+    // Implementation of Microsoft.Extensions.Logging.ILogger interface
+    public void Log<TState>(
+        LogLevel logLevel,
+        EventId eventId,
+        TState state,
+        Exception? exception,
+        Func<TState, Exception?, string> formatter
+    )
+    {
+        if (!IsEnabled(logLevel))
+            return;
+
+        var message = formatter(state, exception);
+        var timestamp = Utils.NetworkTime.Now;
+        var logLevelStr = logLevel switch
+        {
+            LogLevel.Trace => "TRACE",
+            LogLevel.Debug => "DEBUG",
+            LogLevel.Information => "INFO",
+            LogLevel.Warning => "WARN",
+            LogLevel.Error => "ERROR",
+            LogLevel.Critical => "CRITICAL",
+            LogLevel.None => "NONE",
+            _ => logLevel.ToString().ToUpper()
+        };
+
+        if (exception != null)
+        {
+            Console.WriteLine(
+                $"[{timestamp:yyyy-MM-dd HH:mm:ss}] [{logLevelStr}] {message}"
+                    + $"{Environment.NewLine}---{Environment.NewLine}"
+                    + $"{exception}"
+                    + $"{Environment.NewLine}---"
+            );
+        }
+        else
+        {
+            Console.WriteLine($"[{timestamp:yyyy-MM-dd HH:mm:ss}] [{logLevelStr}] {message}");
+        }
+    }
+
+    public bool IsEnabled(LogLevel logLevel)
+    {
+        // Enable all log levels by default
+        return logLevel != LogLevel.None;
+    }
+
+    public IDisposable? BeginScope<TState>(TState state)
+        where TState : notnull
+    {
+        // Console logger doesn't support scopes by default
+        // Return null to indicate no scope is created
+        return null;
     }
 }

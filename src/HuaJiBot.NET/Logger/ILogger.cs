@@ -1,6 +1,8 @@
-﻿namespace HuaJiBot.NET.Logger;
+﻿using Microsoft.Extensions.Logging;
 
-public interface ILogger
+namespace HuaJiBot.NET.Logger;
+
+public interface ILogger : Microsoft.Extensions.Logging.ILogger
 {
     /// <summary>
     /// 日志
