@@ -28,6 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\HuaJiBot.NET.Adapter.Telegram\HuaJiBot.NET.Adapter.Telegram.csproj" />
     <ProjectReference Include="..\HuaJiBot.NET.Plugin.AIChat\HuaJiBot.NET.Plugin.AIChat.csproj" />
     <ProjectReference Include="..\HuaJiBot.NET.Plugin.Calendar\HuaJiBot.NET.Plugin.Calendar.csproj" />
     <ProjectReference Include="..\HuaJiBot.NET.Plugin.GitHubBridge\HuaJiBot.NET.Plugin.GitHubBridge.csproj" />
