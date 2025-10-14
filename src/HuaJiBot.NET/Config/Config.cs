@@ -10,7 +10,8 @@ public partial class Config
     public enum ServiceType
     {
         OneBot,
-        Satori
+        Satori,
+        Telegram,
     }
 
     public ServiceType Service = ServiceType.OneBot;
@@ -30,6 +31,14 @@ public partial class Config
     }
 
     public SatoriConnectionInfo Satori = new();
+
+    public class TelegramConnectionInfo
+    {
+        public string Token = "";
+    }
+
+    public TelegramConnectionInfo Telegram = new();
+
     public string[] ExtraPlugins { get; set; } = [];
 
     public Dictionary<string, JObject> Plugins = new();

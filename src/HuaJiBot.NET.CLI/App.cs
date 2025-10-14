@@ -1,6 +1,7 @@
 ﻿using HuaJiBot.NET;
 using HuaJiBot.NET.Adapter.OneBot;
 using HuaJiBot.NET.Adapter.Satori;
+using HuaJiBot.NET.Adapter.Telegram;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Config;
 using HuaJiBot.NET.Logger;
@@ -32,12 +33,18 @@ BotServiceBase CreateSatoriService(Config config)
     return api;
 }
 
+BotServiceBase CreateTelegramService(Config config)
+{
+    var api = new TelegramAdapter(config.Telegram.Token) { Logger = logger };
+    return api;
+}
 BotServiceBase CreateService(Config config)
 {
     return config.Service switch
     {
         Config.ServiceType.OneBot => CreateOneBotService(config),
         Config.ServiceType.Satori => CreateSatoriService(config),
+        Config.ServiceType.Telegram => CreateTelegramService(config),
         _ => throw new NotSupportedException("不支持的协议类型"),
     };
 }

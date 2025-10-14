@@ -6,30 +6,23 @@ using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.ReplyMarkups;
 
 namespace HuaJiBot.NET.Adapter.Telegram;
 
-public class TelegramAdapter : BotServiceBase
+public class TelegramAdapter(string botToken) : BotServiceBase
 {
-    private readonly TelegramBotClient _botClient;
-    private readonly string _botToken;
+    private readonly TelegramBotClient _botClient = new(botToken);
+    private readonly string _botToken = botToken;
     private CancellationTokenSource _cancellationTokenSource = new();
 
     public override required ILogger Logger { get; init; }
 
     private User? _botUser;
 
-    public TelegramAdapter(string botToken)
-    {
-        _botToken = botToken;
-        _botClient = new TelegramBotClient(botToken);
-    }
-
     public override void Reconnect()
     {
         _cancellationTokenSource.Cancel();
-        _cancellationTokenSource = new CancellationTokenSource();
+        _cancellationTokenSource = new();
         _ = Task.Run(SetupServiceAsync);
     }
 
@@ -41,7 +34,7 @@ public class TelegramAdapter : BotServiceBase
             Log($"Telegram bot started: @{_botUser.Username} ({_botUser.FirstName})");
 
             Events.CallOnBotLogin(
-                new BotLoginEventArgs
+                new()
                 {
                     Service = this,
                     Accounts = [_botUser.Id.ToString()],
@@ -140,7 +133,7 @@ public class TelegramAdapter : BotServiceBase
                     try
                     {
                         await _botClient.DeleteMessage(
-                            new ChatId(targetGroup),
+                            new(targetGroup),
                             messageId,
                             _cancellationTokenSource.Token
                         );
@@ -167,7 +160,7 @@ public class TelegramAdapter : BotServiceBase
                 try
                 {
                     await _botClient.SetChatTitle(
-                        new ChatId(targetGroup),
+                        new(targetGroup),
                         groupName,
                         _cancellationTokenSource.Token
                     );
@@ -193,7 +186,7 @@ public class TelegramAdapter : BotServiceBase
                 try
                 {
                     var member = await _botClient.GetChatMember(
-                        new ChatId(targetGroup),
+                        new(targetGroup),
                         long.Parse(userId),
                         _cancellationTokenSource.Token
                     );
@@ -304,7 +297,7 @@ public class TelegramAdapter : BotServiceBase
                         try
                         {
                             var chat = await _botClient.GetChat(
-                                new ChatId(chatId),
+                                new(chatId),
                                 _cancellationTokenSource.Token
                             );
                             return chat.Title ?? chat.FirstName ?? chatId;
