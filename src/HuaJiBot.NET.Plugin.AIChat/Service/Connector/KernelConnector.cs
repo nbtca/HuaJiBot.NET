@@ -1,5 +1,4 @@
-﻿using System;
-using HuaJiBot.NET.Bot;
+﻿using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Logger;
 using HuaJiBot.NET.Plugin.AIChat.Config;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Services;
 
 namespace HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 

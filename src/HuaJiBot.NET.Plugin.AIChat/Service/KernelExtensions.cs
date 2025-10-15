@@ -1,5 +1,4 @@
 ﻿using HuaJiBot.NET.Agent;
-using HuaJiBot.NET.Bot;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Plugins.Core;
 

@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-
-namespace HuaJiBot.NET.Logger;
+﻿namespace HuaJiBot.NET.Logger;
 
 public interface ILogger : Microsoft.Extensions.Logging.ILogger
 {

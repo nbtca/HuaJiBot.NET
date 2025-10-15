@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 using Ical.Net;
 using Ical.Net.CalendarComponents;
 using Ical.Net.DataTypes;
-using Ical.Net.Evaluation;
 
 namespace HuaJiBot.NET.Plugin.Calendar;
 

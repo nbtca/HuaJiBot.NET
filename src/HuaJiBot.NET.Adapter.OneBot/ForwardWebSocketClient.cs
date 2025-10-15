@@ -1,6 +1,4 @@
-﻿using System.Net.WebSockets;
-using System.Text;
-using HuaJiBot.NET.Websocket;
+﻿using HuaJiBot.NET.Websocket;
 using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.OneBot;

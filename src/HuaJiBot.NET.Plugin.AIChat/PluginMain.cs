@@ -1,11 +1,9 @@
 ﻿using HuaJiBot.NET.DataBase;
 using HuaJiBot.NET.Plugin.AIChat.Config;
-using HuaJiBot.NET.Plugin.AIChat.Service;
 using HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Newtonsoft.Json;
-using ChatMessage = OpenAI.Chat.ChatMessage;
 
 namespace HuaJiBot.NET.Plugin.AIChat;
 

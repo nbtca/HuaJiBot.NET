@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace HuaJiBot.NET.Plugin;
@@ -16,28 +14,34 @@ public static class PluginConfigAccessor
         // For demonstration, we'll populate this at runtime or via initialization
         // [typeof(SomePluginType)] = plugin => ((SomePluginType)plugin).Config,
     };
-    
+
     /// <summary>
     /// Fast plugin config access that replaces the reflection-based TryGetPluginConfig
     /// </summary>
-    public static bool TryGetPluginConfigFast(object plugin, [NotNullWhen(true)] out ConfigBase? config)
+    public static bool TryGetPluginConfigFast(
+        object plugin,
+        [NotNullWhen(true)] out ConfigBase? config
+    )
     {
         var pluginType = plugin.GetType();
-        
+
         if (_configAccessors.TryGetValue(pluginType, out var accessor))
         {
             config = accessor(plugin);
             return config != null;
         }
-        
+
         // Fallback to reflection for unknown plugins
         return TryGetPluginConfigReflection(plugin, out config);
     }
-    
+
     /// <summary>
     /// Original reflection-based implementation as fallback
     /// </summary>
-    private static bool TryGetPluginConfigReflection(object plugin, [NotNullWhen(true)] out ConfigBase? config)
+    private static bool TryGetPluginConfigReflection(
+        object plugin,
+        [NotNullWhen(true)] out ConfigBase? config
+    )
     {
         foreach (var interfaceType in plugin.GetType().GetInterfaces())
         {
@@ -56,7 +60,7 @@ public static class PluginConfigAccessor
         config = null;
         return false;
     }
-    
+
     /// <summary>
     /// Register a new plugin type (would be called by generated code)
     /// </summary>

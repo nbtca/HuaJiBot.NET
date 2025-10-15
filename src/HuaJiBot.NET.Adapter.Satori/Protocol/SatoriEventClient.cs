@@ -1,10 +1,6 @@
-﻿using System.Net.WebSockets;
-using System.Reactive.Linq;
-using System.Text;
-using HuaJiBot.NET.Adapter.Satori.Protocol.Elements;
+﻿using HuaJiBot.NET.Adapter.Satori.Protocol.Elements;
 using HuaJiBot.NET.Adapter.Satori.Protocol.Events;
 using HuaJiBot.NET.Commands;
-using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Websocket;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
