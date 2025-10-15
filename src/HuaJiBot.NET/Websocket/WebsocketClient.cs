@@ -1,23 +1,20 @@
-using System.Net.Sockets;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Security.Authentication;
+using System.Net.WebSockets;
 using System.Text;
-using IWebsocketClientLite;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
-using WebsocketClientLite;
+using WatsonWebsocket;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace HuaJiBot.NET.Websocket;
 
 public class WebsocketClient : IWebsocketClient
 {
-    private readonly ClientWebSocketRx _client;
+    private readonly WatsonWsClient _client;
     private readonly ILogger? _logger;
-    private readonly CancellationTokenSource _outerCancellationTokenSource = new();
-    private readonly CompositeDisposable _disposables = new();
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
     private bool _hasConnectedBefore;
+    private readonly Uri _url;
+    private readonly Dictionary<string, string> _headers;
 
     public WebsocketClient(
         string url,
@@ -35,116 +32,107 @@ public class WebsocketClient : IWebsocketClient
     )
     {
         _logger = logger;
-
-        headers ??= new();
+        _url = url;
+        _headers = headers ?? new Dictionary<string, string>();
 
         if (!string.IsNullOrEmpty(token))
         {
-            headers = headers.Append(new("Authorization", $"Bearer {token}")).ToDictionary();
+            _headers["Authorization"] = $"Bearer {token}";
         }
 
-        _client = new() { Headers = headers, TlsProtocolType = SslProtocols.Tls13 };
-        IDisposable isConnectedDisposable = _client.IsConnectedObservable.Subscribe(isConnected =>
+        // Create Watson WebSocket client with Uri
+        _client = new WatsonWsClient(url);
+
+        // Configure client options with custom headers
+        _client.ConfigureOptions(options =>
         {
-            _logger?.LogDebug($"Is connected: {isConnected}");
-            if (isConnected)
+            // Set custom headers on the underlying ClientWebSocket
+            foreach (var header in _headers)
             {
-                var connectionInfo = new ConnectionInfo
+                try
                 {
-                    IsReconnect = _hasConnectedBefore,
-                    Timestamp = DateTimeOffset.Now,
-                };
-                _hasConnectedBefore = true;
-                OnConnected?.Invoke(connectionInfo);
-            }
-            else
-            {
-                var disconnectionInfo = new DisconnectionInfo
+                    options.SetRequestHeader(header.Key, header.Value);
+                }
+                catch (Exception ex)
                 {
-                    Type = DisconnectionType.Lost,
-                    Timestamp = DateTimeOffset.Now,
-                    Reason = "Connection lost or closed",
-                };
-                OnClosed?.Invoke(disconnectionInfo);
+                    _logger?.LogWarning(ex, $"Failed to set header {header.Key}");
+                }
             }
         });
 
-        _disposables.Add(isConnectedDisposable);
+        // Subscribe to events
+        _client.ServerConnected += OnServerConnected;
+        _client.ServerDisconnected += OnServerDisconnected;
+        _client.MessageReceived += OnMessageReceived;
 
-        Func<IObservable<(IDataframe dataframe, ConnectionStatus state)>> connect = () =>
-            _client.WebsocketConnectWithStatusObservable(
-                uri: url,
-                hasClientPing: true,
-                clientPingInterval: TimeSpan.FromSeconds(10),
-                clientPingMessage: "ping message",
-                cancellationToken: _outerCancellationTokenSource.Token
-            )!;
+        // Start connection
+        _ = StartConnectionAsync();
+    }
 
-        IDisposable disposableConnectionStatus = Observable
-            .Defer(connect)
-            .Retry()
-            .Repeat()
-            .DelaySubscription(TimeSpan.FromSeconds(10))
-            .Do(async tuple =>
+    private async Task StartConnectionAsync()
+    {
+        try
+        {
+            _logger?.LogInformation($"WebSocket connecting to {_url}");
+            
+            await Task.Run(() => _client.Start(), _cancellationTokenSource.Token);
+        }
+        catch (Exception e)
+        {
+            _logger?.LogError(e, "Error starting WebSocket connection");
+            OnClosed?.Invoke(new DisconnectionInfo
             {
-                _logger?.LogDebug($"Connection status: {tuple.state}");
+                Type = DisconnectionType.Error,
+                Reason = e.Message,
+                Exception = e
+            });
+        }
+    }
 
-                if (
-                    tuple.state == ConnectionStatus.DataframeReceived
-                    && tuple.dataframe?.Message is { } message
-                )
-                {
-                    _logger?.LogDebug($"Received message: {message}");
-                    try
-                    {
-                        await ProcessMessageAsync(message);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger?.LogError(e, "Error processing message");
-                    }
-                }
-            })
-            .Subscribe(
-                _ => { },
-                ex =>
-                {
-                    _logger?.LogError(ex, "Connection status error");
+    private void OnServerConnected(object? sender, EventArgs e)
+    {
+        _logger?.LogInformation("WebSocket connected");
+        
+        var connectionInfo = new ConnectionInfo
+        {
+            IsReconnect = _hasConnectedBefore,
+            Timestamp = DateTimeOffset.Now
+        };
 
-                    // 根据异常类型推断断开原因
-                    var disconnectionInfo = new DisconnectionInfo
-                    {
-                        Timestamp = DateTimeOffset.Now,
-                        Exception = ex,
-                    };
+        _hasConnectedBefore = true;
+        OnConnected?.Invoke(connectionInfo);
+    }
 
-                    if (ex is OperationCanceledException)
-                    {
-                        disconnectionInfo.Type = DisconnectionType.ByUser;
-                        disconnectionInfo.Reason = "Operation cancelled by user";
-                    }
-                    else if (ex is SocketException socketEx)
-                    {
-                        disconnectionInfo.Type = DisconnectionType.Error;
-                        disconnectionInfo.Reason = $"Socket error: {socketEx.Message}";
-                    }
-                    else if (ex is TimeoutException)
-                    {
-                        disconnectionInfo.Type = DisconnectionType.Timeout;
-                        disconnectionInfo.Reason = "Connection timeout";
-                    }
-                    else
-                    {
-                        disconnectionInfo.Type = DisconnectionType.Error;
-                        disconnectionInfo.Reason = $"Connection error: {ex.Message}";
-                    }
+    private void OnServerDisconnected(object? sender, EventArgs e)
+    {
+        _logger?.LogInformation("WebSocket disconnected");
+        
+        OnClosed?.Invoke(new DisconnectionInfo
+        {
+            Type = DisconnectionType.ByServer,
+            Reason = "Server disconnected",
+            Timestamp = DateTimeOffset.Now
+        });
+    }
 
-                    OnClosed?.Invoke(disconnectionInfo);
-                },
-                () => _logger?.LogDebug("Connection status completed")
-            );
+    private void OnMessageReceived(object? sender, MessageReceivedEventArgs e)
+    {
+        // Fire and forget - don't block the event handler
+        _ = ProcessMessageInternalAsync(e);
+    }
 
-        _disposables.Add(disposableConnectionStatus);
+    private async Task ProcessMessageInternalAsync(MessageReceivedEventArgs e)
+    {
+        try
+        {
+            var msg = Encoding.UTF8.GetString(e.Data.ToArray());
+            _logger?.LogDebug($"Received message: {msg}");
+            await ProcessMessageAsync(msg);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error processing received message");
+        }
     }
 
     private async ValueTask ProcessMessageAsync(string msg)
@@ -159,10 +147,21 @@ public class WebsocketClient : IWebsocketClient
 
     public void Send(string msg)
     {
+        // Fire and forget - don't block
+        _ = SendAsync(msg);
+    }
+
+    private async Task SendAsync(string msg)
+    {
         try
         {
-            var bytes = Encoding.UTF8.GetBytes(msg);
-            _ = _client.Sender?.SendBinary(bytes, OpcodeKind.Text);
+            if (!_client.Connected)
+            {
+                _logger?.LogWarning("Cannot send message: WebSocket is not connected");
+                return;
+            }
+
+            await _client.SendAsync(msg, WebSocketMessageType.Text);
             _logger?.LogDebug($"Sent message: {msg}");
         }
         catch (Exception e)
@@ -182,9 +181,15 @@ public class WebsocketClient : IWebsocketClient
 
         try
         {
-            _outerCancellationTokenSource.Cancel();
-            _disposables.Dispose();
-            _outerCancellationTokenSource.Dispose();
+            _cancellationTokenSource.Cancel();
+            
+            if (_client.Connected)
+            {
+                _client.Stop();
+            }
+
+            _client.Dispose();
+            _cancellationTokenSource.Dispose();
         }
         catch (Exception e)
         {
