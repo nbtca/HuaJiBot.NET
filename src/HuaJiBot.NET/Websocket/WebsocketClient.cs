@@ -44,33 +44,31 @@ public class WebsocketClient : IWebsocketClient
         }
 
         _client = new() { Headers = headers, TlsProtocolType = SslProtocols.Tls13 };
-
-        IDisposable isConnectedDisposable = _client
-            .IsConnectedObservable.Do(isConnected =>
+        IDisposable isConnectedDisposable = _client.IsConnectedObservable.Subscribe(isConnected =>
+        {
+            _logger?.LogDebug($"Is connected: {isConnected}");
+            if (isConnected)
             {
-                _logger?.LogDebug($"Is connected: {isConnected}");
-                if (isConnected)
+                var connectionInfo = new ConnectionInfo
                 {
-                    var connectionInfo = new ConnectionInfo
-                    {
-                        IsReconnect = _hasConnectedBefore,
-                        Timestamp = DateTimeOffset.Now,
-                    };
-                    _hasConnectedBefore = true;
-                    OnConnected?.Invoke(connectionInfo);
-                }
-                else
+                    IsReconnect = _hasConnectedBefore,
+                    Timestamp = DateTimeOffset.Now,
+                };
+                _hasConnectedBefore = true;
+                OnConnected?.Invoke(connectionInfo);
+            }
+            else
+            {
+                var disconnectionInfo = new DisconnectionInfo
                 {
-                    var disconnectionInfo = new DisconnectionInfo
-                    {
-                        Type = DisconnectionType.Lost,
-                        Timestamp = DateTimeOffset.Now,
-                        Reason = "Connection lost or closed",
-                    };
-                    OnClosed?.Invoke(disconnectionInfo);
-                }
-            })
-            .Subscribe();
+                    Type = DisconnectionType.Lost,
+                    Timestamp = DateTimeOffset.Now,
+                    Reason = "Connection lost or closed",
+                };
+                OnClosed?.Invoke(disconnectionInfo);
+            }
+        });
+
         _disposables.Add(isConnectedDisposable);
 
         Func<IObservable<(IDataframe dataframe, ConnectionStatus state)>> connect = () =>
