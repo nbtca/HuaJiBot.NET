@@ -340,7 +340,7 @@ internal class OneBotMessageHandler(OneBotApi api, OneBotAdapter service)
         }
         catch (Exception e)
         {
-            service.LogError(nameof(ProcessMessageAsync) + " " + data, e);
+            service.LogError(nameof(ProcessMessageAsync) + " " + json, e);
         }
 #endif
     }
