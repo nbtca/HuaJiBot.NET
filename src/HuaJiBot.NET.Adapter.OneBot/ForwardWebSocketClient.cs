@@ -10,10 +10,7 @@ internal class ForwardWebSocketClient
     private readonly WebsocketClient _client;
     internal readonly OneBotApi Api;
 
-    public ValueTask ConnectAsync()
-    {
-        return ValueTask.CompletedTask;
-    }
+    public ValueTask ConnectAsync() => _client.ConnectAsync();
 
     public ForwardWebSocketClient(OneBotAdapter service, string wsUrl, string? token)
     {

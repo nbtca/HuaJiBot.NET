@@ -22,7 +22,7 @@ internal class SatoriEventClient
     private readonly Timer _pingTimer;
     private readonly SatoriAdapter _service;
 
-    public Task ConnectAsync() => Task.CompletedTask;
+    public async Task ConnectAsync() => await _client.ConnectAsync();
 
     public SatoriEventClient(SatoriAdapter service, Uri wsUrl, string token)
     {

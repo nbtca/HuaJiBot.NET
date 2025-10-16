@@ -1,9 +1,8 @@
 using System.Net.WebSockets;
 using System.Text;
-using Microsoft.Extensions.Logging;
+using HuaJiBot.NET.Logger;
 using Newtonsoft.Json.Linq;
 using WatsonWebsocket;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace HuaJiBot.NET.Websocket;
 
@@ -16,9 +15,7 @@ public class WebsocketClient : IWebsocketClient
     private readonly Uri _url;
     private readonly Dictionary<string, string> _headers;
     private readonly SemaphoreSlim _reconnectLock = new(1, 1);
-    private bool _isReconnecting;
-    private int _reconnectAttempts;
-    private bool _shouldReconnect = true; // 控制是否应该重连
+    private int _connectAttempts;
     private Task? _healthCheckTask; // 健康检查任务
     private const int MaxReconnectDelay = 30000; // 最大重连延迟 30 秒
     private const int InitialReconnectDelay = 1000; // 初始重连延迟 1 秒
@@ -63,7 +60,7 @@ public class WebsocketClient : IWebsocketClient
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogWarning(ex, $"Failed to set header {header.Key}");
+                    _logger?.LogError(ex, $"Failed to set header {header.Key}");
                 }
             }
         });
@@ -84,12 +81,12 @@ public class WebsocketClient : IWebsocketClient
     {
         try
         {
-            _logger?.LogInformation($"WebSocket connecting to {_url}");
+            _logger?.Log($"WebSocket connecting to {_url}");
 
             await Task.Run(() => _client.Start(), _cancellationTokenSource.Token);
 
             // 重置重连计数
-            _reconnectAttempts = 0;
+            _connectAttempts = 0;
         }
         catch (Exception e)
         {
@@ -102,15 +99,15 @@ public class WebsocketClient : IWebsocketClient
                     Exception = e,
                 }
             );
-
-            // 启动自动重连
-            _ = TryReconnectAsync();
         }
     }
 
     private void OnServerConnected(object? sender, EventArgs e)
     {
-        _logger?.LogInformation("WebSocket connected");
+        _logger?.Log("WebSocket connected");
+
+        // 重置重连计数
+        _connectAttempts = 0;
 
         var connectionInfo = new ConnectionInfo
         {
@@ -124,7 +121,7 @@ public class WebsocketClient : IWebsocketClient
 
     private void OnServerDisconnected(object? sender, EventArgs e)
     {
-        _logger?.LogInformation("WebSocket disconnected");
+        _logger?.Log("WebSocket disconnected");
 
         OnClosed?.Invoke(
             new DisconnectionInfo
@@ -134,107 +131,31 @@ public class WebsocketClient : IWebsocketClient
                 Timestamp = DateTimeOffset.Now,
             }
         );
-
-        // 只要 _shouldReconnect 为 true，就启动自动重连
-        if (_shouldReconnect && !_disposed)
-        {
-            _ = TryReconnectAsync();
-        }
     }
 
-    private async Task TryReconnectAsync()
+    public async ValueTask ConnectAsync()
     {
-        if (_disposed || !_shouldReconnect)
-            return;
-
+        _logger?.LogDebug(nameof(ConnectAsync) + _url);
         // 使用信号量防止并发重连
-        if (!await _reconnectLock.WaitAsync(0))
-            return;
-
-        try
+        if (await _reconnectLock.WaitAsync(0))
         {
-            if (_isReconnecting)
-                return;
-
-            _isReconnecting = true;
-
-            while (!_disposed && _shouldReconnect)
+            try
             {
-                _reconnectAttempts++;
-
-                // 计算延迟时间（简化的指数退避，1秒到30秒）
-                var delay = Math.Min(
-                    InitialReconnectDelay << Math.Min(_reconnectAttempts - 1, 5),
-                    MaxReconnectDelay
-                );
-
-                _logger?.LogInformation(
-                    $"Attempting to reconnect (attempt {_reconnectAttempts}) in {delay}ms..."
-                );
-
-                try
+                _connectAttempts++;
+                _logger?.Log("Reconnected successfully");
+                if (await _client.StartWithTimeoutAsync(10))
                 {
-                    await Task.Delay(delay, _cancellationTokenSource.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    // 如果被取消但仍需要重连，继续尝试
-                    if (_shouldReconnect && !_disposed)
-                    {
-                        _logger?.LogInformation(
-                            "Reconnect delay cancelled, but will continue trying..."
-                        );
-                        await Task.Delay(delay); // 使用不带取消令牌的版本
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                try
-                {
-                    if (_client.Connected)
-                    {
-                        _logger?.LogInformation("Already connected, stopping reconnect attempts");
-                        break;
-                    }
-
-                    _logger?.LogInformation($"Reconnecting to {_url}...");
-
-                    // 尝试停止现有连接（如果有）
-                    if (_client.Connected)
-                    {
-                        try
-                        {
-                            _client.Stop();
-                        }
-                        catch (Exception stopEx)
-                        {
-                            _logger?.LogDebug(stopEx, "Error stopping client before reconnect");
-                        }
-                    }
-
-                    await Task.Run(() => _client.Start());
-
-                    _logger?.LogInformation("Reconnected successfully");
-                    _reconnectAttempts = 0;
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogWarning(ex, $"Reconnect attempt {_reconnectAttempts} failed");
+                    _connectAttempts = 0;
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error during reconnection process");
-        }
-        finally
-        {
-            _isReconnecting = false;
-            _reconnectLock.Release();
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Reconnect attempt {_connectAttempts} failed");
+            }
+            finally
+            {
+                _reconnectLock.Release();
+            }
         }
     }
 
@@ -243,36 +164,69 @@ public class WebsocketClient : IWebsocketClient
     /// </summary>
     private async Task RunHealthCheckAsync()
     {
-        while (!_disposed && _shouldReconnect)
+        while (!_disposed)
         {
             try
             {
-                await Task.Delay(HealthCheckInterval, _cancellationTokenSource.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                // 如果被取消但仍需要运行健康检查，继续
-                if (_shouldReconnect && !_disposed)
+                // 检查连接状态
+                if (!_client.Connected)
                 {
-                    await Task.Delay(HealthCheckInterval);
+                    // 计算延迟时间（简化的指数退避，1秒到30秒）
+                    var delay = Math.Min(
+                        InitialReconnectDelay << Math.Min(_connectAttempts - 1, 5),
+                        MaxReconnectDelay
+                    );
+
+                    _logger?.Log(
+                        $"Attempting to reconnect (attempt {_connectAttempts}) in {delay}ms..."
+                    );
+                    try
+                    {
+                        await Task.Delay(delay, _cancellationTokenSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (_disposed)
+                            break;
+                    }
+                    if (_disposed)
+                        break;
+                    await ConnectAsync();
                 }
                 else
                 {
-                    break;
-                }
-            }
+                    // 连接正常，重置重连计数
+                    if (_connectAttempts > 0)
+                    {
+                        _connectAttempts = 0;
+                    }
 
-            try
-            {
-                // 检查连接状态
-                if (!_client.Connected && !_isReconnecting)
-                {
-                    _ = TryReconnectAsync();
+                    // 等待下一次健康检查
+                    try
+                    {
+                        await Task.Delay(HealthCheckInterval, _cancellationTokenSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (_disposed)
+                            break;
+                    }
                 }
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error during health check");
+
+                // 发生错误后等待一段时间再继续
+                try
+                {
+                    await Task.Delay(HealthCheckInterval, _cancellationTokenSource.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (_disposed)
+                        break;
+                }
             }
         }
 
@@ -321,7 +275,7 @@ public class WebsocketClient : IWebsocketClient
         {
             if (!_client.Connected)
             {
-                _logger?.LogWarning("Cannot send message: WebSocket is not connected");
+                _logger?.Warn("Cannot send message: WebSocket is not connected");
                 return;
             }
 
@@ -342,7 +296,6 @@ public class WebsocketClient : IWebsocketClient
             return;
 
         _disposed = true;
-        _shouldReconnect = false; // 停止重连
 
         try
         {
@@ -362,7 +315,7 @@ public class WebsocketClient : IWebsocketClient
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogDebug(ex, "Error waiting for health check task to complete");
+                    _logger?.LogError(ex, "Error waiting for health check task to complete");
                 }
             }
 
