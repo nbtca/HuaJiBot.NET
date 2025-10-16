@@ -31,8 +31,12 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         try
         {
             _botUser = await _botClient.GetMe(_cancellationTokenSource.Token);
-            Log($"Telegram bot started: @{_botUser.Username} ({_botUser.FirstName})");
+            await _botClient.DeleteWebhook(); // you may comment this line if you find it unnecessary
+            await _botClient.DropPendingUpdates(); // you may comment this line if you find it unnecessary
 
+            Log(
+                $"Telegram bot started: @{_botUser.Username} ({_botUser.FirstName}) {_botUser.CanReadAllGroupMessages}"
+            );
             Events.CallOnBotLogin(
                 new()
                 {
@@ -42,13 +46,21 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                     ClientVersion = _botUser.Username,
                 }
             );
+            // Subscribe to events
+            _botClient.OnMessage += HandleMessageAsync;
+            _botClient.OnUpdate += HandleUpdateAsync;
+            _botClient.OnError += (exception, source) =>
+            {
+                var errorMessage = exception switch
+                {
+                    ApiRequestException apiRequestException =>
+                        $"Telegram API Error:\n[{apiRequestException.ErrorCode}] {apiRequestException.Message}",
+                    _ => exception.ToString(),
+                };
 
-            // Start receiving updates
-            _botClient.StartReceiving(
-                updateHandler: HandleUpdateAsync,
-                errorHandler: HandleErrorAsync,
-                cancellationToken: _cancellationTokenSource.Token
-            );
+                LogError($"Telegram error from source {source}", errorMessage);
+                return Task.CompletedTask;
+            };
 
             Log("Telegram bot is receiving messages...");
         }
@@ -72,44 +84,96 @@ public class TelegramAdapter(string botToken) : BotServiceBase
 
         try
         {
+            // Group messages by type to combine text-based messages
+            var textBuilder = new System.Text.StringBuilder();
+            string? imagePathToSend = null;
+            int? replyToMessageId = null;
+
             foreach (var message in messages)
             {
-                var sentMessage = message switch
+                switch (message)
                 {
-                    TextMessage { Text: var text } => await _botClient.SendMessage(
+                    case TextMessage { Text: var text }:
+                        if (textBuilder.Length > 0)
+                            textBuilder.Append(' ');
+                        // Escape HTML special characters
+                        textBuilder.Append(
+                            text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
+                        );
+                        break;
+
+                    case AtMessage { Target: var target }
+                        when long.TryParse(target, out var userId):
+                        if (textBuilder.Length > 0)
+                            textBuilder.Append(' ');
+                        textBuilder.Append($"<a href=\"tg://user?id={userId}\">@{target}</a>");
+                        break;
+
+                    case ReplyMessage { MessageId: var msgId }
+                        when int.TryParse(msgId, out var replyId):
+                        replyToMessageId = replyId;
+                        break;
+
+                    case ImageMessage { ImagePath: var path }:
+                        // If we have an image, we'll send it with the text as caption
+                        imagePathToSend = path;
+                        break;
+
+                    default:
+                        throw new NotSupportedException(
+                            $"Message type {message.GetType()} is not supported"
+                        );
+                }
+            }
+
+            // Send the combined message
+            Message? sentMessage = null;
+            var combinedText = textBuilder.ToString();
+
+            if (imagePathToSend != null)
+            {
+                // Send image with text as caption
+                if (!string.IsNullOrWhiteSpace(combinedText))
+                {
+                    sentMessage = await _botClient.SendPhoto(
                         chatId,
-                        text,
-                        parseMode: ParseMode.Html, // Support HTML formatting
+                        InputFile.FromStream(System.IO.File.OpenRead(imagePathToSend)),
+                        caption: combinedText,
+                        parseMode: ParseMode.Html,
+                        replyParameters: replyToMessageId.HasValue
+                            ? new ReplyParameters { MessageId = replyToMessageId.Value }
+                            : null,
                         cancellationToken: _cancellationTokenSource.Token
-                    ),
-
-                    ImageMessage { ImagePath: var path } => await _botClient.SendPhoto(
+                    );
+                }
+                else
+                {
+                    sentMessage = await _botClient.SendPhoto(
                         chatId,
-                        InputFile.FromStream(System.IO.File.OpenRead(path)),
+                        InputFile.FromStream(System.IO.File.OpenRead(imagePathToSend)),
+                        replyParameters: replyToMessageId.HasValue
+                            ? new ReplyParameters { MessageId = replyToMessageId.Value }
+                            : null,
                         cancellationToken: _cancellationTokenSource.Token
-                    ),
+                    );
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(combinedText))
+            {
+                // Send text message
+                sentMessage = await _botClient.SendMessage(
+                    chatId,
+                    combinedText,
+                    parseMode: ParseMode.Html,
+                    replyParameters: replyToMessageId.HasValue
+                        ? new ReplyParameters { MessageId = replyToMessageId.Value }
+                        : null,
+                    cancellationToken: _cancellationTokenSource.Token
+                );
+            }
 
-                    ReplyMessage { MessageId: var msgId }
-                        when int.TryParse(msgId, out var replyToId) => await _botClient.SendMessage(
-                        chatId,
-                        "",
-                        replyParameters: int.Parse(msgId),
-                        cancellationToken: _cancellationTokenSource.Token
-                    ),
-
-                    AtMessage { Target: var target } when long.TryParse(target, out var userId) =>
-                        await _botClient.SendMessage(
-                            chatId,
-                            $"<a href=\"tg://user?id={userId}\">@{target}</a>", // Proper Telegram mention
-                            parseMode: ParseMode.Html,
-                            cancellationToken: _cancellationTokenSource.Token
-                        ),
-
-                    _ => throw new NotSupportedException(
-                        $"Message type {message.GetType()} is not supported"
-                    ),
-                };
-
+            if (sentMessage != null)
+            {
                 messageIds.Add(sentMessage.MessageId.ToString());
             }
         }
@@ -240,17 +304,10 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         return path;
     }
 
-    private async Task HandleUpdateAsync(
-        ITelegramBotClient botClient,
-        Update update,
-        CancellationToken cancellationToken
-    )
+    private async Task HandleMessageAsync(Message message, UpdateType type)
     {
         try
         {
-            if (update.Message is not { } message)
-                return;
-
             var chatId = message.Chat.Id.ToString();
             var userId = message.From?.Id.ToString() ?? "";
             var userName = message.From?.FirstName ?? "";
@@ -267,7 +324,9 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                 ?? (message.Video != null ? "[Video]" : "")
                 ?? "[Unknown message type]";
 
-            LogDebug($"Received message from {userName} in chat {chatId}: {messageText}");
+            LogDebug(
+                $"Received message from {userName} in chat {chatId} (Type: {message.Chat.Type}): {messageText}"
+            );
 
             // Determine if this is a group or private chat
             if (message.Chat.Type == ChatType.Private)
@@ -290,6 +349,8 @@ public class TelegramAdapter(string botToken) : BotServiceBase
             else
             {
                 // Handle group message
+                LogDebug($"Handling group message in chat type: {message.Chat.Type}");
+
                 var eventArgs = new GroupMessageEventArgs(
                     () => new DefaultCommandReader([messageText]),
                     async () =>
@@ -318,29 +379,31 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                     TextMessageLazy = new(() => messageText),
                 };
 
+                LogDebug($"Calling OnGroupMessageReceived event for chat {chatId}");
                 Events.CallOnGroupMessageReceived(eventArgs);
+            }
+        }
+        catch (Exception ex)
+        {
+            LogError("Error handling Telegram message", ex);
+        }
+    }
+
+    private async Task HandleUpdateAsync(Update update)
+    {
+        try
+        {
+            LogDebug($"Received update: Type={update.Type}");
+
+            // Handle non-message updates here if needed
+            if (update.Message == null)
+            {
+                LogDebug($"Update has no message (Type: {update.Type})");
             }
         }
         catch (Exception ex)
         {
             LogError("Error handling Telegram update", ex);
         }
-    }
-
-    private Task HandleErrorAsync(
-        ITelegramBotClient botClient,
-        Exception exception,
-        CancellationToken cancellationToken
-    )
-    {
-        var errorMessage = exception switch
-        {
-            ApiRequestException apiRequestException =>
-                $"Telegram API Error:\n[{apiRequestException.ErrorCode}] {apiRequestException.Message}",
-            _ => exception.ToString(),
-        };
-
-        LogError("Telegram polling error", errorMessage);
-        return Task.CompletedTask;
     }
 }
