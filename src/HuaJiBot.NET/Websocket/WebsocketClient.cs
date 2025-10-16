@@ -72,17 +72,12 @@ public class WebsocketClient : IWebsocketClient
 
         // Start connection
         _ = StartConnectionAsync();
-
-        // Start health check
-        _healthCheckTask = RunHealthCheckAsync();
     }
 
     private async Task StartConnectionAsync()
     {
         try
         {
-            _logger?.Log($"WebSocket connecting to {_url}");
-
             await Task.Run(() => _client.Start(), _cancellationTokenSource.Token);
 
             // 重置重连计数
@@ -100,6 +95,9 @@ public class WebsocketClient : IWebsocketClient
                 }
             );
         }
+
+        // Start health check
+        _healthCheckTask = RunHealthCheckAsync();
     }
 
     private void OnServerConnected(object? sender, EventArgs e)

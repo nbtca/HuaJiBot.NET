@@ -1,4 +1,5 @@
-﻿using HuaJiBot.NET.Websocket;
+﻿using HuaJiBot.NET.Logger;
+using HuaJiBot.NET.Websocket;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -11,12 +12,13 @@ internal class WebsocketTest
         new(
             "wss://mq.nbtca.space/github",
             "nbtca_github_17126334-0997-4ba7-bdfc-4ab505064ea5",
-            LoggerFactory
-                .Create(builder =>
-                {
-                    builder.AddConsole().SetMinimumLevel(LogLevel.Debug); // 控制台输出最低级别
-                })
-                .CreateLogger(nameof(WebsocketTest))
+            //LoggerFactory
+            //    .Create(builder =>
+            //    {
+            //        builder.AddConsole().SetMinimumLevel(LogLevel.Debug); // 控制台输出最低级别
+            //    })
+            //    .CreateLogger(nameof(WebsocketTest))
+            new ConsoleLogger()
         )
     );
 

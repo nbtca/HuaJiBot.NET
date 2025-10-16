@@ -4,10 +4,10 @@ using System.Text;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
-using HuaJiBot.NET.Websocket;
+using HuaJiBot.NET.Logger;
 using HuaJiBot.NET.Plugin.MessageBridge.Types;
 using HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
-using Microsoft.Extensions.Logging;
+using HuaJiBot.NET.Websocket;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using ClientEventType = HuaJiBot.NET.Plugin.MessageBridge.PluginConfig.GroupConfig.ClientEventType;
@@ -144,12 +144,13 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     {
         var groupName = await e.GetGroupNameAsync();
         List<Action<string>> sendActions = [];
+        var groupId = e.GroupId.Split(":")[0];
         foreach (var clientInfo in Config.Clients)
         {
             if (
                 clientInfo
                     .Groups.Where(x => x is { Enabled: true, ForwardToClient: true })
-                    .Any(x => x.GroupId == e.GroupId)
+                    .Any(x => x.GroupId.Split(":")[0] == groupId)
             )
             {
                 if (_clients.TryGetValue(clientInfo, out var client))

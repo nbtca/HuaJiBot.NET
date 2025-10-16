@@ -12,7 +12,6 @@ namespace HuaJiBot.NET.Adapter.Telegram;
 public class TelegramAdapter(string botToken) : BotServiceBase
 {
     private readonly TelegramBotClient _botClient = new(botToken);
-    private readonly string _botToken = botToken;
     private CancellationTokenSource _cancellationTokenSource = new();
 
     public override required ILogger Logger { get; init; }
@@ -79,7 +78,9 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         params SendingMessageBase[] messages
     )
     {
-        var chatId = new ChatId(targetGroup);
+        var groupTopic = GroupTopic.Parse(targetGroup);
+        var chatId = new ChatId(groupTopic.GroupId);
+        var topicId = groupTopic.TopicId;
         var messageIds = new List<string>();
 
         try
@@ -143,6 +144,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                         replyParameters: replyToMessageId.HasValue
                             ? new ReplyParameters { MessageId = replyToMessageId.Value }
                             : null,
+                        messageThreadId: topicId,
                         cancellationToken: _cancellationTokenSource.Token
                     );
                 }
@@ -154,6 +156,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                         replyParameters: replyToMessageId.HasValue
                             ? new ReplyParameters { MessageId = replyToMessageId.Value }
                             : null,
+                        messageThreadId: topicId,
                         cancellationToken: _cancellationTokenSource.Token
                     );
                 }
@@ -168,6 +171,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                     replyParameters: replyToMessageId.HasValue
                         ? new ReplyParameters { MessageId = replyToMessageId.Value }
                         : null,
+                    messageThreadId: topicId,
                     cancellationToken: _cancellationTokenSource.Token
                 );
             }
@@ -308,24 +312,19 @@ public class TelegramAdapter(string botToken) : BotServiceBase
     {
         try
         {
-            var chatId = message.Chat.Id.ToString();
-            var userId = message.From?.Id.ToString() ?? "";
-            var userName = message.From?.FirstName ?? "";
+            var groupTopic = new GroupTopic(
+                message.Chat.Id,
+                message.IsTopicMessage ? message.MessageThreadId : null
+            );
 
-            // Handle different types of messages
+            var userId = message.From?.Id.ToString() ?? "";
+            var userName = $"{message.From?.FirstName} {message.From?.LastName}";
+
             string messageText =
-                message.Text
-                ?? message.Caption
-                ?? (message.Photo?.Length > 0 ? "[Photo]" : "")
-                ?? (message.Document != null ? $"[Document: {message.Document.FileName}]" : "")
-                ?? (message.Sticker != null ? "[Sticker]" : "")
-                ?? (message.Voice != null ? "[Voice]" : "")
-                ?? (message.Audio != null ? "[Audio]" : "")
-                ?? (message.Video != null ? "[Video]" : "")
-                ?? "[Unknown message type]";
+                message.Text ?? message.Caption ?? (message.Photo?.Length > 0 ? "[Photo]" : "");
 
             LogDebug(
-                $"Received message from {userName} in chat {chatId} (Type: {message.Chat.Type}): {messageText}"
+                $"Received message from {userName} in chat {groupTopic} (Type: {message.Chat.Type}): {messageText}"
             );
 
             // Determine if this is a group or private chat
@@ -333,7 +332,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
             {
                 // Handle private message
                 var privateEventArgs = new PrivateMessageEventArgs(() =>
-                    new DefaultCommandReader([messageText])
+                    new TelegramCommandReader(this, message)
                 )
                 {
                     Service = this,
@@ -352,34 +351,41 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                 LogDebug($"Handling group message in chat type: {message.Chat.Type}");
 
                 var eventArgs = new GroupMessageEventArgs(
-                    () => new DefaultCommandReader([messageText]),
+                    () => new TelegramCommandReader(this, message),
                     async () =>
                     {
                         try
                         {
-                            var chat = await _botClient.GetChat(
-                                new(chatId),
-                                _cancellationTokenSource.Token
+                            var chat = (
+                                await _botClient.GetChat(
+                                    new(groupTopic.GroupId),
+                                    _cancellationTokenSource.Token
+                                )
                             );
-                            return chat.Title ?? chat.FirstName ?? chatId;
+                            var chatName = chat.Title ?? chat.FirstName ?? groupTopic;
+                            if (message.ReplyToMessage?.ForumTopicCreated?.Name is { } forumTopic)
+                            {
+                                return chatName + "#" + forumTopic;
+                            }
+                            return chatName;
                         }
                         catch
                         {
-                            return chatId;
+                            return groupTopic;
                         }
                     }
                 )
                 {
                     Service = this,
                     RobotId = _botUser?.Id.ToString(),
-                    GroupId = chatId,
+                    GroupId = groupTopic,
                     SenderId = userId,
                     SenderMemberCard = userName,
                     MessageId = message.MessageId.ToString(),
                     TextMessageLazy = new(() => messageText),
                 };
 
-                LogDebug($"Calling OnGroupMessageReceived event for chat {chatId}");
+                LogDebug($"Calling OnGroupMessageReceived event for chat {groupTopic}");
                 Events.CallOnGroupMessageReceived(eventArgs);
             }
         }

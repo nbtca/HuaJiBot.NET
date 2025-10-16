@@ -1,5 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
+﻿using HuaJiBot.NET.Logger;
+using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Websocket;
 
