@@ -75,7 +75,7 @@ public class WebsocketClient : IWebsocketClient
 
         // Start connection
         _ = StartConnectionAsync();
-        
+
         // Start health check
         _healthCheckTask = RunHealthCheckAsync();
     }
@@ -85,22 +85,24 @@ public class WebsocketClient : IWebsocketClient
         try
         {
             _logger?.LogInformation($"WebSocket connecting to {_url}");
-            
+
             await Task.Run(() => _client.Start(), _cancellationTokenSource.Token);
-            
+
             // 重置重连计数
             _reconnectAttempts = 0;
         }
         catch (Exception e)
         {
             _logger?.LogError(e, "Error starting WebSocket connection");
-            OnClosed?.Invoke(new DisconnectionInfo
-            {
-                Type = DisconnectionType.Error,
-                Reason = e.Message,
-                Exception = e
-            });
-            
+            OnClosed?.Invoke(
+                new DisconnectionInfo
+                {
+                    Type = DisconnectionType.Error,
+                    Reason = e.Message,
+                    Exception = e,
+                }
+            );
+
             // 启动自动重连
             _ = TryReconnectAsync();
         }
@@ -109,11 +111,11 @@ public class WebsocketClient : IWebsocketClient
     private void OnServerConnected(object? sender, EventArgs e)
     {
         _logger?.LogInformation("WebSocket connected");
-        
+
         var connectionInfo = new ConnectionInfo
         {
             IsReconnect = _hasConnectedBefore,
-            Timestamp = DateTimeOffset.Now
+            Timestamp = DateTimeOffset.Now,
         };
 
         _hasConnectedBefore = true;
@@ -123,14 +125,16 @@ public class WebsocketClient : IWebsocketClient
     private void OnServerDisconnected(object? sender, EventArgs e)
     {
         _logger?.LogInformation("WebSocket disconnected");
-        
-        OnClosed?.Invoke(new DisconnectionInfo
-        {
-            Type = DisconnectionType.ByServer,
-            Reason = "Server disconnected",
-            Timestamp = DateTimeOffset.Now
-        });
-        
+
+        OnClosed?.Invoke(
+            new DisconnectionInfo
+            {
+                Type = DisconnectionType.ByServer,
+                Reason = "Server disconnected",
+                Timestamp = DateTimeOffset.Now,
+            }
+        );
+
         // 只要 _shouldReconnect 为 true，就启动自动重连
         if (_shouldReconnect && !_disposed)
         {
@@ -157,12 +161,17 @@ public class WebsocketClient : IWebsocketClient
             while (!_disposed && _shouldReconnect)
             {
                 _reconnectAttempts++;
-                
-                // 计算延迟时间（指数退避，最大30秒）
-                var delay = Math.Min(InitialReconnectDelay * (int)Math.Pow(2, _reconnectAttempts - 1), MaxReconnectDelay);
-                
-                _logger?.LogInformation($"Attempting to reconnect (attempt {_reconnectAttempts}) in {delay}ms...");
-                
+
+                // 计算延迟时间（简化的指数退避，1秒到30秒）
+                var delay = Math.Min(
+                    InitialReconnectDelay << Math.Min(_reconnectAttempts - 1, 5),
+                    MaxReconnectDelay
+                );
+
+                _logger?.LogInformation(
+                    $"Attempting to reconnect (attempt {_reconnectAttempts}) in {delay}ms..."
+                );
+
                 try
                 {
                     await Task.Delay(delay, _cancellationTokenSource.Token);
@@ -172,7 +181,9 @@ public class WebsocketClient : IWebsocketClient
                     // 如果被取消但仍需要重连，继续尝试
                     if (_shouldReconnect && !_disposed)
                     {
-                        _logger?.LogInformation("Reconnect delay cancelled, but will continue trying...");
+                        _logger?.LogInformation(
+                            "Reconnect delay cancelled, but will continue trying..."
+                        );
                         await Task.Delay(delay); // 使用不带取消令牌的版本
                     }
                     else
@@ -190,7 +201,7 @@ public class WebsocketClient : IWebsocketClient
                     }
 
                     _logger?.LogInformation($"Reconnecting to {_url}...");
-                    
+
                     // 尝试停止现有连接（如果有）
                     if (_client.Connected)
                     {
@@ -203,9 +214,9 @@ public class WebsocketClient : IWebsocketClient
                             _logger?.LogDebug(stopEx, "Error stopping client before reconnect");
                         }
                     }
-                    
+
                     await Task.Run(() => _client.Start());
-                    
+
                     _logger?.LogInformation("Reconnected successfully");
                     _reconnectAttempts = 0;
                     break;
@@ -232,8 +243,6 @@ public class WebsocketClient : IWebsocketClient
     /// </summary>
     private async Task RunHealthCheckAsync()
     {
-        _logger?.LogDebug("Health check task started");
-        
         while (!_disposed && _shouldReconnect)
         {
             try
@@ -258,12 +267,7 @@ public class WebsocketClient : IWebsocketClient
                 // 检查连接状态
                 if (!_client.Connected && !_isReconnecting)
                 {
-                    _logger?.LogWarning("Health check detected disconnection, triggering reconnect...");
                     _ = TryReconnectAsync();
-                }
-                else if (_client.Connected)
-                {
-                    _logger?.LogDebug("Health check: Connection is healthy");
                 }
             }
             catch (Exception ex)
@@ -271,7 +275,7 @@ public class WebsocketClient : IWebsocketClient
                 _logger?.LogError(ex, "Error during health check");
             }
         }
-        
+
         _logger?.LogDebug("Health check task stopped");
     }
 
@@ -343,7 +347,7 @@ public class WebsocketClient : IWebsocketClient
         try
         {
             _cancellationTokenSource.Cancel();
-            
+
             if (_client.Connected)
             {
                 _client.Stop();

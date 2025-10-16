@@ -14,8 +14,8 @@ public static class KernelExtensions
 #pragma warning disable SKEXP0050
         // https://github.com/microsoft/semantic-kernel/tree/main/dotnet/src/Plugins/Plugins.Core
         builder.Plugins.AddFromType<ConversationSummaryPlugin>(nameof(ConversationSummaryPlugin));
-        builder.Plugins.AddFromType<HttpPlugin>(nameof(HttpPlugin));
-        builder.Plugins.AddFromType<TextPlugin>(nameof(TextPlugin));
+        //builder.Plugins.AddFromType<HttpPlugin>(nameof(HttpPlugin));
+        //builder.Plugins.AddFromType<TextPlugin>(nameof(TextPlugin));
         builder.Plugins.AddFromType<TimePlugin>(nameof(TimePlugin));
 #pragma warning restore SKEXP0050
 
