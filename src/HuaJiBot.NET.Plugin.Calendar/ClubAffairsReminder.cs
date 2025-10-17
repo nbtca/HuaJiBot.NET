@@ -48,15 +48,15 @@ internal class ClubAffairsReminder : IDisposable
         {
             var now = Utils.NetworkTime.Now;
 
-            // 检查是否应该发送每周汇总（每周一上午9:00）
-            if (ShouldSendWeeklySummary(now))
+            // 检查是否应该发送每周汇总
+            if (Config.ClubAffairsReminder.EnableWeeklySummary && ShouldSendWeeklySummary(now))
             {
                 SendWeeklySummary(now);
                 _lastWeeklySummaryDate = now.Date;
             }
 
-            // 检查是否应该发送每日提醒（每天上午9:00）
-            if (ShouldSendDailyReminder(now))
+            // 检查是否应该发送每日提醒
+            if (Config.ClubAffairsReminder.EnableDailyReminder && ShouldSendDailyReminder(now))
             {
                 SendDailyReminder(now);
                 _lastDailyReminderDate = now.Date;
@@ -70,11 +70,12 @@ internal class ClubAffairsReminder : IDisposable
 
     private bool ShouldSendWeeklySummary(DateTimeOffset now)
     {
-        // 每周一上午9:00发送
-        if (now.DayOfWeek != DayOfWeek.Monday)
+        // 根据配置的星期几发送
+        if (now.DayOfWeek != Config.ClubAffairsReminder.WeeklySummaryDayOfWeek)
             return false;
 
-        if (now.Hour != 9)
+        // 根据配置的小时发送
+        if (now.Hour != Config.ClubAffairsReminder.WeeklySummaryHour)
             return false;
 
         // 检查今天是否已经发送过
@@ -83,8 +84,8 @@ internal class ClubAffairsReminder : IDisposable
 
     private bool ShouldSendDailyReminder(DateTimeOffset now)
     {
-        // 每天上午9:00发送
-        if (now.Hour != 9)
+        // 根据配置的小时发送
+        if (now.Hour != Config.ClubAffairsReminder.DailyReminderHour)
             return false;
 
         // 检查今天是否已经发送过
