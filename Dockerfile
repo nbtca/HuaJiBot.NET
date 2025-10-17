@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build-env
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build-env
 
 COPY . /root/build
 
@@ -10,19 +10,16 @@ RUN dotnet publish src/HuaJiBot.NET.CLI \
         -a $TARGETARCH \
         --no-self-contained \
         -p:PublishSingleFile=true \
-        --framework net9.0 \
+        --framework net10.0 \
         -o /root/out
 
-FROM mcr.microsoft.com/dotnet/runtime:9.0-alpine
+FROM mcr.microsoft.com/dotnet/runtime:10.0-azurelinux3.0-distroless
 
 ENV TZ=Asia/Shanghai
 
 # COPY --from=build-env /root/out/HuaJiBot.NET.CLI /app/bin/HuaJiBot.NET.CLI
 COPY --from=build-env /root/out /app/bin
 
-RUN mkdir /app/data \
- && adduser -D user \
- && chmod +x /app/bin/HuaJiBot.NET.CLI
-
+USER app
 WORKDIR /app/data
 ENTRYPOINT ["/app/bin/HuaJiBot.NET.CLI"]
