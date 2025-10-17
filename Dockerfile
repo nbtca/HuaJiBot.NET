@@ -22,4 +22,4 @@ COPY --from=build-env /root/out /app/bin
 
 USER app
 WORKDIR /app/data
-CMD ["/app/bin/HuaJiBot.NET.CLI"]
+ENTRYPOINT ["/app/bin/HuaJiBot.NET.CLI"]
