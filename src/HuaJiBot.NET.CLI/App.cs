@@ -92,28 +92,53 @@ if (config.ExtraPlugins is { Length: > 0 } extraPluginsList)
 }
 #endregion
 await Internal.SetupAsync(api, pluginDir); //启动
-while (true)
+bool hasTty;
+try
 {
-    if (Console.ReadLine() is { } line)
+    // Try to get cursor position to determine whether we are attached to a real TTY.
+    // Console.GetCursorPosition throws when output is redirected, so this is a good probe.
+    _ = Console.GetCursorPosition();
+
+    // Also ensure input/output are not redirected
+    hasTty = !Console.IsInputRedirected && !Console.IsOutputRedirected;
+}
+catch
+{
+    hasTty = false;
+}
+
+if (hasTty)
+    while (true)
     {
-        var cmds = line.Split(' ');
-        switch (cmds)
+        if (Console.ReadLine() is { } line)
         {
-            case ["quit" or "q"]:
-                break;
-            case ["r" or "rc"]:
-                api.Reconnect();
-                break;
-            case ["save"]:
-                var result = api.Config.Save();
-                api.Log("配置文件保存成功：" + result);
-                break;
-            case ["send", var targetGroup, var message]:
-                await api.SendGroupMessageAsync(accountId, targetGroup, message);
-                break;
-            default:
-                Console.WriteLine($"未知的命令 {line} .");
-                break;
+            var cmds = line.Split(' ');
+            switch (cmds)
+            {
+                case ["quit" or "q"]:
+                    break;
+                case ["r" or "rc"]:
+                    api.Reconnect();
+                    break;
+                case ["save"]:
+                    var result = api.Config.Save();
+                    api.Log("配置文件保存成功：" + result);
+                    break;
+                case ["send", var targetGroup, var message]:
+                    await api.SendGroupMessageAsync(accountId, targetGroup, message);
+                    break;
+                default:
+                    Console.WriteLine($"未知的命令 {line} .");
+                    break;
+            }
         }
     }
-}
+var cts = new CancellationTokenSource();
+Console.CancelKeyPress += (sender, e) =>
+{
+    e.Cancel = true;
+    cts.Cancel();
+};
+Console.WriteLine("Running... Press Ctrl+C to exit.");
+await Task.Delay(Timeout.Infinite, cts.Token);
+Console.WriteLine("Exiting gracefully...");
