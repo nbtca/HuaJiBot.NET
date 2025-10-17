@@ -14,6 +14,7 @@ This adapter allows HuaJiBot.NET to connect to Telegram using the official Teleg
 - Set group chat titles
 - Get user member permissions
 - HTML formatting support for rich text
+- **Automatic bot command registration** - Commands from plugins are automatically registered with Telegram Bot API
 
 ## Setup
 
@@ -37,6 +38,18 @@ await telegramAdapter.SetupServiceAsync();
 ## Configuration
 
 The TelegramAdapter requires only a bot token to function. The bot token is obtained from [@BotFather](https://t.me/BotFather) when you create a new bot.
+
+### Automatic Command Registration
+
+When plugins are loaded, the adapter automatically collects all commands and registers them with the Telegram Bot API using the `setMyCommands` method. This makes commands visible to users in the Telegram UI.
+
+**Command Requirements:**
+- Command names must contain only lowercase letters (a-z), digits (0-9), and underscores (_)
+- Maximum length: 32 characters
+- Commands with Chinese or other non-ASCII characters in names will be skipped
+- Command descriptions are limited to 256 characters
+
+The adapter will log debug messages for any commands that are skipped due to invalid names.
 
 ## Message Types
 
