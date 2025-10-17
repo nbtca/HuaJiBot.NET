@@ -52,11 +52,11 @@ internal class ClubAffairsReminderTest
     {
         // Test that tomorrow calculation is correct
         var today = new DateTimeOffset(2024, 10, 21, 9, 0, 0, TimeSpan.FromHours(8));
-        var tomorrow = today.Date.AddDays(1);
+        var tomorrow = today.AddDays(1).Date;
         var dayAfterTomorrow = tomorrow.AddDays(1);
         
-        var expectedTomorrow = new DateTimeOffset(2024, 10, 22, 0, 0, 0, TimeSpan.FromHours(8));
-        var expectedDayAfter = new DateTimeOffset(2024, 10, 23, 0, 0, 0, TimeSpan.FromHours(8));
+        var expectedTomorrow = new DateTime(2024, 10, 22, 0, 0, 0);
+        var expectedDayAfter = new DateTime(2024, 10, 23, 0, 0, 0);
         
         Assert.That(tomorrow, Is.EqualTo(expectedTomorrow));
         Assert.That(dayAfterTomorrow, Is.EqualTo(expectedDayAfter));
