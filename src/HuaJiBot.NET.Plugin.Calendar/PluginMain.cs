@@ -42,6 +42,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private RemoteSync Sync => _sync.Value;
     private Ical.Net.Calendar? Calendar => _sync.Value.Calendar;
     private ReminderTask? _reminderTask;
+    private ClubAffairsReminder? _clubAffairsReminder;
 
     protected override void Initialize()
     {
@@ -57,6 +58,19 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             }
         );
         _reminderTask.Start();
+        
+        // 启动社团事务临期提醒功能
+        _clubAffairsReminder = new(
+            Service,
+            Config,
+            () =>
+            {
+                _ = Sync.UpdateCalendarAsync();
+                return Calendar;
+            }
+        );
+        _clubAffairsReminder.Start();
+        Service.Log("[日程] 社团事务临期提醒功能已启动");
     }
 
     private readonly Dictionary<string, DateTimeOffset> _cache = new();
@@ -201,5 +215,8 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    protected override void Unload() { }
+    protected override void Unload() 
+    {
+        _clubAffairsReminder?.Dispose();
+    }
 }
