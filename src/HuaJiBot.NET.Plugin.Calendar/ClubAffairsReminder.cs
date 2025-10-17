@@ -135,8 +135,8 @@ internal class ClubAffairsReminder : IDisposable
             return;
         }
 
-        var tomorrow = now.Date.AddDays(1);
-        var dayAfterTomorrow = tomorrow.AddDays(1);
+        var tomorrow = new DateTimeOffset(now.Date.AddDays(1), now.Offset);
+        var dayAfterTomorrow = new DateTimeOffset(now.Date.AddDays(2), now.Offset);
 
         var tomorrowEvents = Calendar
             .GetEvents(tomorrow, dayAfterTomorrow)
