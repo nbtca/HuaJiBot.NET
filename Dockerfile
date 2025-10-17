@@ -13,16 +13,13 @@ RUN dotnet publish src/HuaJiBot.NET.CLI \
         --framework net10.0 \
         -o /root/out
 
-FROM mcr.microsoft.com/dotnet/runtime:10.0-alpine
+FROM mcr.microsoft.com/dotnet/runtime:10.0-azurelinux3.0-distroless
 
 ENV TZ=Asia/Shanghai
 
 # COPY --from=build-env /root/out/HuaJiBot.NET.CLI /app/bin/HuaJiBot.NET.CLI
 COPY --from=build-env /root/out /app/bin
 
-RUN mkdir /app/data \
- && adduser -D user \
- && chmod +x /app/bin/HuaJiBot.NET.CLI
-
+USER app
 WORKDIR /app/data
 ENTRYPOINT ["/app/bin/HuaJiBot.NET.CLI"]
