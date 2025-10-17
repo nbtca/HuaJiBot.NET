@@ -51,6 +51,7 @@ internal class ClubAffairsReminderTest
     public void TestDayRange()
     {
         // Test that tomorrow calculation is correct
+        // 创建午夜时间的DateTimeOffset以匹配生产代码中用于日期范围查询的行为
         var today = new DateTimeOffset(2024, 10, 21, 9, 0, 0, TimeSpan.FromHours(8));
         var tomorrow = new DateTimeOffset(today.Date.AddDays(1), today.Offset);
         var dayAfterTomorrow = new DateTimeOffset(today.Date.AddDays(2), today.Offset);

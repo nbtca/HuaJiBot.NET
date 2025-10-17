@@ -135,6 +135,7 @@ internal class ClubAffairsReminder : IDisposable
             return;
         }
 
+        // 创建明天和后天的DateTimeOffset，时间设置为00:00:00以获取整天的事务
         var tomorrow = new DateTimeOffset(now.Date.AddDays(1), now.Offset);
         var dayAfterTomorrow = new DateTimeOffset(now.Date.AddDays(2), now.Offset);
 
