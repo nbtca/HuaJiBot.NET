@@ -1,4 +1,4 @@
-#r "nuget: SharpCompress, 0.36.0"
+#r "nuget: SharpCompress, 0.47.3"
 open System.IO
 let isWindows = System.OperatingSystem.IsWindows()
 let isDebugBuild = isWindows
@@ -89,12 +89,12 @@ for dir in binDirs do
 //compress
 open SharpCompress.Archives
 open SharpCompress.Archives.Zip
+open SharpCompress.Common
 let compress()=
     let zipFile = Path.Combine(cd, "HuaJiBot.NET.Plugins.zip")
     if zipFile|>File.Exists then File.Delete zipFile
-    use archive = ZipArchive.Create()
+    use archive = ZipArchive.CreateArchive()
     archive.AddAllFromDirectory output
-    use fileStream = File.Create zipFile
-    archive.SaveTo fileStream|>ignore
+    archive.SaveTo(zipFile, CompressionType.Deflate) |> ignore
 if isWindows then
     compress()
