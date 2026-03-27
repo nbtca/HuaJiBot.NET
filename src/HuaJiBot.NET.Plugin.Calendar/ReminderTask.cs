@@ -173,14 +173,14 @@ internal class ReminderTask : IDisposable
                         ev =>
                         {
                             Service.Log(
-                                $"[日程] {RemindBeforeEndMinutes} 分钟后开始日程：{ev.Summary}({ev.Start?.ToLocalNetworkTime()})"
+                                $"[日程] {RemindBeforeEndMinutes} 分钟后结束日程：{ev.Summary}({eventEndTime})"
                             );
                             ForEachMatchedGroup(
                                 ev,
                                 send =>
                                     send(
                                         $"""
-                                        日程提醒({ev.End?.ToLocalNetworkTime()})：
+                                        日程提醒({eventEndTime})：
                                         {ev.Summary} {ev.Location}
                                         预计于 {RemindBeforeEndMinutes} 分钟后结束
                                         """
