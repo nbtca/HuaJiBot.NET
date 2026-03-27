@@ -12,6 +12,37 @@ public class PluginConfig : ConfigBase
     public int MinRange = -128;
     public int MaxRange = 48;
     public ReminderFilterConfig[] ReminderGroups = [];
+    
+    // 社团事务临期提醒配置
+    public ClubAffairsReminderConfig ClubAffairsReminder { get; set; } = new();
+
+    public class ClubAffairsReminderConfig
+    {
+        /// <summary>
+        /// 是否启用每周汇总提醒（默认启用）
+        /// </summary>
+        public bool EnableWeeklySummary { get; set; } = true;
+        
+        /// <summary>
+        /// 是否启用每日提醒（默认启用）
+        /// </summary>
+        public bool EnableDailyReminder { get; set; } = true;
+        
+        /// <summary>
+        /// 每周汇总发送时间（小时，0-23，默认9点）
+        /// </summary>
+        public int WeeklySummaryHour { get; set; } = 9;
+        
+        /// <summary>
+        /// 每日提醒发送时间（小时，0-23，默认9点）
+        /// </summary>
+        public int DailyReminderHour { get; set; } = 9;
+        
+        /// <summary>
+        /// 每周汇总发送在星期几（0=周日，1=周一，默认1=周一）
+        /// </summary>
+        public DayOfWeek WeeklySummaryDayOfWeek { get; set; } = DayOfWeek.Monday;
+    }
 
     public class ReminderFilterConfig
     {
@@ -42,6 +73,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private RemoteSync Sync => _sync.Value;
     private Ical.Net.Calendar? Calendar => _sync.Value.Calendar;
     private ReminderTask? _reminderTask;
+    private ClubAffairsReminder? _clubAffairsReminder;
 
     protected override void Initialize()
     {
@@ -57,6 +89,26 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             }
         );
         _reminderTask.Start();
+        
+        // 启动社团事务临期提醒功能
+        if (Config.ClubAffairsReminder.EnableWeeklySummary || Config.ClubAffairsReminder.EnableDailyReminder)
+        {
+            _clubAffairsReminder = new(
+                Service,
+                Config,
+                () =>
+                {
+                    _ = Sync.UpdateCalendarAsync();
+                    return Calendar;
+                }
+            );
+            _clubAffairsReminder.Start();
+            Service.Log("[日程] 社团事务临期提醒功能已启动");
+        }
+        else
+        {
+            Service.Log("[日程] 社团事务临期提醒功能已禁用");
+        }
     }
 
     private readonly Dictionary<string, DateTimeOffset> _cache = new();
@@ -201,5 +253,8 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    protected override void Unload() { }
+    protected override void Unload() 
+    {
+        _clubAffairsReminder?.Dispose();
+    }
 }
