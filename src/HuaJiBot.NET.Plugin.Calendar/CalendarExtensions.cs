@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
+using HuaJiBot.NET.Utils;
 using Ical.Net;
 using Ical.Net.CalendarComponents;
 using Ical.Net.DataTypes;
@@ -8,11 +9,42 @@ namespace HuaJiBot.NET.Plugin.Calendar;
 
 internal static class CalendarExtensions
 {
-    public class Period(Ical.Net.DataTypes.Period p)
+    /// <summary>
+    /// Wraps an ical.net <see cref="Ical.Net.DataTypes.Period"/> and converts its times to
+    /// <see cref="DateTimeOffset"/>. The <paramref name="calendarEvent"/> is required to
+    /// correctly compute <see cref="EndTime"/> because ical.net 5.1.1 does not populate
+    /// <c>Period.EndTime</c> when using the single-argument <c>GetOccurrences</c> overload.
+    /// </summary>
+    public class Period(Ical.Net.DataTypes.Period p, CalendarEvent? calendarEvent = null)
     {
         public DateTimeOffset StartTime { get; } = p.StartTime.ToLocalNetworkTime();
 
-        public DateTimeOffset EndTime { get; } = (p.EndTime ?? p.StartTime).ToLocalNetworkTime();
+        // ical.net 5.1.1 does not populate Period.EndTime when using GetOccurrences(startArg).
+        // Compute the end time using the event duration (End - Start) applied to the occurrence's
+        // start time. This correctly handles both non-recurring and recurring events.
+        public DateTimeOffset EndTime { get; } = ComputeEndTime(p, calendarEvent);
+
+        private static DateTimeOffset ComputeEndTime(
+            Ical.Net.DataTypes.Period p,
+            CalendarEvent? calendarEvent
+        )
+        {
+            if (p.EndTime is not null)
+                return p.EndTime.ToLocalNetworkTime();
+            if (calendarEvent?.Start is not null)
+            {
+                // Compute occurrence end = occurrence start + event duration
+                // Using duration instead of ev.End directly ensures recurring events
+                // get the correct end date for each occurrence.
+                // When End is null, duration is zero, treating the event as instantaneous.
+                var duration =
+                    (calendarEvent.End?.AsUtc ?? calendarEvent.Start.AsUtc)
+                    - calendarEvent.Start.AsUtc;
+                var endUtc = p.StartTime.AsUtc.Add(duration);
+                return new DateTimeOffset(endUtc).ToOffset(NetworkTime.LocalTimeZoneOffset);
+            }
+            return p.StartTime.ToLocalNetworkTime();
+        }
     }
 
     /// <summary>
@@ -74,7 +106,7 @@ internal static class CalendarExtensions
             occurrence.Source switch
             {
                 CalendarEvent calendarEvent => (
-                    Period: new Period(occurrence.Period),
+                    Period: new Period(occurrence.Period, calendarEvent),
                     calendarEvent
                 ),
                 _ => throw new ArgumentOutOfRangeException(
