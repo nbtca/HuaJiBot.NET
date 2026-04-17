@@ -1,0 +1,28 @@
+<Solution>
+  <Project Path="src/HuaJiBot.NET.Adapter.Lagrange/HuaJiBot.NET.Adapter.Lagrange.csproj" />
+  <Project Path="src/HuaJiBot.NET.Adapter.OneBot/HuaJiBot.NET.Adapter.OneBot.csproj" />
+  <Project Path="src/HuaJiBot.NET.Adapter.Satori/HuaJiBot.NET.Adapter.Satori.csproj" />
+  <Project Path="src/HuaJiBot.NET.Adapter.Telegram/HuaJiBot.NET.Adapter.Telegram.csproj" />
+  <Project Path="src/HuaJiBot.NET.CLI/HuaJiBot.NET.CLI.csproj">
+    <BuildDependency Project="src/HuaJiBot.NET.Adapter.Lagrange/HuaJiBot.NET.Adapter.Lagrange.csproj" />
+    <BuildDependency Project="src/HuaJiBot.NET.Adapter.Telegram/HuaJiBot.NET.Adapter.Telegram.csproj" />
+    <BuildDependency Project="src/HuaJiBot.NET.Plugin.AIChat/HuaJiBot.NET.Plugin.AIChat.csproj" />
+    <BuildDependency Project="src/HuaJiBot.NET.Plugin.AutoReply/HuaJiBot.NET.Plugin.AutoReply.csproj" />
+    <BuildDependency Project="src/HuaJiBot.NET.Plugin.Calendar/HuaJiBot.NET.Plugin.Calendar.csproj" />
+    <BuildDependency Project="src/HuaJiBot.NET.Plugin.GitHubBridge/HuaJiBot.NET.Plugin.GitHubBridge.csproj" />
+    <BuildDependency Project="src/HuaJiBot.NET.Plugin.MessageBridge/HuaJiBot.NET.Plugin.MessageBridge.csproj" />
+    <BuildDependency Project="src/HuaJiBot.NET.Plugin.RepairTeam/HuaJiBot.NET.Plugin.RepairTeam.csproj" />
+    <BuildDependency Project="src/HuaJiBot.NET.Plugin.Scripting/HuaJiBot.NET.Plugin.Scripting.csproj" />
+    <BuildDependency Project="src/HuaJiBot.NET/HuaJiBot.NET.csproj" />
+  </Project>
+  <Project Path="src/HuaJiBot.NET.Plugin.AIChat/HuaJiBot.NET.Plugin.AIChat.csproj" />
+  <Project Path="src/HuaJiBot.NET.Plugin.AutoReply/HuaJiBot.NET.Plugin.AutoReply.csproj" />
+  <Project Path="src/HuaJiBot.NET.Plugin.Calendar/HuaJiBot.NET.Plugin.Calendar.csproj" />
+  <Project Path="src/HuaJiBot.NET.Plugin.GitHubBridge/HuaJiBot.NET.Plugin.GitHubBridge.csproj" />
+  <Project Path="src/HuaJiBot.NET.Plugin.MessageBridge/HuaJiBot.NET.Plugin.MessageBridge.csproj" />
+  <Project Path="src/HuaJiBot.NET.Plugin.RepairTeam/HuaJiBot.NET.Plugin.RepairTeam.csproj" />
+  <Project Path="src/HuaJiBot.NET.Plugin.Scripting/HuaJiBot.NET.Plugin.Scripting.csproj" />
+  <Project Path="src/HuaJiBot.NET.SourceGenerator/HuaJiBot.NET.SourceGenerator.csproj" />
+  <Project Path="src/HuaJiBot.NET.UnitTest/HuaJiBot.NET.UnitTest.csproj" />
+  <Project Path="src/HuaJiBot.NET/HuaJiBot.NET.csproj" />
+</Solution>
