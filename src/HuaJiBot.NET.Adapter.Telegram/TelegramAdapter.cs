@@ -6,6 +6,7 @@ using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using BotCommand = Telegram.Bot.Types.BotCommand;
 
 namespace HuaJiBot.NET.Adapter.Telegram;
 
@@ -60,6 +61,9 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                 LogError($"Telegram error from source {source}", errorMessage);
                 return Task.CompletedTask;
             };
+
+            // Subscribe to OnInitialized event to register commands after all plugins are loaded
+            Events.OnInitialized += RegisterBotCommandsAsync;
 
             Log("Telegram bot is receiving messages...");
         }
@@ -410,6 +414,69 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         catch (Exception ex)
         {
             LogError("Error handling Telegram update", ex);
+        }
+    }
+
+    private async void RegisterBotCommandsAsync(object? sender, BotServiceBase service)
+    {
+        try
+        {
+            // Collect all commands from all loaded plugins
+            var commands = new List<BotCommand>();
+
+            foreach (var (entryPoint, plugin) in Internal.Plugins)
+            {
+                if (!plugin.Enabled)
+                    continue;
+
+                foreach (var commandInfo in plugin.GetAllCommands())
+                {
+                    // Telegram bot commands must be lowercase and can only contain letters, digits and underscores
+                    // Maximum length is 32 characters
+                    var commandName = commandInfo.Name.ToLowerInvariant();
+                    
+                    // Check if command name contains only valid characters (letters, digits, underscores)
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(commandName, @"^[a-z0-9_]+$"))
+                    {
+                        LogDebug($"Skipping command '{commandInfo.Name}' - contains invalid characters for Telegram (only a-z, 0-9, _ allowed)");
+                        continue;
+                    }
+                    
+                    if (commandName.Length > 32)
+                    {
+                        LogDebug($"Skipping command '{commandInfo.Name}' - name too long for Telegram (max 32 chars)");
+                        continue;
+                    }
+
+                    // Telegram command description max length is 256 characters
+                    var description = commandInfo.Description;
+                    if (description.Length > 256)
+                    {
+                        description = description.Substring(0, 253) + "...";
+                    }
+
+                    commands.Add(new BotCommand
+                    {
+                        Command = commandName,
+                        Description = description
+                    });
+                }
+            }
+
+            if (commands.Count > 0)
+            {
+                // Register commands with Telegram Bot API
+                await _botClient.SetMyCommands(commands, cancellationToken: _cancellationTokenSource.Token);
+                Log($"Successfully registered {commands.Count} commands with Telegram Bot API");
+            }
+            else
+            {
+                Log("No commands to register with Telegram Bot API");
+            }
+        }
+        catch (Exception ex)
+        {
+            LogError("Failed to register bot commands with Telegram", ex);
         }
     }
 }
