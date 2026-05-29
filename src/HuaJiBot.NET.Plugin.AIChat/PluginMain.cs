@@ -1,27 +1,31 @@
 ﻿using HuaJiBot.NET.DataBase;
 using HuaJiBot.NET.Plugin.AIChat.Config;
 using HuaJiBot.NET.Plugin.AIChat.Service.Connector;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
+using HuaJiBot.NET.Plugin.AIChat.Service;
+using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
 using Newtonsoft.Json;
+using System.Collections.Concurrent;
+using System.Text;
 
 namespace HuaJiBot.NET.Plugin.AIChat;
 
 public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
     private MessageHistory _history = null!;
+    private readonly ConcurrentDictionary<string, AgentSession> _sessions = new();
 
-    private KernelConnector Connector
+    private AgentConnector Connector
     {
         get
         {
             return Config.Model switch
             {
-                { Provider: ModelProvider.OpenAI } => new OpenAIKernelConnector(
+                { Provider: ModelProvider.OpenAI } => new OpenAIAgentConnector(
                     Service,
                     Config.Model
                 ),
-                { Provider: ModelProvider.Google } => new GoogleKernelConnector(
+                { Provider: ModelProvider.Google } => new GoogleAgentConnector(
                     Service,
                     Config.Model
                 ),
@@ -29,6 +33,11 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             };
         }
     }
+
+    private AIFunction[]? _tools;
+
+    private AIFunction[] GetTools() =>
+        _tools ??= AgentTools.CreateBotFunctions(Service.ExportFunctions);
 
     protected override void Initialize()
     {
@@ -42,9 +51,34 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         //});
     }
 
+    private AgentSession GetOrCreateSession(string groupId)
+    {
+        return _sessions.GetOrAdd(groupId, _ =>
+        {
+            var session = Connector.CreateSessionAsync().GetAwaiter().GetResult();
+            Info($"为群组 {groupId} 创建新的Agent会话");
+            return session;
+        });
+    }
+
+    private void LogToolCalls(AgentResponseUpdate update)
+    {
+        foreach (var content in update.Contents)
+        {
+            if (content is FunctionCallContent funcCall)
+            {
+                Info($"工具调用: {funcCall.Name}({JsonConvert.SerializeObject(funcCall.Arguments)})");
+            }
+            else if (content is FunctionResultContent funcResult)
+            {
+                Info($"工具结果: {funcResult.CallId} = {funcResult.Result}");
+            }
+        }
+    }
+
     private async Task InvokeLlmMessage(
         string systemPrompt,
-        ICollection<ChatMessageContent> messages,
+        IList<ChatMessage> messages,
         Events.GroupMessageEventArgs e
     )
     {
@@ -61,27 +95,87 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     )
                     .Replace("\n", "\n\t")
         );
-        var agent = Connector.CreateChatCompletionAgent(systemPrompt);
-        await foreach (var content in agent.InvokeAsync(messages))
+        var session = GetOrCreateSession(e.GroupId);
+        var agent = Connector.CreateAIAgentWithOptions(systemPrompt, GetTools());
+        var response = await agent.RunAsync(messages, session);
+        // 记录工具调用
+        foreach (var update in response.ToAgentResponseUpdates())
         {
-            var text = content.Message.Content ?? "null";
-            var messageIds = await e.Reply(text);
-            //机器人回复后把自己的消息添加到数据库
-            foreach (var msgId in messageIds)
+            LogToolCalls(update);
+        }
+        var text = response.Text ?? "null";
+        var messageIds = await e.Reply(text);
+        //机器人回复后把自己的消息添加到数据库
+        foreach (var msgId in messageIds)
+        {
+            _history.StoreMessage( //AI回复记录
+                new GroupMessage
+                {
+                    Content = text,
+                    GroupId = e.GroupId,
+                    MessageId = msgId,
+                    SenderId = null,
+                    SenderName = "bot",
+                    IsBot = true,
+                    ReplyToMessageId = e.MessageId,
+                }
+            );
+        }
+    }
+
+    private async Task InvokeLlmMessageStreaming(
+        string systemPrompt,
+        IList<ChatMessage> messages,
+        Events.GroupMessageEventArgs e
+    )
+    {
+        Info(
+            "调用AI流式消息\n\t"
+                + JsonConvert
+                    .SerializeObject(
+                        messages,
+                        new JsonSerializerSettings
+                        {
+                            Formatting = Formatting.Indented,
+                            NullValueHandling = NullValueHandling.Ignore,
+                        }
+                    )
+                    .Replace("\n", "\n\t")
+        );
+        var session = GetOrCreateSession(e.GroupId);
+        var agent = Connector.CreateAIAgentWithOptions(systemPrompt, GetTools());
+        var sb = new StringBuilder();
+        await foreach (var update in agent.RunStreamingAsync(messages, session))
+        {
+            // 记录工具调用
+            LogToolCalls(update);
+            if (!string.IsNullOrEmpty(update.Text))
             {
-                _history.StoreMessage( //AI回复记录
-                    new GroupMessage
-                    {
-                        Content = text,
-                        GroupId = e.GroupId,
-                        MessageId = msgId,
-                        SenderId = null,
-                        SenderName = "bot",
-                        IsBot = true,
-                        ReplyToMessageId = e.MessageId,
-                    }
-                );
+                sb.Append(update.Text);
+                Info($"流式文本块: {update.Text}");
             }
+        }
+        var text = sb.ToString();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            text = "null";
+        }
+        var messageIds = await e.Reply(text);
+        //机器人回复后把自己的消息添加到数据库
+        foreach (var msgId in messageIds)
+        {
+            _history.StoreMessage( //AI回复记录
+                new GroupMessage
+                {
+                    Content = text,
+                    GroupId = e.GroupId,
+                    MessageId = msgId,
+                    SenderId = null,
+                    SenderName = "bot",
+                    IsBot = true,
+                    ReplyToMessageId = e.MessageId,
+                }
+            );
         }
     }
 
@@ -114,7 +208,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     //调用LLM回复
                     await InvokeLlmMessage(
                         Config.SystemPrompt,
-                        [new ChatMessageContent(AuthorRole.User, restText)],
+                        [new ChatMessage(ChatRole.User, restText)],
                         e
                     );
                 }
@@ -184,16 +278,16 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     return;
                 }
                 #region 调用大模型回复（多轮对话）
-                List<ChatMessageContent> prompts = [];
+                List<ChatMessage> prompts = [];
                 foreach (var (_, message) in messageList)
                 {
                     prompts.Add(
                         message.IsBot
-                            ? new ChatMessageContent(AuthorRole.Assistant, message.Content)
-                            : new ChatMessageContent(AuthorRole.User, message.Content)
+                            ? new ChatMessage(ChatRole.Assistant, message.Content)
+                            : new ChatMessage(ChatRole.User, message.Content)
                     );
                 }
-                prompts.Add(new ChatMessageContent(AuthorRole.User, text));
+                prompts.Add(new ChatMessage(ChatRole.User, text));
 
                 //收到回复消息记录
                 _history.StoreMessage(

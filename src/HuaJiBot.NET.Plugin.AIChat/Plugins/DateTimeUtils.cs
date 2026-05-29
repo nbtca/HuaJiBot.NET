@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using System.Globalization;
-using Microsoft.SemanticKernel;
 
 namespace HuaJiBot.NET.Plugin.AIChat.Plugins;
 
@@ -10,35 +9,30 @@ namespace HuaJiBot.NET.Plugin.AIChat.Plugins;
 /// </summary>
 public sealed class DateTimeUtils
 {
-    [KernelFunction]
     [Description("Get the current date and time")]
     public string GetCurrentDateTime()
     {
         return DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
     }
 
-    [KernelFunction]
     [Description("Get the current date")]
     public string GetCurrentDate()
     {
         return DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
     }
 
-    [KernelFunction]
     [Description("Get the current time")]
     public string GetCurrentTime()
     {
         return DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
     }
 
-    [KernelFunction]
     [Description("Get the current day of week")]
     public string GetDayOfWeek()
     {
         return DateTime.Now.DayOfWeek.ToString();
     }
 
-    [KernelFunction]
     [Description("Calculate time difference between two timestamps")]
     public string CalculateTimeDifference(
         [Description("First timestamp in format yyyy-MM-dd HH:mm:ss")] string timestamp1,

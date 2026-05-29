@@ -6,10 +6,8 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.SemanticKernel" Version="1.74.0" />
-    <PackageReference Include="Microsoft.SemanticKernel.Agents.Core" Version="1.74.0" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.65.0-alpha" />
-    <PackageReference Include="Microsoft.SemanticKernel.Plugins.Core" Version="1.65.0-preview" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.4.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />

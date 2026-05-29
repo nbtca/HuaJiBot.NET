@@ -1,26 +1,19 @@
-﻿using System.ClientModel;
+using System.ClientModel;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Logger;
 using HuaJiBot.NET.Plugin.AIChat.Config;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI;
+using OpenAI.Chat;
 
 namespace HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 
-// ReSharper disable once InconsistentNaming
-public class OpenAIKernelConnector(BotService service, ModelConfig modelConfig)
-    : KernelConnector(service, modelConfig)
+public class GoogleAgentConnector(BotService service, ModelConfig modelConfig)
+    : AgentConnector(modelConfig)
 {
     private OpenAIClient? _client;
 
-    protected override IKernelBuilder CreateKernel()
-    {
-        var builder = Kernel.CreateBuilder();
-        builder.AddOpenAIChatCompletion(ModelConfig.ModelId, Client);
-        return builder;
-    }
+    protected override ChatClient CreateChatClient() => Client.GetChatClient(ModelConfig.ModelId);
 
     private OpenAIClient Client
     {
@@ -28,13 +21,16 @@ public class OpenAIKernelConnector(BotService service, ModelConfig modelConfig)
         {
             if (_client is null)
             {
+                var endpoint = string.IsNullOrEmpty(ModelConfig.Endpoint)
+                    ? "https://generativelanguage.googleapis.com/v1beta/openai/"
+                    : ModelConfig.Endpoint;
                 _client = new OpenAIClient(
                     new ApiKeyCredential(
                         string.IsNullOrEmpty(ModelConfig.ApiKey) ? "null" : ModelConfig.ApiKey
                     ),
                     new OpenAIClientOptions
                     {
-                        Endpoint = new Uri(ModelConfig.Endpoint),
+                        Endpoint = new Uri(endpoint),
                         ClientLoggingOptions = new()
                         {
                             EnableLogging = ModelConfig.Logging,
@@ -44,7 +40,7 @@ public class OpenAIKernelConnector(BotService service, ModelConfig modelConfig)
                             {
                                 logger
                                     .SetMinimumLevel(LogLevel.Trace)
-                                    .AddProvider(new PluginLoggerProvider(Service));
+                                    .AddProvider(new PluginLoggerProvider(service));
                             }),
                         },
                     }
@@ -53,10 +49,4 @@ public class OpenAIKernelConnector(BotService service, ModelConfig modelConfig)
             return _client;
         }
     }
-
-    protected override PromptExecutionSettings GetPromptExecutionSettings() =>
-        new OpenAIPromptExecutionSettings()
-        {
-            ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions,
-        };
 }
