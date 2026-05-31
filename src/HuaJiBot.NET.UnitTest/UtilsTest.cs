@@ -8,6 +8,7 @@ internal class UtilsTest
         return Utils.NetworkTime.UpdateDiffAsync();
     }
 
+    [Explicit("Requires live NTP server")]
     [Test]
     public void Test1()
     {
