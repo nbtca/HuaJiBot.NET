@@ -4,8 +4,10 @@ using HuaJiBot.NET.Adapter.Satori;
 using HuaJiBot.NET.Adapter.Telegram;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Config;
+using HuaJiBot.NET.Interfaces;
 using HuaJiBot.NET.Logger;
 using HuaJiBot.NET.PluginManager;
+using Microsoft.Extensions.DependencyInjection;
 
 //using HuaJiBot.NET.Adapter.Red;
 //BotService CreateRedProtocolService()
@@ -22,38 +24,42 @@ using HuaJiBot.NET.PluginManager;
 //    return api;
 //}
 var logger = new ConsoleLogger();
-BotServiceBase CreateOneBotService(Config config)
-{
-    var api = new OneBotAdapter(config.OneBot.Url, config.OneBot.Token) { Logger = logger }; //链接协议适配器
-    return api;
-}
-
-BotServiceBase CreateSatoriService(Config config)
-{
-    var api = new SatoriAdapter(config.Satori.Url, config.Satori.Token) { Logger = logger }; //链接协议适配器
-    return api;
-}
-
-BotServiceBase CreateTelegramService(Config config)
-{
-    var api = new TelegramAdapter(config.Telegram.Token) { Logger = logger };
-    return api;
-}
-BotServiceBase CreateService(Config config)
-{
-    return config.Service switch
-    {
-        Config.ServiceType.OneBot => CreateOneBotService(config),
-        Config.ServiceType.Satori => CreateSatoriService(config),
-        Config.ServiceType.Telegram => CreateTelegramService(config),
-        _ => throw new NotSupportedException("不支持的协议类型"),
-    };
-}
 Console.WriteLine("运行路径：" + Environment.CurrentDirectory);
 var config = Config.Load(); //配置文件
 config.Save();
-var api = CreateService(config); //创建协议适配器
-await Internal.SetupServiceAsync(api, config); //协议适配器
+var services = new ServiceCollection();
+
+// Register logger
+services.AddSingleton<ILogger>(logger);
+
+// Register config
+services.AddSingleton(config);
+
+// Register adapter (via factory)
+services.AddSingleton<BotServiceBase>(sp =>
+{
+    var cfg = sp.GetRequiredService<Config>();
+    var lg = sp.GetRequiredService<ILogger>();
+    return cfg.Service switch
+    {
+        Config.ServiceType.OneBot => new OneBotAdapter(cfg.OneBot.Url, cfg.OneBot.Token) { Logger = lg },
+        Config.ServiceType.Satori => new SatoriAdapter(cfg.Satori.Url, cfg.Satori.Token) { Logger = lg },
+        Config.ServiceType.Telegram => new TelegramAdapter(cfg.Telegram.Token) { Logger = lg },
+        _ => throw new NotSupportedException("不支持的协议类型"),
+    };
+});
+services.AddSingleton<IPluginService>(sp => sp.GetRequiredService<BotServiceBase>());
+services.AddSingleton<IAdapterService>(sp => sp.GetRequiredService<BotServiceBase>());
+
+// Register Internal
+services.AddSingleton<Internal>();
+
+
+using var provider = services.BuildServiceProvider();
+var api = provider.GetRequiredService<BotServiceBase>(); //创建协议适配器
+var adapterApi = provider.GetRequiredService<IAdapterService>();
+var internalService = provider.GetRequiredService<Internal>();
+await internalService.SetupServiceAsync(api, config); //协议适配器
 var pluginManager = new PluginManager();
 var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>
@@ -120,7 +126,7 @@ if (hasTty)
                 case ["quit" or "q"]:
                     break;
                 case ["r" or "rc"]:
-                    api.Reconnect();
+                    adapterApi.Reconnect();
                     break;
                 case ["save"]:
                     var result = api.Config.Save();

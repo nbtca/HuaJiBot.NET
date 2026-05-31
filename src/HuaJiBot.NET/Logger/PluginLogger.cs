@@ -1,10 +1,10 @@
 ﻿using System.Text;
-using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace HuaJiBot.NET.Logger;
 
-public class PluginLogger(BotService service, string categoryName)
+public class PluginLogger(IPluginService service, string categoryName)
     : Microsoft.Extensions.Logging.ILogger
 {
     public void Log<TState>(

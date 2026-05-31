@@ -1,4 +1,4 @@
-﻿using HuaJiBot.NET.Bot;
+﻿using HuaJiBot.NET.Interfaces;
 using LiteDB;
 
 namespace HuaJiBot.NET.DataBase;
@@ -21,9 +21,9 @@ public class MessageHistory : IDisposable
     private readonly LiteDatabase _db;
     private readonly ILiteCollection<GroupMessage> _messages;
     private bool _disposed = false;
-    private BotService _service;
+    private readonly IPluginService _service;
 
-    public MessageHistory(BotService service, string dbName = "messages.db")
+    public MessageHistory(IPluginService service, string dbName = "messages.db")
     {
         _service = service;
         var dbPath = Path.Combine(service.GetPluginDataPath(), "database", dbName);

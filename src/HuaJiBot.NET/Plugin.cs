@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using HuaJiBot.NET.Agent;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
+using HuaJiBot.NET.Interfaces;
 using Newtonsoft.Json;
 
 namespace HuaJiBot.NET;
@@ -23,7 +24,7 @@ public abstract partial class PluginBase
 {
     public bool Enabled { get; internal set; } = true;
     public string Name { get; internal set; } = null!;
-    public BotService Service { get; internal set; } = null!;
+    public IPluginService Service { get; internal set; } = null!;
 
     public void Info(
         object msg,

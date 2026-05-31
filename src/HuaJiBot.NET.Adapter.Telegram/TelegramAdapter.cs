@@ -18,14 +18,14 @@ public class TelegramAdapter(string botToken) : BotServiceBase
 
     private User? _botUser;
 
-    public override void Reconnect()
+    protected override void ReconnectCore()
     {
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource = new();
-        _ = Task.Run(SetupServiceAsync);
+        _ = Task.Run(SetupServiceAsyncCore);
     }
 
-    public override async Task SetupServiceAsync()
+    protected override async Task SetupServiceAsyncCore()
     {
         try
         {
@@ -219,7 +219,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         }
     }
 
-    public override void SetGroupName(string? robotId, string targetGroup, string groupName)
+    protected override void SetGroupNameCore(string? robotId, string targetGroup, string groupName)
     {
         try
         {
@@ -245,7 +245,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         }
     }
 
-    public override MemberType GetMemberType(string robotId, string targetGroup, string userId)
+    protected override MemberType GetMemberTypeCore(string robotId, string targetGroup, string userId)
     {
         try
         {
@@ -281,7 +281,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         }
     }
 
-    public override string GetNick(string robotId, string userId)
+    protected override string GetNickCore(string robotId, string userId)
     {
         try
         {

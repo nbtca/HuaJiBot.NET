@@ -8,7 +8,7 @@ internal class ClubAffairsReminderTest
         // Test that Monday is correctly identified for weekly summary
         var monday = new DateTimeOffset(2024, 10, 21, 9, 0, 0, TimeSpan.FromHours(8)); // Monday
         var tuesday = new DateTimeOffset(2024, 10, 22, 9, 0, 0, TimeSpan.FromHours(8)); // Tuesday
-        
+
         Assert.That(monday.DayOfWeek, Is.EqualTo(DayOfWeek.Monday));
         Assert.That(tuesday.DayOfWeek, Is.Not.EqualTo(DayOfWeek.Monday));
     }
@@ -19,7 +19,7 @@ internal class ClubAffairsReminderTest
         // Test that hour comparison works correctly for reminder timing
         var nineAm = new DateTimeOffset(2024, 10, 21, 9, 0, 0, TimeSpan.FromHours(8));
         var tenAm = new DateTimeOffset(2024, 10, 21, 10, 0, 0, TimeSpan.FromHours(8));
-        
+
         Assert.That(nineAm.Hour, Is.EqualTo(9));
         Assert.That(tenAm.Hour, Is.EqualTo(10));
     }
@@ -31,7 +31,7 @@ internal class ClubAffairsReminderTest
         var date1 = new DateTimeOffset(2024, 10, 21, 9, 0, 0, TimeSpan.FromHours(8));
         var date2 = new DateTimeOffset(2024, 10, 21, 10, 0, 0, TimeSpan.FromHours(8));
         var date3 = new DateTimeOffset(2024, 10, 22, 9, 0, 0, TimeSpan.FromHours(8));
-        
+
         Assert.That(date1.Date, Is.EqualTo(date2.Date));
         Assert.That(date1.Date, Is.Not.EqualTo(date3.Date));
     }
@@ -42,7 +42,7 @@ internal class ClubAffairsReminderTest
         // Test that week range calculation is correct
         var start = new DateTimeOffset(2024, 10, 21, 9, 0, 0, TimeSpan.FromHours(8));
         var end = start.AddDays(7);
-        
+
         var expectedEnd = new DateTimeOffset(2024, 10, 28, 9, 0, 0, TimeSpan.FromHours(8));
         Assert.That(end, Is.EqualTo(expectedEnd));
     }
@@ -55,10 +55,10 @@ internal class ClubAffairsReminderTest
         var today = new DateTimeOffset(2024, 10, 21, 9, 0, 0, TimeSpan.FromHours(8));
         var tomorrow = new DateTimeOffset(today.Date.AddDays(1), today.Offset);
         var dayAfterTomorrow = new DateTimeOffset(today.Date.AddDays(2), today.Offset);
-        
+
         var expectedTomorrow = new DateTimeOffset(2024, 10, 22, 0, 0, 0, TimeSpan.FromHours(8));
         var expectedDayAfter = new DateTimeOffset(2024, 10, 23, 0, 0, 0, TimeSpan.FromHours(8));
-        
+
         Assert.That(tomorrow, Is.EqualTo(expectedTomorrow));
         Assert.That(dayAfterTomorrow, Is.EqualTo(expectedDayAfter));
     }
@@ -86,7 +86,7 @@ internal class ClubAffairsReminderTest
             var emoji = GetNumberEmoji(testCase.Key);
             Assert.That(emoji, Is.EqualTo(testCase.Value));
         }
-        
+
         // Test fallback for numbers > 10
         Assert.That(GetNumberEmoji(11), Is.EqualTo("11."));
     }

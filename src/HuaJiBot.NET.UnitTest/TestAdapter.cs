@@ -7,12 +7,12 @@ internal class TestAdapter : BotServiceBase
 {
     public override ILogger Logger { get; init; } = new ConsoleLogger();
 
-    public override void Reconnect()
+    protected override void ReconnectCore()
     {
         throw new NotImplementedException();
     }
 
-    public override Task SetupServiceAsync()
+    protected override Task SetupServiceAsyncCore()
     {
         return Task.CompletedTask;
     }
@@ -33,7 +33,7 @@ internal class TestAdapter : BotServiceBase
         throw new NotImplementedException();
     }
 
-    public override void SetGroupName(string? robotId, string targetGroup, string groupName)
+    protected override void SetGroupNameCore(string? robotId, string targetGroup, string groupName)
     {
         throw new NotImplementedException();
     }
@@ -48,12 +48,12 @@ internal class TestAdapter : BotServiceBase
         throw new NotImplementedException();
     }
 
-    public override MemberType GetMemberType(string robotId, string targetGroup, string userId)
+    protected override MemberType GetMemberTypeCore(string robotId, string targetGroup, string userId)
     {
         throw new NotImplementedException();
     }
 
-    public override string GetNick(string robotId, string userId)
+    protected override string GetNickCore(string robotId, string userId)
     {
         throw new NotImplementedException();
     }

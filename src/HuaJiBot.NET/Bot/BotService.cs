@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using HuaJiBot.NET.Agent;
 using HuaJiBot.NET.Events;
+using HuaJiBot.NET.Interfaces;
 using HuaJiBot.NET.Logger;
 
 namespace HuaJiBot.NET.Bot;
@@ -31,7 +32,7 @@ public abstract class BotServiceBase : BotService
     public override EventsSender Events { get; } = new();
 }
 
-public abstract class BotService : IMessageService
+public abstract class BotService : IMessageService, IPluginService, IAdapterService
 {
     #region Logger
     public abstract ILogger Logger { get; init; }
@@ -72,11 +73,12 @@ public abstract class BotService : IMessageService
         return $"{msg} [{file}:{line}]";
     }
 
-    public abstract void Reconnect();
-    public abstract Task SetupServiceAsync();
     public Config.ConfigWrapper Config { get; internal set; } = null!;
     public abstract IEvents Events { get; }
     public abstract string[] AllRobots { get; }
+
+    protected abstract void ReconnectCore();
+    protected abstract Task SetupServiceAsyncCore();
 
     public abstract Task<string[]> SendGroupMessageAsync(
         string? robotId,
@@ -84,7 +86,7 @@ public abstract class BotService : IMessageService
         params SendingMessageBase[] messages
     );
     public abstract void RecallMessage(string? robotId, string targetGroup, string msgId);
-    public abstract void SetGroupName(string? robotId, string targetGroup, string groupName);
+    protected abstract void SetGroupNameCore(string? robotId, string targetGroup, string groupName);
 
     public virtual async Task<string[]> FeedbackAt(
         string? robotId,
@@ -101,16 +103,35 @@ public abstract class BotService : IMessageService
         );
     }
 
-    public abstract MemberType GetMemberType(string robotId, string targetGroup, string userId);
-    public abstract string GetNick(string robotId, string userId);
+    protected abstract MemberType GetMemberTypeCore(string robotId, string targetGroup, string userId);
+    protected abstract string GetNickCore(string robotId, string userId);
 
-    public virtual string GetPluginDataPath()
+    protected virtual string GetPluginDataPathCore()
     {
         var path = Path.GetFullPath(Path.Combine("plugins", "data"));
         if (!Directory.Exists(path))
             Directory.CreateDirectory(path);
         return path;
     }
+
+    Task IAdapterService.SetupServiceAsync() => SetupServiceAsyncCore();
+
+    void IAdapterService.Reconnect() => ReconnectCore();
+
+    MemberType IAdapterService.GetMemberType(string robotId, string targetGroup, string userId) =>
+        GetMemberTypeCore(robotId, targetGroup, userId);
+
+    string IAdapterService.GetNick(string robotId, string userId) => GetNickCore(robotId, userId);
+
+    void IAdapterService.SetGroupName(string? robotId, string targetGroup, string groupName) =>
+        SetGroupNameCore(robotId, targetGroup, groupName);
+
+    string IPluginService.GetPluginDataPath() => GetPluginDataPathCore();
+
+    string IAdapterService.GetPluginDataPath() => GetPluginDataPathCore();
+
+    void IMessageService.SetGroupName(string? robotId, string targetGroup, string groupName) =>
+        SetGroupNameCore(robotId, targetGroup, groupName);
 
     // Command service composition
     private readonly ICommandService _commandService;

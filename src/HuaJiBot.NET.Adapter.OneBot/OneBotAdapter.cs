@@ -16,12 +16,12 @@ public class OneBotAdapter : BotServiceBase
 
     public override required ILogger Logger { get; init; }
 
-    public override void Reconnect()
+    protected override void ReconnectCore()
     {
         _client.ConnectAsync();
     }
 
-    public override async Task SetupServiceAsync() => await _client.ConnectAsync();
+    protected override async Task SetupServiceAsyncCore() => await _client.ConnectAsync();
 
     public override string[] AllRobots => _client.QQ is not null ? [_client.QQ] : [];
 
@@ -57,32 +57,17 @@ public class OneBotAdapter : BotServiceBase
         _client.Api.RecallMessageAsync(targetGroup, msgId);
     }
 
-    public override void SetGroupName(string? robotId, string targetGroup, string groupName)
+    protected override void SetGroupNameCore(string? robotId, string targetGroup, string groupName)
     {
         _client.Api.SetGroupNameAsync(targetGroup, groupName);
     }
 
-    public override MemberType GetMemberType(string robotId, string targetGroup, string userId)
+    protected override MemberType GetMemberTypeCore(string robotId, string targetGroup, string userId)
     {
         throw new NotImplementedException();
     }
 
-    public override async Task<string[]> FeedbackAt(
-        string? robotId,
-        string targetGroup,
-        string msgId,
-        string text
-    )
-    {
-        return await SendGroupMessageAsync(
-            robotId,
-            targetGroup,
-            new ReplyMessage(msgId),
-            new TextMessage(text)
-        );
-    }
-
-    public override string GetNick(string robotId, string userId)
+    protected override string GetNickCore(string robotId, string userId)
     {
         throw new NotImplementedException();
     }

@@ -401,3 +401,6 @@ FodyWeavers.xsd
 .idea
 huajibot.tar
 HuaJiBot.NET.Plugins.zip
+
+# Sisyphus workspace metadata
+.sisyphus/

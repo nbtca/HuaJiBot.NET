@@ -1,10 +1,11 @@
 ﻿using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Interfaces;
 using HuaJiBot.NET.Utils;
 
 namespace HuaJiBot.NET.Plugin.Calendar;
 
 internal class RemoteSync(
-    BotService service,
+    IPluginService service,
     int updateDurationInMinutes = 15,
     string icalUrl = "https://ical.nbtca.space/"
 )

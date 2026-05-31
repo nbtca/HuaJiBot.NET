@@ -1,16 +1,20 @@
 ﻿using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Config;
+using HuaJiBot.NET.Interfaces;
 
 namespace HuaJiBot.NET;
 
-public static class Internal
+public class Internal
 {
-    public static Task SetupServiceAsync<T>(T service, Config.Config config)
-        where T : BotService
+    public Internal() { }
+
+    public Task SetupServiceAsync<T>(T service, Config.Config config)
+        where T : BotService, IAdapterService
     {
         Utils.NetworkTime.TryUpdateTimeDiff();
         service.Config = new ConfigWrapper(config);
-        return service.SetupServiceAsync();
+        IAdapterService adapterService = service;
+        return adapterService.SetupServiceAsync();
         //Global.ServiceInstance = service;
     }
 }

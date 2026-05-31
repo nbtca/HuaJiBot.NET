@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Config;
+using HuaJiBot.NET.Interfaces;
 
 namespace HuaJiBot.NET.PluginManager;
 
@@ -15,7 +16,7 @@ public class PluginManager
     /// <summary>
     /// 插件列表
     /// </summary>
-    internal readonly List<(EntryPointBase entryPoint, PluginBase instance)> Plugins = [];
+    internal readonly PluginRegistry Plugins = new();
 
     /// <summary>
     /// 启动并加载插件
@@ -33,7 +34,7 @@ public class PluginManager
         }
         LoadAllPlugins(api, directoryInfo); //加载所有插件，并添加到Plugins列表
         //注入读取到的配置文件到对应结构
-        foreach (var (_, plugin) in Plugins)
+        foreach (var (_, plugin) in Plugins.GetAll())
         { //遍历所有插件
             [MethodImpl(MethodImplOptions.Synchronized)]
             bool TryGetPluginConfig([NotNullWhen(true)] out ConfigBase? cfg)
@@ -43,7 +44,7 @@ public class PluginManager
                 {
                     return true;
                 }
-                
+
                 // Fallback to original reflection implementation
                 foreach (var it in plugin.GetType().GetInterfaces())
                 {
@@ -84,7 +85,7 @@ public class PluginManager
         api.Config.Save();
         //触发启动事件
         api.Events.CallOnStartup(api);
-        foreach (var (entryPoint, plugin) in Plugins) //调用所有插件的初始化方法
+        foreach (var (entryPoint, plugin) in Plugins.GetAll()) //调用所有插件的初始化方法
         {
             if (!plugin.Enabled)
             {
@@ -111,14 +112,14 @@ public class PluginManager
     {
         //响应关闭事件
         api.Events.CallOnShutdown(api);
-        foreach (var (_, plugin) in Plugins) //调用所有插件的卸载方法
+        foreach (var (_, plugin) in Plugins.GetAll()) //调用所有插件的卸载方法
         {
             plugin.Unload();
         }
         Plugins.Clear(); //清空插件列表
     }
 
-    private void LoadAllPlugins(BotService api, DirectoryInfo directoryInfo)
+    private void LoadAllPlugins(IPluginService api, DirectoryInfo directoryInfo)
     {
         var libsDir = Path.Combine(directoryInfo.FullName, "libs");
         if (!Directory.Exists(libsDir))
@@ -137,7 +138,7 @@ public class PluginManager
         foreach (
             var file in directoryInfo
                 .EnumerateFiles("*.dll", SearchOption.AllDirectories) //遍历所有dll文件
-                //SearchOption.AllDirectories 包括所有子目录
+                                                                      //SearchOption.AllDirectories 包括所有子目录
                 .SkipWhile(x => libs.Contains(x.FullName)) //跳过libs目录下的dll
         )
         {
@@ -148,7 +149,7 @@ public class PluginManager
             var assembly = Assembly.LoadFrom(file.FullName); //加载程序集
             foreach (var entryPoint in assembly.GetCustomAttributes<EntryPointBase>()) //遍历所有EntryPoint注解
             {
-                Plugins.Add((entryPoint, entryPoint.CreateInstance(api)));
+                Plugins.Add(entryPoint, entryPoint.CreateInstance(api));
                 api.Log(
                     $"路径 {Path.GetRelativePath(Environment.CurrentDirectory, file.FullName)} 获取到插件 {entryPoint.Name}."
                 );
