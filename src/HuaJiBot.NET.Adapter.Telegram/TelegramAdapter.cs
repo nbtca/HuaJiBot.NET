@@ -300,14 +300,6 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         }
     }
 
-    public override string GetPluginDataPath()
-    {
-        var path = Path.GetFullPath(Path.Combine("plugins", "data"));
-        if (!Directory.Exists(path))
-            Directory.CreateDirectory(path);
-        return path;
-    }
-
     private async Task HandleMessageAsync(Message message, UpdateType type)
     {
         try

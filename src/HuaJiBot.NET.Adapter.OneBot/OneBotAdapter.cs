@@ -87,15 +87,4 @@ public class OneBotAdapter : BotServiceBase
         throw new NotImplementedException();
     }
 
-    /// <summary>
-    /// 取插件数据目录
-    /// </summary>
-    /// <returns></returns>
-    public override string GetPluginDataPath()
-    {
-        var path = Path.GetFullPath(Path.Combine("plugins", "data")); //插件数据目录，当前目录下的plugins/data
-        if (!Directory.Exists(path))
-            Directory.CreateDirectory(path); //自动创建目录
-        return path;
-    }
 }
