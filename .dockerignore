@@ -1,0 +1,23 @@
+# Git
+.git
+
+# Build artifacts
+bin/
+obj/
+
+# Archives
+*.tar
+*.zip
+
+# IDE
+.vs/
+.vscode/
+.idea/
+.github/
+
+# Documentation
+docs/
+*.md
+
+# Sisyphus workspace
+.sisyphus/
