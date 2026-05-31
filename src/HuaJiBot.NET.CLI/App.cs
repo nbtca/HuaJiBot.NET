@@ -5,6 +5,7 @@ using HuaJiBot.NET.Adapter.Telegram;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Config;
 using HuaJiBot.NET.Logger;
+using HuaJiBot.NET.PluginManager;
 
 //using HuaJiBot.NET.Adapter.Red;
 //BotService CreateRedProtocolService()
@@ -53,6 +54,7 @@ var config = Config.Load(); //配置文件
 config.Save();
 var api = CreateService(config); //创建协议适配器
 await Internal.SetupServiceAsync(api, config); //协议适配器
+var pluginManager = new PluginManager();
 var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>
 {
@@ -91,7 +93,7 @@ if (config.ExtraPlugins is { Length: > 0 } extraPluginsList)
     }
 }
 #endregion
-await Internal.SetupAsync(api, pluginDir); //启动
+await pluginManager.SetupAsync(api, pluginDir); //启动
 bool hasTty;
 try
 {
@@ -141,4 +143,5 @@ Console.CancelKeyPress += (sender, e) =>
 };
 Console.WriteLine("Running... Press Ctrl+C to exit.");
 await Task.Delay(Timeout.Infinite, cts.Token);
+pluginManager.Shutdown(api);
 Console.WriteLine("Exiting gracefully...");
