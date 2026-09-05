@@ -4,9 +4,6 @@ using System.Diagnostics;
 using HuaJiBot.NET.Plugin.AIChat.Config;
 using HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Agents;
-using Microsoft.SemanticKernel.ChatCompletion;
 using OpenAI;
 using ChatMessage = OpenAI.Chat.ChatMessage;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
@@ -52,9 +49,9 @@ internal class AIChat
     }
 
     [Test]
-    public async Task TestChatUsingSemanticKernel()
+    public async Task TestChatUsingAgent()
     {
-        KernelConnector connector = new OpenAIKernelConnector(
+        AgentConnector connector = new OpenAIAgentConnector(
             _api,
             new ModelConfig(
                 ModelProvider.OpenAI,
@@ -65,21 +62,17 @@ internal class AIChat
             )
         );
 
-        var agent = connector.CreateChatCompletionAgent("你是一个有用的人工智能助手。");
-        await foreach (
-            var response in agent.InvokeAsync(
-                new ChatMessageContent[] { new(AuthorRole.User, "现在的日期和时间？") }
-            )
-        )
+        var agent = connector.CreateAIAgent("You are a helpful AI assistant.");
+        await foreach (var update in agent.RunStreamingAsync("What is the current date and time?"))
         {
-            Console.WriteLine(response.Message);
+            Console.WriteLine(update.Text);
         }
     }
 
     [Test]
-    public async Task TestChatGeminiUsingSemanticKernel()
+    public async Task TestChatGeminiUsingAgent()
     {
-        KernelConnector connector = new GoogleKernelConnector(
+        AgentConnector connector = new GoogleAgentConnector(
             _api,
             new ModelConfig(
                 ModelProvider.Google,
@@ -91,16 +84,10 @@ internal class AIChat
             )
         );
 
-        ChatCompletionAgent agent = connector.CreateChatCompletionAgent(
-            "你是一个有用的人工智能助手。"
-        );
-        await foreach (
-            var response in agent.InvokeAsync(
-                new ChatMessageContent[] { new(AuthorRole.User, "现在的日期和时间") }
-            )
-        )
+        var agent = connector.CreateAIAgent("You are a helpful AI assistant.");
+        await foreach (var update in agent.RunStreamingAsync("What is the current date and time?"))
         {
-            Console.WriteLine(response.Message);
+            Console.WriteLine(update.Text);
         }
     }
 
