@@ -1,4 +1,4 @@
-﻿using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssueCommentEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssuesEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Utils;
@@ -16,14 +16,38 @@ internal static class IssuesEventDispatcher
     {
         var repositoryFullName = body.Repository.FullName;
         plugin.Info("IssueCommentEvent " + repositoryFullName);
-        var repoInfo = body.Repository.FullName.Replace("/", " / ");
-        var issue = body.Issue;
-        var comment = body.Comment;
-        var avatar = await Utils.AvatarHelper.GetAsync($"{body.Sender.AvatarUrl}?s=96");
         if (body.Action is "assigned")
         {
             return;
         }
+        TempFile.AutoDeleteFile? tempImage = null;
+        try
+        {
+            await Broadcast.SendAsync(
+                plugin.Service,
+                plugin.GetBroadcastTargets(repositoryFullName),
+                RichMarkdown.IssueComment(body),
+                async () =>
+                    [
+                        new ImageMessage(tempImage = await BuildCommentCardAsync(body)),
+                        new TextMessage(await plugin.OrRawAsync(body.Issue.HtmlUrl)),
+                    ]
+            );
+        }
+        finally
+        {
+            tempImage?.Dispose();
+        }
+    }
+
+    private static async Task<TempFile.AutoDeleteFile> BuildCommentCardAsync(
+        IssueCommentEventBody body
+    )
+    {
+        var repoInfo = body.Repository.FullName.Replace("/", " / ");
+        var issue = body.Issue;
+        var comment = body.Comment;
+        var avatar = await Utils.AvatarHelper.GetAsync($"{body.Sender.AvatarUrl}?s=96");
         var icon = issue.State switch
         {
             "open" => CardBuilder.CharToImage(
@@ -77,68 +101,44 @@ internal static class IssuesEventDispatcher
             FooterIcon = avatar,
             Icon = icon,
             IconPlaceholder = "",
-            TopRightContent =
-            [
-                //new TextRun(" +2", Color.ParseHex("#2cbe4e")),
-                //new TextRun(" -3", Color.ParseHex("#eb2431")),
-                //new TextRun(" ~4", Color.ParseHex("#ffc000")),
-            ],
-        }; // 保存图像到文件
-        using var tempImage = card.SaveTempAutoDelete(true);
-        var issueUrl = issue.HtmlUrl.ToString();
-        try
-        {
-            var result = await plugin.ShortLinkApi.ShortLinkAsync(
-                plugin.Config.ShortLinkApi,
-                issueUrl
-            );
-            issueUrl = result.Url;
-        }
-        catch (Exception ex)
-        {
-            plugin.Error("生成短链接失败：", ex);
-        }
-        var text = new TextMessage(issueUrl);
-        var m = new ImageMessage(tempImage);
-        foreach (var group in plugin.GetBroadcastTargets(repositoryFullName))
-        {
-            await plugin.Service.SendGroupMessageAsync(null, group, m, text);
-        }
+            TopRightContent = [],
+        };
+        return card.SaveTempAutoDelete(true);
     }
 
     public static async Task DispatchIssuesEventAsync(this PluginMain plugin, IssuesEventBody body)
     {
         var repositoryFullName = body.Repository.FullName;
         plugin.Info("IssuesEvent " + repositoryFullName);
-        //var issue = body.Issue;
-        //var (shortLinkException, shortLink) = await plugin.ShortLinkApi.TryShortLinkAsync(
-        //    plugin.Config.ShortLinkApi,
-        //    issue.HtmlUrl.ToString()
-        //);
-        //if (shortLinkException is not null)
-        //{
-        //    plugin.Error("ShortLink Error", shortLinkException);
-        //}
-        //var targets = plugin.GetBroadcastTargets(issue.RepositoryUrl.ToString());
-        //var message = new StringBuilder();
-        //message.AppendLine($"[{issue.RepositoryUrl}] {issue.Title}");
-        //message.AppendLine($"状态: {issue.State}");
-        //message.AppendLine($"链接: {shortLink.Url}");
-        //message.AppendLine($"作者: {issue.User.Login}");
-        //message.AppendLine($"评论数: {issue.Comments}");
-        //message.AppendLine($"标签: {string.Join(", ", issue.Labels.Select(x => x.ToString()))}");
-        //message.AppendLine($"[查看详情]({shortLink.Url})");
-        //foreach (var target in targets)
-        //{
-        //    await plugin.Service.SendGroupMessageAsync(null, target, message.ToString());
-        //}
-        var repoInfo = body.Repository.FullName.Replace("/", " / ");
-        var issue = body.Issue;
-        var avatar = await Utils.AvatarHelper.GetAsync($"{body.Sender.AvatarUrl}?s=96");
         if (body.Action is "assigned")
         {
             return;
         }
+        TempFile.AutoDeleteFile? tempImage = null;
+        try
+        {
+            await Broadcast.SendAsync(
+                plugin.Service,
+                plugin.GetBroadcastTargets(repositoryFullName),
+                RichMarkdown.Issue(body),
+                async () =>
+                    [
+                        new ImageMessage(tempImage = await BuildIssueCardAsync(body)),
+                        new TextMessage(await plugin.OrRawAsync(body.Issue.HtmlUrl)),
+                    ]
+            );
+        }
+        finally
+        {
+            tempImage?.Dispose();
+        }
+    }
+
+    private static async Task<TempFile.AutoDeleteFile> BuildIssueCardAsync(IssuesEventBody body)
+    {
+        var repoInfo = body.Repository.FullName.Replace("/", " / ");
+        var issue = body.Issue;
+        var avatar = await Utils.AvatarHelper.GetAsync($"{body.Sender.AvatarUrl}?s=96");
         var icon = body.Action switch
         {
             "open" => CardBuilder.CharToImage(
@@ -192,32 +192,8 @@ internal static class IssuesEventDispatcher
             FooterIcon = avatar,
             Icon = icon,
             IconPlaceholder = "",
-            TopRightContent =
-            [
-                //new TextRun(" +2", Color.ParseHex("#2cbe4e")),
-                //new TextRun(" -3", Color.ParseHex("#eb2431")),
-                //new TextRun(" ~4", Color.ParseHex("#ffc000")),
-            ],
-        }; // 保存图像到文件
-        using var tempImage = card.SaveTempAutoDelete(true);
-        var issueUrl = issue.HtmlUrl.ToString();
-        try
-        {
-            var result = await plugin.ShortLinkApi.ShortLinkAsync(
-                plugin.Config.ShortLinkApi,
-                issueUrl
-            );
-            issueUrl = result.Url;
-        }
-        catch (Exception ex)
-        {
-            plugin.Error("生成短链接失败：", ex);
-        }
-        var text = new TextMessage(issueUrl);
-        var m = new ImageMessage(tempImage);
-        foreach (var group in plugin.GetBroadcastTargets(repositoryFullName))
-        {
-            await plugin.Service.SendGroupMessageAsync(null, group, m, text);
-        }
+            TopRightContent = [],
+        };
+        return card.SaveTempAutoDelete(true);
     }
 }
