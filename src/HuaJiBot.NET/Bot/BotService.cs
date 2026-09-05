@@ -29,6 +29,8 @@ public sealed record AtMessage(string Target) : SendingMessageBase;
 
 public sealed record ReplyMessage(string MessageId) : SendingMessageBase;
 
+public sealed record RichContent(string Markdown, string? ReplyToMessageId = null);
+
 public abstract class BotServiceBase : BotService
 {
     public override EventsSender Events { get; } = new();
@@ -86,6 +88,21 @@ public abstract class BotService
         string targetGroup,
         params SendingMessageBase[] messages
     );
+
+    public virtual async Task<string[]> SendRichMessageAsync(
+        string? robotId,
+        string targetGroup,
+        RichContent content,
+        Func<Task<SendingMessageBase[]>> fallback
+    ) =>
+        await SendGroupMessageAsync(
+            robotId,
+            targetGroup,
+            content.ReplyToMessageId is { } replyTo
+                ? [new ReplyMessage(replyTo), .. await fallback()]
+                : await fallback()
+        );
+
     public abstract void RecallMessage(string? robotId, string targetGroup, string msgId);
     public abstract void SetGroupName(string? robotId, string targetGroup, string groupName);
 

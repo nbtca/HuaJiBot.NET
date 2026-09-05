@@ -72,6 +72,9 @@ public class TelegramAdapter(string botToken) : BotServiceBase
 
     public override string[] AllRobots => _botUser != null ? [_botUser.Id.ToString()] : [];
 
+    internal static ReplyParameters? ToReplyParameters(string? messageId) =>
+        int.TryParse(messageId, out var id) ? new ReplyParameters { MessageId = id } : null;
+
     public override async Task<string[]> SendGroupMessageAsync(
         string? robotId,
         string targetGroup,
@@ -88,7 +91,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
             // Group messages by type to combine text-based messages
             var textBuilder = new System.Text.StringBuilder();
             string? imagePathToSend = null;
-            int? replyToMessageId = null;
+            ReplyParameters? replyParameters = null;
 
             foreach (var message in messages)
             {
@@ -111,8 +114,8 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                         break;
 
                     case ReplyMessage { MessageId: var msgId }
-                        when int.TryParse(msgId, out var replyId):
-                        replyToMessageId = replyId;
+                        when ToReplyParameters(msgId) is { } reply:
+                        replyParameters = reply;
                         break;
 
                     case ImageMessage { ImagePath: var path }:
@@ -141,9 +144,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                         InputFile.FromStream(System.IO.File.OpenRead(imagePathToSend)),
                         caption: combinedText,
                         parseMode: ParseMode.Html,
-                        replyParameters: replyToMessageId.HasValue
-                            ? new ReplyParameters { MessageId = replyToMessageId.Value }
-                            : null,
+                        replyParameters: replyParameters,
                         messageThreadId: topicId,
                         cancellationToken: _cancellationTokenSource.Token
                     );
@@ -153,9 +154,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                     sentMessage = await _botClient.SendPhoto(
                         chatId,
                         InputFile.FromStream(System.IO.File.OpenRead(imagePathToSend)),
-                        replyParameters: replyToMessageId.HasValue
-                            ? new ReplyParameters { MessageId = replyToMessageId.Value }
-                            : null,
+                        replyParameters: replyParameters,
                         messageThreadId: topicId,
                         cancellationToken: _cancellationTokenSource.Token
                     );
@@ -168,9 +167,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                     chatId,
                     combinedText,
                     parseMode: ParseMode.Html,
-                    replyParameters: replyToMessageId.HasValue
-                        ? new ReplyParameters { MessageId = replyToMessageId.Value }
-                        : null,
+                    replyParameters: replyParameters,
                     messageThreadId: topicId,
                     cancellationToken: _cancellationTokenSource.Token
                 );
@@ -188,6 +185,32 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         }
 
         return messageIds.ToArray();
+    }
+
+    public override async Task<string[]> SendRichMessageAsync(
+        string? robotId,
+        string targetGroup,
+        RichContent content,
+        Func<Task<SendingMessageBase[]>> fallback
+    )
+    {
+        var groupTopic = GroupTopic.Parse(targetGroup);
+        try
+        {
+            var sent = await _botClient.SendRichMessage(
+                new ChatId(groupTopic.GroupId),
+                new InputRichMessage { Markdown = content.Markdown },
+                replyParameters: ToReplyParameters(content.ReplyToMessageId),
+                messageThreadId: groupTopic.TopicId,
+                cancellationToken: _cancellationTokenSource.Token
+            );
+            return [sent.MessageId.ToString()];
+        }
+        catch (Exception ex)
+        {
+            LogError($"Failed to send rich message to chat {targetGroup}", ex);
+            throw;
+        }
     }
 
     public override void RecallMessage(string? robotId, string targetGroup, string msgId)
