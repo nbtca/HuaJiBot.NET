@@ -135,6 +135,26 @@ public class MessageHistory : IDisposable
         return _messages.Find(x => x.Timestamp >= start && x.Timestamp <= end, skip, limit);
     }
 
+    public IEnumerable<GroupMessage> GetGroupMessagesByTimeRange(
+        string groupId,
+        DateTime start,
+        DateTime end,
+        int limit = 100,
+        int skip = 0
+    )
+    {
+        return _messages.Find(
+            x => x.GroupId == groupId && x.Timestamp >= start && x.Timestamp < end,
+            skip,
+            limit
+        );
+    }
+
+    public IEnumerable<string> GetGroupIds()
+    {
+        return _messages.FindAll().Select(message => message.GroupId).Distinct();
+    }
+
     public void DeleteMessage(string messageId)
     {
         _messages.DeleteMany(x => x.MessageId == messageId);

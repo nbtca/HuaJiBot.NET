@@ -148,6 +148,15 @@ Console.CancelKeyPress += (sender, e) =>
     cts.Cancel();
 };
 Console.WriteLine("Running... Press Ctrl+C to exit.");
-await Task.Delay(Timeout.Infinite, cts.Token);
-pluginManager.Shutdown(api);
+try
+{
+    await Task.Delay(Timeout.Infinite, cts.Token);
+}
+catch (OperationCanceledException) when (cts.IsCancellationRequested)
+{
+}
+finally
+{
+    pluginManager.Shutdown(api);
+}
 Console.WriteLine("Exiting gracefully...");

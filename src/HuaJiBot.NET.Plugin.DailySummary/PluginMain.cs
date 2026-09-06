@@ -43,7 +43,12 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         Service.Events.OnGroupMessageReceived += (s, e) => _ = OnGroupMessageReceived(e);
 
         // 启动定时总结任务
-        _summaryTask = new DailySummaryTask(Service, Config, GenerateSummaryAsync);
+        _summaryTask = new DailySummaryTask(
+            Service,
+            Config,
+            GenerateSummaryAsync,
+            _history.GetGroupIds
+        );
         _summaryTask.Start();
 
         Info("启动成功");
@@ -80,10 +85,12 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     {
         try
         {
-            // 获取昨天的消息
-            var now = DateTime.Now;
-var yesterday = now.AddDays(-1);
-            var messages = _history.GetMessagesByTimeRange(yesterday, now).ToList();
+            // 查询完整的前一个自然日，避免非午夜执行时重复当天消息。
+            var today = DateTime.Today;
+            var yesterday = today.AddDays(-1);
+            var messages = _history
+                .GetGroupMessagesByTimeRange(groupId, yesterday, today)
+                .ToList();
 
             // 检查消息数量
             if (messages.Count < Config.MinMessageCount)

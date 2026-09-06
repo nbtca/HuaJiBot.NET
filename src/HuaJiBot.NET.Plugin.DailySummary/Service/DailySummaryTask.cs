@@ -9,18 +9,21 @@ internal class DailySummaryTask : IDisposable
     private readonly IPluginService _service;
     private readonly PluginConfig _config;
     private readonly Func<string, Task> _generateSummary;
+    private readonly Func<IEnumerable<string>> _getActiveGroupIds;
     private readonly Timer _timer;
     private DateTime _lastRunDate = DateTime.MinValue;
 
     public DailySummaryTask(
         IPluginService service,
         PluginConfig config,
-        Func<string, Task> generateSummary
+        Func<string, Task> generateSummary,
+        Func<IEnumerable<string>> getActiveGroupIds
     )
     {
         _service = service;
         _config = config;
         _generateSummary = generateSummary;
+        _getActiveGroupIds = getActiveGroupIds;
 
         // 每分钟检查一次
         _timer = new Timer(TimeSpan.FromMinutes(1));
@@ -54,7 +57,7 @@ internal class DailySummaryTask : IDisposable
             // 获取要处理的群组列表
             var groupIds = _config.GroupIds.Count > 0
                 ? _config.GroupIds.Select(id => id.ToString()).ToList()
-                : await GetActiveGroupIdsAsync();
+                : _getActiveGroupIds().ToList();
 
             // 为每个群组生成总结
             foreach (var groupId in groupIds)
@@ -75,13 +78,6 @@ internal class DailySummaryTask : IDisposable
         {
             _service.LogError("[每日总结] 定时任务异常", ex.Message);
         }
-    }
-
-    private Task<List<string>> GetActiveGroupIdsAsync()
-    {
-        // 如果没有配置特定群组，则返回空列表
-        // 实际使用时需要从数据库或配置中获取活跃群组
-        return Task.FromResult(new List<string>());
     }
 
     public void Dispose()
