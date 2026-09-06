@@ -2,6 +2,8 @@ using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Logger;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
@@ -11,6 +13,7 @@ namespace HuaJiBot.NET.Adapter.Telegram;
 
 public class TelegramAdapter(string botToken) : BotServiceBase
 {
+    private static readonly HttpClient RichMessageClient = new();
     private readonly TelegramBotClient _botClient = new(botToken);
     private CancellationTokenSource _cancellationTokenSource = new();
 
@@ -72,6 +75,9 @@ public class TelegramAdapter(string botToken) : BotServiceBase
 
     public override string[] AllRobots => _botUser != null ? [_botUser.Id.ToString()] : [];
 
+    internal static ReplyParameters? ToReplyParameters(string? messageId) =>
+        int.TryParse(messageId, out var id) ? new ReplyParameters { MessageId = id } : null;
+
     public override async Task<string[]> SendGroupMessageAsync(
         string? robotId,
         string targetGroup,
@@ -88,7 +94,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
             // Group messages by type to combine text-based messages
             var textBuilder = new System.Text.StringBuilder();
             string? imagePathToSend = null;
-            int? replyToMessageId = null;
+            ReplyParameters? replyParameters = null;
 
             foreach (var message in messages)
             {
@@ -111,8 +117,8 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                         break;
 
                     case ReplyMessage { MessageId: var msgId }
-                        when int.TryParse(msgId, out var replyId):
-                        replyToMessageId = replyId;
+                        when ToReplyParameters(msgId) is { } reply:
+                        replyParameters = reply;
                         break;
 
                     case ImageMessage { ImagePath: var path }:
@@ -141,9 +147,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                         InputFile.FromStream(System.IO.File.OpenRead(imagePathToSend)),
                         caption: combinedText,
                         parseMode: ParseMode.Html,
-                        replyParameters: replyToMessageId.HasValue
-                            ? new ReplyParameters { MessageId = replyToMessageId.Value }
-                            : null,
+                        replyParameters: replyParameters,
                         messageThreadId: topicId,
                         cancellationToken: _cancellationTokenSource.Token
                     );
@@ -153,9 +157,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                     sentMessage = await _botClient.SendPhoto(
                         chatId,
                         InputFile.FromStream(System.IO.File.OpenRead(imagePathToSend)),
-                        replyParameters: replyToMessageId.HasValue
-                            ? new ReplyParameters { MessageId = replyToMessageId.Value }
-                            : null,
+                        replyParameters: replyParameters,
                         messageThreadId: topicId,
                         cancellationToken: _cancellationTokenSource.Token
                     );
@@ -168,9 +170,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
                     chatId,
                     combinedText,
                     parseMode: ParseMode.Html,
-                    replyParameters: replyToMessageId.HasValue
-                        ? new ReplyParameters { MessageId = replyToMessageId.Value }
-                        : null,
+                    replyParameters: replyParameters,
                     messageThreadId: topicId,
                     cancellationToken: _cancellationTokenSource.Token
                 );
@@ -189,6 +189,54 @@ public class TelegramAdapter(string botToken) : BotServiceBase
 
         return messageIds.ToArray();
     }
+
+    public override async Task<string[]> SendRichMessageAsync(
+        string? robotId,
+        string targetGroup,
+        RichContent content,
+        Func<Task<SendingMessageBase[]>> fallback
+    )
+    {
+        var groupTopic = GroupTopic.Parse(targetGroup);
+        try
+        {
+            var replyParameters = ToReplyParameters(content.ReplyToMessageId);
+            using var response = await RichMessageClient.PostAsJsonAsync(
+                $"https://api.telegram.org/bot{botToken}/sendRichMessage",
+                new
+                {
+                    chat_id = groupTopic.GroupId,
+                    rich_message = new { markdown = content.Markdown },
+                    reply_parameters = replyParameters is { } reply
+                        ? new { message_id = reply.MessageId }
+                        : null,
+                    message_thread_id = groupTopic.TopicId,
+                },
+                _cancellationTokenSource.Token
+            );
+            var result = await response.Content.ReadFromJsonAsync<RichMessageResponse>(
+                _cancellationTokenSource.Token
+            );
+            if (!response.IsSuccessStatusCode || result is not { Ok: true, Result: { } message })
+            {
+                throw new HttpRequestException(result?.Description ?? response.ReasonPhrase);
+            }
+            return [message.MessageId.ToString()];
+        }
+        catch (Exception ex)
+        {
+            LogError($"Failed to send rich message to chat {targetGroup}", ex);
+            throw;
+        }
+    }
+
+    private sealed record RichMessageResponse(
+        bool Ok,
+        RichMessageResult? Result,
+        string? Description
+    );
+
+    private sealed record RichMessageResult([property: JsonPropertyName("message_id")] int MessageId);
 
     public override void RecallMessage(string? robotId, string targetGroup, string msgId)
     {

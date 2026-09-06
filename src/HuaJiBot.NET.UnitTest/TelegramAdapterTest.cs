@@ -63,4 +63,15 @@ public class TelegramAdapterTest
         // Assert
         Assert.That(nick, Is.EqualTo(userId));
     }
+    [Test]
+    public void ToReplyParameters_WithoutReplyTo_ReturnsNull() =>
+        Assert.That(TelegramAdapter.ToReplyParameters(null), Is.Null);
+
+    [Test]
+    public void ToReplyParameters_WithNonNumericId_ReturnsNull() =>
+        Assert.That(TelegramAdapter.ToReplyParameters("not-a-number"), Is.Null);
+
+    [Test]
+    public void ToReplyParameters_WithNumericId_MapsMessageId() =>
+        Assert.That(TelegramAdapter.ToReplyParameters("7")?.MessageId, Is.EqualTo(7));
 }

@@ -7,11 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Telegram.Bot" Version="22.9.5.3" />
+    <PackageReference Include="Telegram.Bot" Version="22.10.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="HuaJiBot.NET.UnitTest" />
   </ItemGroup>
 
 </Project>

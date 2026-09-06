@@ -53,7 +53,7 @@ internal class AIChat
 
     [Explicit("Connects to local AI service")]
     [Test]
-    public async Task TestChatUsingSemanticKernel()
+    public async Task TestChatUsingAgent()
     {
         AgentConnector connector = new OpenAIAgentConnector(
             _api,
@@ -80,7 +80,7 @@ internal class AIChat
 
     [Explicit("Connects to external AI service")]
     [Test]
-    public async Task TestChatGeminiUsingSemanticKernel()
+    public async Task TestChatGeminiUsingAgent()
     {
         AgentConnector connector = new GoogleAgentConnector(
             _api,

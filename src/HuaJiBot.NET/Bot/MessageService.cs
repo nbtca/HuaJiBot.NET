@@ -8,6 +8,20 @@ public abstract class MessageService : IMessageService
         params SendingMessageBase[] messages
     );
 
+    public virtual async Task<string[]> SendRichMessageAsync(
+        string? robotId,
+        string targetGroup,
+        RichContent content,
+        Func<Task<SendingMessageBase[]>> fallback
+    ) =>
+        await SendGroupMessageAsync(
+            robotId,
+            targetGroup,
+            content.ReplyToMessageId is { } replyTo
+                ? [new ReplyMessage(replyTo), .. await fallback()]
+                : await fallback()
+        );
+
     public abstract void RecallMessage(string? robotId, string targetGroup, string msgId);
 
     public abstract void SetGroupName(string? robotId, string targetGroup, string groupName);
