@@ -87,7 +87,7 @@ internal static class RichMarkdown
         AppendDetails(sb, summary, body, BodyLimit);
         sb.AppendLine();
         sb.Append(Button(issue.HtmlUrl, $"Open issue #{issue.Number}"));
-        return new RichContent(sb.ToString());
+        return new RichContent(sb.ToString().ReplaceLineEndings("\n"));
     }
 
     internal static RichContent Push(PushEventBody body)
@@ -107,7 +107,7 @@ internal static class RichMarkdown
         sb.AppendLine($"{Stats(body)}pushed by **{Escape(body.Sender.Login)}**");
         sb.AppendLine();
         sb.Append(Button(body.Compare, "View comparison"));
-        return new RichContent(sb.ToString());
+        return new RichContent(sb.ToString().ReplaceLineEndings("\n"));
     }
 
     private static string Stats(PushEventBody body)

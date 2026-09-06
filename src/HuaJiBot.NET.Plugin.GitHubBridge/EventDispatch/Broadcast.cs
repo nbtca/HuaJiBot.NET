@@ -1,11 +1,12 @@
 using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Interfaces;
 
 namespace HuaJiBot.NET.Plugin.GitHubBridge.EventDispatch;
 
 internal static class Broadcast
 {
     internal static async Task SendAsync(
-        BotService service,
+        IPluginService service,
         IEnumerable<string> targets,
         RichContent content,
         Func<Task<SendingMessageBase[]>> fallback
