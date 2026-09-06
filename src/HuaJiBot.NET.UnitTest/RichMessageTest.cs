@@ -7,31 +7,6 @@ internal class RichMessageTest
     private static Task<SendingMessageBase[]> Fallback(params SendingMessageBase[] messages) =>
         Task.FromResult(messages);
 
-    private sealed class RecordingAdapter : TestAdapter
-    {
-        public SendingMessageBase[]? Sent;
-
-        public override Task<string[]> SendGroupMessageAsync(
-            string? robotId,
-            string targetGroup,
-            params SendingMessageBase[] messages
-        )
-        {
-            Sent = messages;
-            return Task.FromResult<string[]>(["42"]);
-        }
-    }
-
-    private sealed class RichAdapter : TestAdapter
-    {
-        public override Task<string[]> SendRichMessageAsync(
-            string? robotId,
-            string targetGroup,
-            RichContent content,
-            Func<Task<SendingMessageBase[]>> fallback
-        ) => Task.FromResult<string[]>(["rich"]);
-    }
-
     [Test]
     public async Task SendRichMessageAsync_WhenAdapterDoesNotOverride_SendsFallback()
     {
@@ -47,7 +22,7 @@ internal class RichMessageTest
         Assert.Multiple(() =>
         {
             Assert.That(
-                adapter.Sent,
+                adapter.Sends.Single().Messages,
                 Is.EqualTo(new SendingMessageBase[] { new TextMessage("plain") })
             );
             Assert.That(ids, Is.EqualTo(new[] { "42" }));
@@ -67,7 +42,7 @@ internal class RichMessageTest
         );
 
         Assert.That(
-            adapter.Sent,
+            adapter.Sends.Single().Messages,
             Is.EqualTo(new SendingMessageBase[] { new ReplyMessage("7"), new TextMessage("plain") })
         );
     }

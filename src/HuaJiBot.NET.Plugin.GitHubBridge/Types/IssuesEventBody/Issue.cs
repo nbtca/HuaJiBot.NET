@@ -40,7 +40,7 @@ internal class Issue
     public Sender User { get; set; }
 
     [JsonProperty("labels")]
-    public object[] Labels { get; set; }
+    public Label[] Labels { get; set; }
 
     [JsonProperty("state")]
     public string State { get; set; }
