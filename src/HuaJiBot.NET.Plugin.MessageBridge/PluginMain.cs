@@ -290,9 +290,9 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         List<(string, string[])> msgIds = [];
         foreach (
             var config in from config in clientInfo.Groups
-            where config is { Enabled: true, ForwardFromClient: true }
-            where !config.ForwardFromClientDisabledEvent.Contains(eventType)
-            select config
+                          where config is { Enabled: true, ForwardFromClient: true }
+                          where !config.ForwardFromClientDisabledEvent.Contains(eventType)
+                          select config
         )
         {
             msgIds.Add(

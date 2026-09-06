@@ -1,9 +1,9 @@
 ﻿using System.Text;
-using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Interfaces;
 
 namespace HuaJiBot.NET.Plugin.AIChat.Service;
 
-public class HttpWithLogHandler(BotService plugin) : HttpClientHandler
+public class HttpWithLogHandler(IPluginService plugin) : HttpClientHandler
 {
     private string DecodeContent(HttpContent? content)
     {

@@ -1,5 +1,6 @@
 using System.Text;
 using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Interfaces;
 using Ical.Net.CalendarComponents;
 using Timer = System.Timers.Timer;
 
@@ -12,7 +13,7 @@ namespace HuaJiBot.NET.Plugin.Calendar;
 internal class ClubAffairsReminder : IDisposable
 {
     public PluginConfig Config { get; }
-    public BotService Service { get; }
+    public IPluginService Service { get; }
     private readonly Func<Ical.Net.Calendar?> _getCalendar;
     private Ical.Net.Calendar? Calendar => _getCalendar();
     private readonly Timer _dailyCheckTimer;
@@ -21,7 +22,7 @@ internal class ClubAffairsReminder : IDisposable
     private DateTimeOffset _lastDailyReminderDate = DateTimeOffset.MinValue;
 
     public ClubAffairsReminder(
-        BotService service,
+        IPluginService service,
         PluginConfig config,
         Func<Ical.Net.Calendar?> getCalendar
     )

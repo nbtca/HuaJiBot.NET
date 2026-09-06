@@ -1,9 +1,9 @@
-﻿using HuaJiBot.NET.Bot;
+﻿using HuaJiBot.NET.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace HuaJiBot.NET.Logger;
 
-public class PluginLoggerProvider(BotService service) : ILoggerProvider
+public class PluginLoggerProvider(IPluginService service) : ILoggerProvider
 {
     public void Dispose() { }
 

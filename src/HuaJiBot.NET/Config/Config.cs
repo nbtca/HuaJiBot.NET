@@ -14,32 +14,32 @@ public partial class Config
         Telegram,
     }
 
-    public ServiceType Service = ServiceType.OneBot;
+    public ServiceType Service { get; set; } = ServiceType.OneBot;
 
     public class OneBotConnectionInfo
     {
-        public string Url = "";
-        public string? Token = "";
+        public string Url { get; set; } = "";
+        public string? Token { get; set; } = "";
     }
 
-    public OneBotConnectionInfo OneBot = new();
+    public OneBotConnectionInfo OneBot { get; set; } = new();
 
     public class SatoriConnectionInfo
     {
-        public string Url = "";
-        public string Token = "";
+        public string Url { get; set; } = "";
+        public string Token { get; set; } = "";
     }
 
-    public SatoriConnectionInfo Satori = new();
+    public SatoriConnectionInfo Satori { get; set; } = new();
 
     public class TelegramConnectionInfo
     {
-        public string Token = "";
+        public string Token { get; set; } = "";
     }
 
-    public TelegramConnectionInfo Telegram = new();
+    public TelegramConnectionInfo Telegram { get; set; } = new();
 
     public string[] ExtraPlugins { get; set; } = [];
 
-    public Dictionary<string, JObject> Plugins = new();
+    public Dictionary<string, JObject> Plugins { get; set; } = new();
 }

@@ -3,7 +3,7 @@ using HuaJiBot.NET.Commands;
 
 namespace HuaJiBot.NET.UnitTest;
 
-public class Tests
+public class CommandTest
 {
     [SetUp]
     public void Setup() { }
@@ -35,8 +35,8 @@ public class Tests
             }
             return value.ToString();
         }
-        Console.WriteLine(EnumToAttributeName(TestE.A));
-        Console.WriteLine(EnumToAttributeName(TestE.B));
+        Assert.That(EnumToAttributeName(TestE.A), Is.EqualTo("XA"));
+        Assert.That(EnumToAttributeName(TestE.B), Is.EqualTo("B"));
     }
 
     [Test]
@@ -50,8 +50,8 @@ public class Tests
         var reader = new DefaultCommandReader(Read());
         {
             var result = reader.Input(out var test);
-            Console.WriteLine(result);
-            Console.WriteLine(test);
+            Assert.That(result, Is.True);
+            Assert.That(test, Is.EqualTo("枚举"));
         }
         {
             var result = reader.Match<TestE?>(
@@ -60,8 +60,8 @@ public class Tests
                 out var test,
                 true
             );
-            Console.WriteLine(result);
-            Console.WriteLine(test.ToString());
+            Assert.That(result, Is.False);
+            Assert.That(test, Is.Null);
         }
     }
 
@@ -79,33 +79,32 @@ public class Tests
         var reader = new DefaultCommandReader(Read());
         {
             var result = reader.Input(out var test);
-            Console.WriteLine(result);
-            Console.WriteLine(test);
+            Assert.That(result, Is.True);
+            Assert.That(test, Is.EqualTo("a"));
         }
         {
             var result = reader.Input(out var test);
-            Console.WriteLine(result);
-            Console.WriteLine(test);
+            Assert.That(result, Is.True);
+            Assert.That(test, Is.EqualTo("测 试 ``` code ```"));
         }
         {
             var result = reader.Input(out var test);
-            Console.WriteLine(result);
-            Console.WriteLine(test);
+            Assert.That(result, Is.True);
+            Assert.That(test, Is.EqualTo("@0001"));
         }
         {
             var result = reader.Input(out var test);
-            Console.WriteLine(result);
-            Console.WriteLine(test);
+            Assert.That(result, Is.True);
+            Assert.That(test, Is.EqualTo("test"));
         }
         {
             var result = reader.Match(["test"], x => x, out var test);
-            Console.WriteLine(result);
-            Console.WriteLine(test);
+            Assert.That(result, Is.False);
         }
         {
             var result = reader.Input(out var test);
-            Console.WriteLine(result);
-            Console.WriteLine(test);
+            Assert.That(result, Is.True);
+            Assert.That(test, Is.EqualTo("测试  内容"));
         }
     }
 }

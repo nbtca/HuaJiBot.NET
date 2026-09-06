@@ -13,8 +13,8 @@ namespace HuaJiBot.NET.Plugin.AIChat;
 public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
     private MessageHistory _history = null!;
+    private McpClientManager _mcpClientManager = null!;
     private readonly ConcurrentDictionary<string, AgentSession> _sessions = new();
-
     private AgentConnector Connector
     {
         get
@@ -36,19 +36,23 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     private AIFunction[]? _tools;
 
-    private AIFunction[] GetTools() =>
+    private AIFunction[] GetFunctionTools() =>
         _tools ??= AgentTools.CreateBotFunctions(Service.ExportFunctions);
 
-    protected override void Initialize()
+    protected override async Task InitializeAsync()
     {
         _history = new MessageHistory(Service, "ai_messages.db");
+        _mcpClientManager = new McpClientManager(Service.Logger);
+
+        // Initialize MCP servers if configured
+        if (Config.McpServers.Count > 0)
+        {
+            await _mcpClientManager.InitializeAsync(Config.McpServers);
+            Info($"已连接 {_mcpClientManager.Tools.Count} 个MCP工具");
+        }
+
         Service.Events.OnGroupMessageReceived += (s, e) => _ = Events_OnGroupMessageReceived(e);
         Info("启动成功");
-        //Task.Run(async () =>
-        //{
-        //    //var models = await ModelClient.GetModelsAsync();
-        //    //Info("模型列表：" + string.Join(", ", models.Value.Select(x => x.ModelId)));
-        //});
     }
 
     private AgentSession GetOrCreateSession(string groupId)
@@ -96,7 +100,10 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     .Replace("\n", "\n\t")
         );
         var session = GetOrCreateSession(e.GroupId);
-        var agent = Connector.CreateAIAgentWithOptions(systemPrompt, GetTools());
+        var agent = Connector.CreateAIAgentWithOptions(
+            systemPrompt,
+            functionTools: GetFunctionTools(),
+            mcpTools: _mcpClientManager.Tools.Count > 0 ? [.. _mcpClientManager.Tools] : null);
         var response = await agent.RunAsync(messages, session);
         // 记录工具调用
         foreach (var update in response.ToAgentResponseUpdates())
@@ -143,7 +150,10 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     .Replace("\n", "\n\t")
         );
         var session = GetOrCreateSession(e.GroupId);
-        var agent = Connector.CreateAIAgentWithOptions(systemPrompt, GetTools());
+        var agent = Connector.CreateAIAgentWithOptions(
+            systemPrompt,
+            functionTools: GetFunctionTools(),
+            mcpTools: _mcpClientManager.Tools.Count > 0 ? [.. _mcpClientManager.Tools] : null);
         var sb = new StringBuilder();
         await foreach (var update in agent.RunStreamingAsync(messages, session))
         {
@@ -313,7 +323,11 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    protected override void Unload() { }
+    protected override async void Unload()
+    {
+        if (_mcpClientManager is not null)
+            await _mcpClientManager.DisposeAsync();
+    }
 
     public PluginConfig Config { get; } = new();
 }

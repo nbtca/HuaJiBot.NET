@@ -320,33 +320,33 @@ public class CommandSourceGenerator : IIncrementalGenerator
         {
             // Handle CommandArgumentString
             case "CommandArgumentStringAttribute":
-            {
-                var description = GetAttributeArgument(attribute, 0) ?? "\"\"";
-                return $"new CommandArgumentStringAttribute({description})";
-            }
+                {
+                    var description = GetAttributeArgument(attribute, 0) ?? "\"\"";
+                    return $"new CommandArgumentStringAttribute({description})";
+                }
             // Handle CommandArgumentStringMatch
             case "CommandArgumentStringMatchAttribute":
-            {
-                var pattern = GetAttributeArgument(attribute, 0) ?? "\".*\"";
-                var options = GetAttributeArgument(attribute, 1) ?? "RegexOptions.None";
-                var description = GetAttributeArgument(attribute, 2) ?? "\"\"";
-                return $"new CommandArgumentStringMatchAttribute({pattern}, {options}, {description})";
-            }
+                {
+                    var pattern = GetAttributeArgument(attribute, 0) ?? "\".*\"";
+                    var options = GetAttributeArgument(attribute, 1) ?? "RegexOptions.None";
+                    var description = GetAttributeArgument(attribute, 2) ?? "\"\"";
+                    return $"new CommandArgumentStringMatchAttribute({pattern}, {options}, {description})";
+                }
             // Handle CommandArgumentEnum
             case "CommandArgumentEnumAttribute":
             case { } name when name.Contains("CommandArgumentEnum"):
-            {
-                var description = GetAttributeArgument(attribute, 0) ?? "\"\"";
-                // For generic enum attributes, we need to preserve the type parameter
-                if (attribute.Name is GenericNameSyntax genericName)
                 {
-                    var typeArg = genericName.TypeArgumentList.Arguments.FirstOrDefault();
-                    var typeArgStr = GetFullTypeName(typeArg, semanticModel, typeForTypeof);
-                    return $"new CommandArgumentEnumAttribute<{typeArgStr}>({description})";
-                }
+                    var description = GetAttributeArgument(attribute, 0) ?? "\"\"";
+                    // For generic enum attributes, we need to preserve the type parameter
+                    if (attribute.Name is GenericNameSyntax genericName)
+                    {
+                        var typeArg = genericName.TypeArgumentList.Arguments.FirstOrDefault();
+                        var typeArgStr = GetFullTypeName(typeArg, semanticModel, typeForTypeof);
+                        return $"new CommandArgumentEnumAttribute<{typeArgStr}>({description})";
+                    }
 
-                return $"new CommandArgumentEnumAttribute<{typeForTypeof}>({description})";
-            }
+                    return $"new CommandArgumentEnumAttribute<{typeForTypeof}>({description})";
+                }
             // Fallback to CommandArgumentUnknownAttribute
             default:
                 return $"new CommandArgumentUnknownAttribute(typeof({typeForTypeof}))";
