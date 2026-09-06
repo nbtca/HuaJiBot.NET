@@ -36,6 +36,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set build date
+        id: date
+        run: echo "date=$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
+
       - name: Build and push # 构建并推送镜像到仓库
         uses: docker/build-push-action@v5
         with:
@@ -45,3 +49,5 @@ jobs:
           platforms: linux/amd64, linux/arm64
           tags: |
             ${{ env.IMAGE_NAME_FULL }}:latest
+            ${{ env.IMAGE_NAME_FULL }}:sha-${{ github.sha }}
+            ${{ env.IMAGE_NAME_FULL }}:date-${{ steps.date.outputs.date }}

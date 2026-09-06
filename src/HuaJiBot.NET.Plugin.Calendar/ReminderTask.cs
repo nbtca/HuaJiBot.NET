@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Interfaces;
 using Ical.Net.CalendarComponents;
 using Timer = System.Timers.Timer;
 
@@ -8,7 +9,7 @@ namespace HuaJiBot.NET.Plugin.Calendar;
 internal class ReminderTask : IDisposable
 {
     public PluginConfig Config { get; }
-    public BotService Service { get; }
+    public IPluginService Service { get; }
     private readonly Func<Ical.Net.Calendar?> _getCalendar;
     private Ical.Net.Calendar? Calendar => _getCalendar();
     private readonly Timer _timer;
@@ -17,7 +18,7 @@ internal class ReminderTask : IDisposable
     private const int RemindBeforeEndMinutes = 5;
 
     public ReminderTask(
-        BotService service,
+        IPluginService service,
         PluginConfig config,
         Func<Ical.Net.Calendar?> getCalendar
     )
@@ -115,9 +116,9 @@ internal class ReminderTask : IDisposable
                 var remindEnd = end.AddMinutes(RemindBeforeStartMinutes); //计算提醒结束时间
                 foreach (
                     var (eventStartTime, e) in from x in Calendar.GetEvents(remindStart, remindEnd) //获取所有有交集的日程
-                    let eventStartTime = x.period.StartTime
-                    where eventStartTime >= remindStart && eventStartTime <= remindEnd //筛选开始时间在提醒时间段内的日程
-                    select (eventStartTime, x.e)
+                                               let eventStartTime = x.period.StartTime
+                                               where eventStartTime >= remindStart && eventStartTime <= remindEnd //筛选开始时间在提醒时间段内的日程
+                                               select (eventStartTime, x.e)
                 )
                 {
                     var remindTime = eventStartTime.AddMinutes(-RemindBeforeStartMinutes); //计算提醒时间(RemindBeforeStartMinutes 分钟前提醒)
@@ -155,9 +156,9 @@ internal class ReminderTask : IDisposable
                 var remindEnd = end.AddMinutes(RemindBeforeEndMinutes); //计算提醒结束时间
                 foreach (
                     var (eventEndTime, e) in from x in Calendar.GetEvents(remindStart, remindEnd)
-                    let eventEndTime = x.period.EndTime
-                    where eventEndTime >= remindStart && eventEndTime <= remindEnd //筛选结束时间在提醒时间段内的日程
-                    select (eventEndTime, x.e)
+                                             let eventEndTime = x.period.EndTime
+                                             where eventEndTime >= remindStart && eventEndTime <= remindEnd //筛选结束时间在提醒时间段内的日程
+                                             select (eventEndTime, x.e)
                 )
                 {
                     var remindTime = eventEndTime.AddMinutes(-RemindBeforeEndMinutes); //计算提醒时间(RemindBeforeEndMinutes 分钟前提醒)

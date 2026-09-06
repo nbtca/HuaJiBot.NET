@@ -4,8 +4,10 @@ using System.Diagnostics;
 using HuaJiBot.NET.Plugin.AIChat.Config;
 using HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 using Microsoft.Extensions.Logging;
+using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
 using OpenAI;
-using ChatMessage = OpenAI.Chat.ChatMessage;
+using OpenAIChatMessage = OpenAI.Chat.ChatMessage;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace HuaJiBot.NET.UnitTest;
@@ -37,6 +39,7 @@ internal class AIChat
         );
     }
 
+    [Explicit("Connects to local AI service")]
     [Test]
     public async Task GetAllModels()
     {
@@ -48,6 +51,7 @@ internal class AIChat
         }
     }
 
+    [Explicit("Connects to local AI service")]
     [Test]
     public async Task TestChatUsingAgent()
     {
@@ -61,14 +65,20 @@ internal class AIChat
                 Logging: true
             )
         );
-
-        var agent = connector.CreateAIAgent("You are a helpful AI assistant.");
-        await foreach (var update in agent.RunStreamingAsync("What is the current date and time?"))
+        var agent = connector.CreateAIAgent("你是一个有用的人工智能助手。");
+        var session = await connector.CreateSessionAsync();
+        var messages = new List<Microsoft.Extensions.AI.ChatMessage>
         {
-            Console.WriteLine(update.Text);
+            new Microsoft.Extensions.AI.ChatMessage(ChatRole.User, "现在的日期和时间？")
+        };
+        await foreach (var update in agent.RunStreamingAsync(messages, session))
+        {
+            if (!string.IsNullOrEmpty(update.Text))
+                Console.WriteLine(update.Text);
         }
     }
 
+    [Explicit("Connects to external AI service")]
     [Test]
     public async Task TestChatGeminiUsingAgent()
     {
@@ -83,14 +93,20 @@ internal class AIChat
                 Logging: true
             )
         );
-
-        var agent = connector.CreateAIAgent("You are a helpful AI assistant.");
-        await foreach (var update in agent.RunStreamingAsync("What is the current date and time?"))
+        var agent = connector.CreateAIAgent("你是一个有用的人工智能助手。");
+        var session = await connector.CreateSessionAsync();
+        var messages = new List<Microsoft.Extensions.AI.ChatMessage>
         {
-            Console.WriteLine(update.Text);
+            new Microsoft.Extensions.AI.ChatMessage(ChatRole.User, "现在的日期和时间")
+        };
+        await foreach (var update in agent.RunStreamingAsync(messages, session))
+        {
+            if (!string.IsNullOrEmpty(update.Text))
+                Console.WriteLine(update.Text);
         }
     }
 
+    [Explicit("Connects to local AI service")]
     [Test]
     public async Task TestChat()
     {
@@ -98,8 +114,8 @@ internal class AIChat
         var chatClient = _client.GetChatClient("huihui_ai/qwen2.5-1m-abliterated:14b");
         var response = await chatClient.CompleteChatAsync(
             [
-                ChatMessage.CreateSystemMessage("你是一个AI助手"),
-                ChatMessage.CreateUserMessage("你好，你是谁？"),
+                OpenAIChatMessage.CreateSystemMessage("你是一个AI助手"),
+                OpenAIChatMessage.CreateUserMessage("你好，你是谁？"),
             ]
         );
         foreach (var msg in response.Value.Content)

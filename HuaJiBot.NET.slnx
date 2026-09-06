@@ -9,6 +9,7 @@
     <BuildDependency Project="src/HuaJiBot.NET.Plugin.AIChat/HuaJiBot.NET.Plugin.AIChat.csproj" />
     <BuildDependency Project="src/HuaJiBot.NET.Plugin.AutoReply/HuaJiBot.NET.Plugin.AutoReply.csproj" />
     <BuildDependency Project="src/HuaJiBot.NET.Plugin.Calendar/HuaJiBot.NET.Plugin.Calendar.csproj" />
+    <BuildDependency Project="src/HuaJiBot.NET.Plugin.DailySummary/HuaJiBot.NET.Plugin.DailySummary.csproj" />
     <BuildDependency Project="src/HuaJiBot.NET.Plugin.GitHubBridge/HuaJiBot.NET.Plugin.GitHubBridge.csproj" />
     <BuildDependency Project="src/HuaJiBot.NET.Plugin.MessageBridge/HuaJiBot.NET.Plugin.MessageBridge.csproj" />
     <BuildDependency Project="src/HuaJiBot.NET.Plugin.RepairTeam/HuaJiBot.NET.Plugin.RepairTeam.csproj" />
@@ -18,6 +19,7 @@
   <Project Path="src/HuaJiBot.NET.Plugin.AIChat/HuaJiBot.NET.Plugin.AIChat.csproj" />
   <Project Path="src/HuaJiBot.NET.Plugin.AutoReply/HuaJiBot.NET.Plugin.AutoReply.csproj" />
   <Project Path="src/HuaJiBot.NET.Plugin.Calendar/HuaJiBot.NET.Plugin.Calendar.csproj" />
+  <Project Path="src/HuaJiBot.NET.Plugin.DailySummary/HuaJiBot.NET.Plugin.DailySummary.csproj" />
   <Project Path="src/HuaJiBot.NET.Plugin.GitHubBridge/HuaJiBot.NET.Plugin.GitHubBridge.csproj" />
   <Project Path="src/HuaJiBot.NET.Plugin.MessageBridge/HuaJiBot.NET.Plugin.MessageBridge.csproj" />
   <Project Path="src/HuaJiBot.NET.Plugin.RepairTeam/HuaJiBot.NET.Plugin.RepairTeam.csproj" />

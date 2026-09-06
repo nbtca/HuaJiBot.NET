@@ -102,21 +102,21 @@ internal static class CalendarExtensions
         var endArg = new CalDateTime(end.UtcDateTime, "UTC");
         var allOcc = @this.GetOccurrences(startArg).TakeWhileBefore(endArg);
         return from occurrence in allOcc
-            select //选择
-            occurrence.Source switch
-            {
-                CalendarEvent calendarEvent => (
-                    Period: new Period(occurrence.Period, calendarEvent),
-                    calendarEvent
-                ),
-                _ => throw new ArgumentOutOfRangeException(
-                    "not impl " + occurrence.Source.GetType()
-                ),
-            } into tuple
-            orderby tuple.Period.StartTime ascending //按照开始时间排序
-            where //确保时间范围内
-                tuple.Period.StartTime < end && tuple.Period.EndTime > start
-            select tuple;
+               select //选择
+               occurrence.Source switch
+               {
+                   CalendarEvent calendarEvent => (
+                       Period: new Period(occurrence.Period, calendarEvent),
+                       calendarEvent
+                   ),
+                   _ => throw new ArgumentOutOfRangeException(
+                       "not impl " + occurrence.Source.GetType()
+                   ),
+               } into tuple
+               orderby tuple.Period.StartTime ascending //按照开始时间排序
+               where //确保时间范围内
+                   tuple.Period.StartTime < end && tuple.Period.EndTime > start
+               select tuple;
     }
 
     //todo: 生成图片

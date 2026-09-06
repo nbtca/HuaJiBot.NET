@@ -160,25 +160,25 @@ internal class SatoriEventClient
                                     default:
                                         _service.LogDebug($"未处理的消息元素：{element}");
                                         break;
-                                    //case SharpElement: break;
-                                    //case LinkElement: break;
-                                    //case ImageElement: break;
-                                    //case AudioElement: break;
-                                    //case VideoElement: break;
-                                    //case FileElement: break;
-                                    //case BoldElement: break;
-                                    //case ItalicElement: break;
-                                    //case UnderlineElement: break;
-                                    //case DeleteElement: break;
-                                    //case SpoilerElement: break;
-                                    //case CodeElement: break;
-                                    //case SuperscriptElement: break;
-                                    //case SubscriptElement: break;
-                                    //case BreakElement: break;
-                                    //case ParagraphElement: break;
-                                    //case MessageElement: break;
-                                    //case QuoteElement: break;
-                                    //case AuthorElement: break;
+                                        //case SharpElement: break;
+                                        //case LinkElement: break;
+                                        //case ImageElement: break;
+                                        //case AudioElement: break;
+                                        //case VideoElement: break;
+                                        //case FileElement: break;
+                                        //case BoldElement: break;
+                                        //case ItalicElement: break;
+                                        //case UnderlineElement: break;
+                                        //case DeleteElement: break;
+                                        //case SpoilerElement: break;
+                                        //case CodeElement: break;
+                                        //case SuperscriptElement: break;
+                                        //case SubscriptElement: break;
+                                        //case BreakElement: break;
+                                        //case ParagraphElement: break;
+                                        //case MessageElement: break;
+                                        //case QuoteElement: break;
+                                        //case AuthorElement: break;
                                 }
                             }
                         }

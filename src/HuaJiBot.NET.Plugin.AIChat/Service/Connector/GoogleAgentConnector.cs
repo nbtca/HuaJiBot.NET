@@ -1,5 +1,5 @@
 using System.ClientModel;
-using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Interfaces;
 using HuaJiBot.NET.Logger;
 using HuaJiBot.NET.Plugin.AIChat.Config;
 using Microsoft.Extensions.Logging;
@@ -8,7 +8,7 @@ using OpenAI.Chat;
 
 namespace HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 
-public class GoogleAgentConnector(BotService service, ModelConfig modelConfig)
+public class GoogleAgentConnector(IPluginService service, ModelConfig modelConfig)
     : AgentConnector(modelConfig)
 {
     private OpenAIClient? _client;

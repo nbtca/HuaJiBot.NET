@@ -25,4 +25,5 @@ COPY --from=build-env /root/build/bin/plugins /app/data/plugins
 
 USER app
 WORKDIR /app/data
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD ["dotnet", "--info"]
 ENTRYPOINT ["/app/bin/HuaJiBot.NET.CLI"]

@@ -1,4 +1,4 @@
-﻿using HuaJiBot.NET.Bot;
+﻿using HuaJiBot.NET.Interfaces;
 using LiteDB;
 
 namespace HuaJiBot.NET.DataBase;
@@ -21,9 +21,9 @@ public class MessageHistory : IDisposable
     private readonly LiteDatabase _db;
     private readonly ILiteCollection<GroupMessage> _messages;
     private bool _disposed = false;
-    private BotService _service;
+    private readonly IPluginService _service;
 
-    public MessageHistory(BotService service, string dbName = "messages.db")
+    public MessageHistory(IPluginService service, string dbName = "messages.db")
     {
         _service = service;
         var dbPath = Path.Combine(service.GetPluginDataPath(), "database", dbName);
@@ -133,6 +133,26 @@ public class MessageHistory : IDisposable
     )
     {
         return _messages.Find(x => x.Timestamp >= start && x.Timestamp <= end, skip, limit);
+    }
+
+    public IEnumerable<GroupMessage> GetGroupMessagesByTimeRange(
+        string groupId,
+        DateTime start,
+        DateTime end,
+        int limit = 100,
+        int skip = 0
+    )
+    {
+        return _messages.Find(
+            x => x.GroupId == groupId && x.Timestamp >= start && x.Timestamp < end,
+            skip,
+            limit
+        );
+    }
+
+    public IEnumerable<string> GetGroupIds()
+    {
+        return _messages.FindAll().Select(message => message.GroupId).Distinct();
     }
 
     public void DeleteMessage(string messageId)

@@ -22,6 +22,7 @@ internal class BuildImageTest
 
     private string avatarUrl = "https://avatars.githubusercontent.com/u/91080742?v=4";
 
+    [Explicit("Requires HTTP fetch and process spawning")]
     [Test]
     public async Task GitIssue()
     {
@@ -208,6 +209,7 @@ internal class BuildImageTest
         Console.WriteLine("图片已生成。");
     }
 
+    [Explicit("Requires HTTP fetch and process spawning")]
     [Test]
     public async Task GitPush()
     {
@@ -275,6 +277,7 @@ internal class BuildImageTest
         Console.WriteLine("图片已生成。");
     }
 
+    [Explicit("Requires process spawning")]
     [Test]
     public Task BuildTextImage()
     {
@@ -291,6 +294,7 @@ internal class BuildImageTest
         return Task.CompletedTask;
     }
 
+    [Explicit("Requires process spawning")]
     [Test]
     public Task BuildCalendar()
     {

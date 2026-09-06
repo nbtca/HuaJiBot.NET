@@ -27,9 +27,9 @@ public class SatoriAdapter : BotServiceBase
         _eventClient = new(this, wsUrl, token);
     }
 
-    public override void Reconnect() => _ = _eventClient.ConnectAsync();
+    protected override void ReconnectCore() => _ = _eventClient.ConnectAsync();
 
-    public override Task SetupServiceAsync() => _eventClient.ConnectAsync();
+    protected override Task SetupServiceAsyncCore() => _eventClient.ConnectAsync();
 
     public override string[] AllRobots => Accounts;
 
@@ -94,26 +94,19 @@ public class SatoriAdapter : BotServiceBase
         }
     }
 
-    public override void SetGroupName(string? robotId, string targetGroup, string groupName)
+    protected override void SetGroupNameCore(string? robotId, string targetGroup, string groupName)
     {
         throw new NotImplementedException();
     }
 
-    public override MemberType GetMemberType(string robotId, string targetGroup, string userId)
+    protected override MemberType GetMemberTypeCore(string robotId, string targetGroup, string userId)
     {
         throw new NotImplementedException();
     }
 
-    public override string GetNick(string robotId, string userId)
+    protected override string GetNickCore(string robotId, string userId)
     {
         throw new NotImplementedException();
     }
 
-    public override string GetPluginDataPath()
-    {
-        var path = Path.GetFullPath(Path.Combine("plugins", "data")); //插件数据目录，当前目录下的plugins/data
-        if (!Directory.Exists(path))
-            Directory.CreateDirectory(path); //自动创建目录
-        return path;
-    }
 }

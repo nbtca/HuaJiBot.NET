@@ -7,5 +7,6 @@ internal static class WorkflowRunEventDispatcher
     public static async Task DispatchWorkflowRunEventAsync(
         this PluginMain plugin,
         WorkflowRunEventBody body
-    ) { }
+    )
+    { }
 }

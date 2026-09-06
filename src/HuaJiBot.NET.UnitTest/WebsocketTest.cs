@@ -24,6 +24,7 @@ internal class WebsocketTest
 
     private ServerlessMQ MQ => _mq.Value;
 
+    [Explicit("Requires live server")]
     [Test]
     public async Task TestClientChanged()
     {
@@ -37,6 +38,7 @@ internal class WebsocketTest
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
     }
 
+    [Explicit("Requires live server")]
     [Test]
     public async Task TestWebhook()
     {
@@ -50,6 +52,7 @@ internal class WebsocketTest
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
     }
 
+    [Explicit("Requires live server")]
     [Test]
     public async Task TestPacket()
     {

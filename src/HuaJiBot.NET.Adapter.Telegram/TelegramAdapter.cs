@@ -2,6 +2,8 @@ using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Logger;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
@@ -11,6 +13,7 @@ namespace HuaJiBot.NET.Adapter.Telegram;
 
 public class TelegramAdapter(string botToken) : BotServiceBase
 {
+    private static readonly HttpClient RichMessageClient = new();
     private readonly TelegramBotClient _botClient = new(botToken);
     private CancellationTokenSource _cancellationTokenSource = new();
 
@@ -18,14 +21,14 @@ public class TelegramAdapter(string botToken) : BotServiceBase
 
     private User? _botUser;
 
-    public override void Reconnect()
+    protected override void ReconnectCore()
     {
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource = new();
-        _ = Task.Run(SetupServiceAsync);
+        _ = Task.Run(SetupServiceAsyncCore);
     }
 
-    public override async Task SetupServiceAsync()
+    protected override async Task SetupServiceAsyncCore()
     {
         try
         {
@@ -197,14 +200,28 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         var groupTopic = GroupTopic.Parse(targetGroup);
         try
         {
-            var sent = await _botClient.SendRichMessage(
-                new ChatId(groupTopic.GroupId),
-                new InputRichMessage { Markdown = content.Markdown },
-                replyParameters: ToReplyParameters(content.ReplyToMessageId),
-                messageThreadId: groupTopic.TopicId,
-                cancellationToken: _cancellationTokenSource.Token
+            var replyParameters = ToReplyParameters(content.ReplyToMessageId);
+            using var response = await RichMessageClient.PostAsJsonAsync(
+                $"https://api.telegram.org/bot{botToken}/sendRichMessage",
+                new
+                {
+                    chat_id = groupTopic.GroupId,
+                    rich_message = new { markdown = content.Markdown },
+                    reply_parameters = replyParameters is { } reply
+                        ? new { message_id = reply.MessageId }
+                        : null,
+                    message_thread_id = groupTopic.TopicId,
+                },
+                _cancellationTokenSource.Token
             );
-            return [sent.MessageId.ToString()];
+            var result = await response.Content.ReadFromJsonAsync<RichMessageResponse>(
+                _cancellationTokenSource.Token
+            );
+            if (!response.IsSuccessStatusCode || result is not { Ok: true, Result: { } message })
+            {
+                throw new HttpRequestException(result?.Description ?? response.ReasonPhrase);
+            }
+            return [message.MessageId.ToString()];
         }
         catch (Exception ex)
         {
@@ -212,6 +229,14 @@ public class TelegramAdapter(string botToken) : BotServiceBase
             throw;
         }
     }
+
+    private sealed record RichMessageResponse(
+        bool Ok,
+        RichMessageResult? Result,
+        string? Description
+    );
+
+    private sealed record RichMessageResult([property: JsonPropertyName("message_id")] int MessageId);
 
     public override void RecallMessage(string? robotId, string targetGroup, string msgId)
     {
@@ -242,7 +267,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         }
     }
 
-    public override void SetGroupName(string? robotId, string targetGroup, string groupName)
+    protected override void SetGroupNameCore(string? robotId, string targetGroup, string groupName)
     {
         try
         {
@@ -268,7 +293,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         }
     }
 
-    public override MemberType GetMemberType(string robotId, string targetGroup, string userId)
+    protected override MemberType GetMemberTypeCore(string robotId, string targetGroup, string userId)
     {
         try
         {
@@ -304,7 +329,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         }
     }
 
-    public override string GetNick(string robotId, string userId)
+    protected override string GetNickCore(string robotId, string userId)
     {
         try
         {
@@ -321,14 +346,6 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         {
             return userId;
         }
-    }
-
-    public override string GetPluginDataPath()
-    {
-        var path = Path.GetFullPath(Path.Combine("plugins", "data"));
-        if (!Directory.Exists(path))
-            Directory.CreateDirectory(path);
-        return path;
     }
 
     private async Task HandleMessageAsync(Message message, UpdateType type)
