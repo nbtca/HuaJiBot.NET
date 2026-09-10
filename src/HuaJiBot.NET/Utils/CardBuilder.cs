@@ -1,7 +1,10 @@
-﻿using System.Numerics;
+﻿using System.Net;
+using System.Numerics;
 using System.Text;
+using System.Text.RegularExpressions;
 using HuaJiBot.NET.Utils.Fonts;
 using Markdig;
+using Markdig.Extensions.Tables;
 using Markdig.Extensions.TaskLists;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
@@ -214,7 +217,7 @@ public abstract class ImageBuilder
     public abstract void Generate(Stream stream, bool autoHeight = false);
 }
 
-public class CardBuilder : ImageBuilder
+public partial class CardBuilder : ImageBuilder
 {
     public required string Title;
     public required IEnumerable<TextRun> Subtitle;
@@ -227,9 +230,22 @@ public class CardBuilder : ImageBuilder
     public byte[]? FooterIcon;
     public required byte[] Icon;
 
-    private static readonly MarkdownPipeline TaskListPipeline = new MarkdownPipelineBuilder()
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
+        .UsePipeTables()
         .UseTaskLists()
         .Build();
+
+    [GeneratedRegex(
+        @"(<(script|style)\b.*?</\2\s*>|<[^>]*>|\s)+",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline
+    )]
+    private static partial Regex TagsAndWhitespace();
+
+    [GeneratedRegex(@"^<br\s*/?>$", RegexOptions.IgnoreCase)]
+    private static partial Regex LineBreakTag();
+
+    private static string StripHtml(string html) =>
+        WebUtility.HtmlDecode(TagsAndWhitespace().Replace(html, " ")).Trim();
 
     public static IEnumerable<TextRun> MarkdownRender(string? markdown)
     {
@@ -240,11 +256,9 @@ public class CardBuilder : ImageBuilder
 
     private static IEnumerable<TextRun> MarkdownRenderCore(string markdown)
     {
-        string GetRawText(SourceSpan span)
-        {
-            return markdown[span.Start..span.End];
-        }
-        var document = Markdown.Parse(markdown, TaskListPipeline);
+        //SourceSpan.End is inclusive
+        string GetRawText(SourceSpan span) => markdown[span.Start..(span.End + 1)];
+        var document = Markdown.Parse(markdown, Pipeline);
 
         TextRun newLine = new(Environment.NewLine) { FontSize = 0 };
 
@@ -318,12 +332,19 @@ public class CardBuilder : ImageBuilder
                             FontSize = fontSize,
                         };
                         break;
-                    case HtmlInline html:
-                        yield return new TextRun(html.Tag, Color.Gray)
+                    case HtmlEntityInline entity:
+                        yield return new TextRun(entity.Transcoded.ToString(), Color.White)
                         {
-                            Italic = true,
                             FontSize = fontSize,
                         };
+                        break;
+                    case HtmlInline html when LineBreakTag().IsMatch(html.Tag):
+                        yield return new TextRun(Environment.NewLine, Color.White)
+                        {
+                            FontSize = fontSize,
+                        };
+                        break;
+                    case HtmlInline:
                         break;
                     case ContainerInline container:
                         foreach (var run in InlineToString(container, fontSize))
@@ -428,41 +449,38 @@ public class CardBuilder : ImageBuilder
                     }
                     yield return new TextRun(">", Color.LightGoldenrodYellow) { EndPrefix = true };
                     break;
-                case HtmlBlock html:
-                    var htmlRaw = GetRawText(html.Span);
-                    var htmlText = htmlRaw.Length > 20 ? htmlRaw[..20] : htmlRaw;
-
-                    switch (html.Type)
+                case Table table:
+                    foreach (var (rowIndex, row) in table.OfType<TableRow>().Index())
                     {
-                        //case HtmlBlockType.DocumentType:
-                        //    yield return new TextRun("<!DOCTYPE html>" + htmlText, Color.Gray)
-                        //    {
-                        //        FontSize = fontSize,
-                        //    };
-                        //    break;
-                        //case HtmlBlockType.CData:
-                        //    break;
-                        case HtmlBlockType.Comment:
-                            //yield return new TextRun("//" + htmlText, Color.Gray)
-                            //{
-                            //    FontSize = fontSize,
-                            //};
-                            break;
-                        //case HtmlBlockType.ProcessingInstruction:
-                        //    break;
-                        //case HtmlBlockType.ScriptPreOrStyle:
-                        //    break;
-                        //case HtmlBlockType.InterruptingBlock:
-                        //    break;
-                        //case HtmlBlockType.NonInterruptingBlock:
-                        //    break;
-                        default:
-                            yield return new TextRun(htmlText, Color.LightSeaGreen)
-                            {
-                                FontSize = fontSize,
-                            };
-                            break;
+                        if (rowIndex > 0)
+                            yield return newLine;
+                        foreach (var (cellIndex, cell) in row.OfType<TableCell>().Index())
+                        {
+                            if (cellIndex > 0)
+                                yield return new TextRun(" | ", Color.Gray)
+                                {
+                                    FontSize = fontSize,
+                                };
+                            foreach (var paragraph in cell.OfType<ParagraphBlock>())
+                                foreach (var run in InlineToString(paragraph.Inline, fontSize))
+                                    //GFM unescapes \| inside code spans in cells, Markdig does not
+                                    yield return run with
+                                    {
+                                        Text = run.Text.Replace('\n', ' ').Replace(@"\|", "|"),
+                                        Bold = run.Bold || row.IsHeader,
+                                    };
+                        }
                     }
+                    break;
+                case HtmlBlock html:
+                    if (
+                        html.Type is not HtmlBlockType.Comment
+                        && StripHtml(GetRawText(html.Span)) is { Length: > 0 } htmlText
+                    )
+                        yield return new TextRun(htmlText, Color.White)
+                        {
+                            FontSize = fontSize,
+                        };
                     break;
                 default:
                     yield return new TextRun(GetRawText(block.Span)
