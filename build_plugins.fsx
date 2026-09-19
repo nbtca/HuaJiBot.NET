@@ -104,10 +104,7 @@ for dir in binDirs do
             let dest = Path.Combine(pluginDir, fileName)
             File.Copy(file, dest, true)
             printfn "Copy %s to %s" file dest
-        else if
-            // skip *.Abstractions.dll
-            fileName.EndsWith "Abstractions.dll" |> not
-        then
+        else
             let dest = Path.Combine(libsDir, fileName)
             File.Copy(file, dest, true)
             printfn "Copy %s to %s" file dest
