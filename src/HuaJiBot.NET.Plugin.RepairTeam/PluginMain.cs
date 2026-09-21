@@ -21,6 +21,11 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     protected override void Initialize()
     {
+        if (string.IsNullOrWhiteSpace(Config.NsqUrl) || string.IsNullOrWhiteSpace(Config.NsqTopic))
+        {
+            Service.Warn("[RepairTeam] 未配置 NsqUrl 或 NsqTopic，不接收维修事件");
+            return;
+        }
         _nsq = new(Config.NsqUrl, Config.NsqTopic, Config.NsqChannel, Config.NsqSecret);
         Service.Log("[RepairTem] 启动成功！");
         _nsq.MessageReceived += OnMessageReceived;
