@@ -119,7 +119,8 @@ public class WebsocketClient : IWebsocketClient
                 if (_client.Connected)
                     return;
                 _connectAttempts++;
-                if (await _client.StartWithTimeoutAsync(10))
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                if (await _client.StartWithTimeoutAsync(10, token: timeout.Token))
                 {
                     _connectAttempts = 0;
                 }
