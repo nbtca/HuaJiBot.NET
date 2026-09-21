@@ -13,7 +13,10 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
     private MessageHistory _history = null!;
     private McpClientManager _mcpClientManager = null!;
-    private readonly ConcurrentDictionary<string, AgentSession> _sessions = new();
+    private sealed record GroupSession(AgentSession Session, DateTimeOffset LastUsed, int Turns);
+
+    private static readonly TimeSpan SessionIdleTimeout = TimeSpan.FromHours(1);
+    private readonly ConcurrentDictionary<string, GroupSession> _sessions = new();
     private AgentConnector Connector
     {
         get
@@ -54,14 +57,23 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         Info("启动成功");
     }
 
-    private AgentSession GetOrCreateSession(string groupId)
+    // Callers hold the per-group lock, so a group's session is never used concurrently.
+    private async Task<AgentSession> GetSessionAsync(AgentConnector connector, string groupId)
     {
-        return _sessions.GetOrAdd(groupId, _ =>
+        var now = DateTimeOffset.UtcNow;
+        if (
+            _sessions.TryGetValue(groupId, out var current)
+            && current.Turns < Config.MaxTurns
+            && now - current.LastUsed < SessionIdleTimeout
+        )
         {
-            var session = Connector.CreateSessionAsync().GetAwaiter().GetResult();
-            Info($"为群组 {groupId} 创建新的Agent会话");
-            return session;
-        });
+            _sessions[groupId] = current with { LastUsed = now, Turns = current.Turns + 1 };
+            return current.Session;
+        }
+        var session = await connector.CreateSessionAsync();
+        _sessions[groupId] = new(session, now, 1);
+        Info($"为群组 {groupId} 创建新的Agent会话");
+        return session;
     }
 
     private void LogToolCalls(AgentResponseUpdate update)
@@ -119,8 +131,9 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     )
                     .Replace("\n", "\n\t")
         );
-        var session = GetOrCreateSession(e.GroupId);
-        var agent = Connector.CreateAIAgentWithOptions(
+        var connector = Connector;
+        var session = await GetSessionAsync(connector, e.GroupId);
+        var agent = connector.CreateAIAgentWithOptions(
             systemPrompt,
             functionTools: GetFunctionTools(),
             mcpTools: _mcpClientManager.Tools.Count > 0 ? [.. _mcpClientManager.Tools] : null);
@@ -157,6 +170,8 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     private async Task OnGroupMessageReceivedAsync(Events.GroupMessageEventArgs e)
     {
+        if (!Config.GroupIds.Contains(e.GroupId))
+            return;
         var reader = e.CommandReader;
         if (reader.At(out var atId))
         {

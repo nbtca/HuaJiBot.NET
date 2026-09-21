@@ -211,13 +211,10 @@ public abstract class CommonCommandReader : CommandReader
                             yield return new MatchAt(atTarget, atText);
                             break;
                         }
-                    case ReaderReply { Data: var data } reply:
+                    case ReaderReply { Data: var data }:
                         {
                             if (_lastOne)
-                            {
-                                (lastTextBuffer ??= new StringBuilder()).Append(reply); //返回剩下的整个文本，加到buffer
-                                continue;
-                            }
+                                continue; // A reply has no text form; appending it would print the record.
                             yield return new MatchReply(data);
                             previousIsReply = true;
                             break;
