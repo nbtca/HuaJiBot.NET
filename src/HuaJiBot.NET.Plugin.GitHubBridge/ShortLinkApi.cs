@@ -16,41 +16,25 @@ internal class ShortLinkApi(string token)
         public required string Url { get; init; }
     }
 
+    private static readonly HttpClient Client = new();
+
     public async Task<ShortLinkResult> ShortLinkAsync(
         string apiUrl,
         string url,
         string? path = null
     )
     {
-        using var client = new HttpClient();
         var obj = new JObject { ["url"] = url };
         if (path is not null)
             obj["path"] = path;
-        var content = new StringContent(
-            obj.ToString(Formatting.None),
-            Encoding.UTF8,
-            "application/json"
-        );
-        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
-        var response = await client.PostAsync(apiUrl, content);
+        using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl)
+        {
+            Content = new StringContent(obj.ToString(Formatting.None), Encoding.UTF8, "application/json"),
+        };
+        request.Headers.Add("Authorization", $"Bearer {token}");
+        using var response = await Client.SendAsync(request);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ShortLinkResult>()
             ?? throw new NullReferenceException("Response is empty");
-    }
-
-    public async Task<(Exception?, ShortLinkResult)> TryShortLinkAsync(
-        string apiUrl,
-        string url,
-        string? path = null
-    )
-    {
-        try
-        {
-            return (null, await ShortLinkAsync(apiUrl, url, path));
-        }
-        catch (Exception ex)
-        {
-            return (ex, new ShortLinkResult { Original = url, Url = url });
-        }
     }
 }

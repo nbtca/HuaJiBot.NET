@@ -10,6 +10,7 @@ internal class RemoteSync(
     string icalUrl = "https://ical.nbtca.space/events.ics"
 )
 {
+    private static readonly HttpClient Client = new();
     private DateTimeOffset _lastLoadTime = DateTimeOffset.MinValue;
     public Ical.Net.Calendar? Calendar { get; private set; }
 
@@ -27,8 +28,7 @@ internal class RemoteSync(
         }
         try
         {
-            HttpClient client = new();
-            var resp = await client.GetAsync(icalUrl); //从Url获取
+            using var resp = await Client.GetAsync(icalUrl);
             resp.EnsureSuccessStatusCode();
             Calendar = Ical.Net.Calendar.Load(await resp.Content.ReadAsStringAsync());
             if (Calendar is null)

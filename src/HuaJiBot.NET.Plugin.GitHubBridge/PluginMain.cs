@@ -5,7 +5,6 @@ using HuaJiBot.NET.Plugin.GitHubBridge.Types.Generic;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssueCommentEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssuesEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.PushEventBody;
-using HuaJiBot.NET.Plugin.GitHubBridge.Types.WorkflowRunEventBody;
 
 namespace HuaJiBot.NET.Plugin.GitHubBridge;
 
@@ -69,9 +68,6 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         break;
                     case IssueCommentEventBody body: //issue comment事件
                         await this.DispatchIssueCommentEventAsync(body);
-                        break;
-                    case WorkflowRunEventBody body: //actions构建事件
-                        await this.DispatchWorkflowRunEventAsync(body);
                         break;
                     case UnknownEventBody body:
                         Info("收到未实现的事件！" + e.Headers.XGithubEvent[0]);
