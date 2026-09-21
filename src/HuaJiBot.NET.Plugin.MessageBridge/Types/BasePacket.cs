@@ -11,9 +11,6 @@ public abstract class BasePacket
 
     public string ToJson() => JsonConvert.SerializeObject(this, SerializerSettings.Value);
 
-    public static BasePacket? FromJson(JObject json) =>
-        json.ToObject<BasePacket>(JsonSerializer.Create(SerializerSettings.Value));
-
     public static BasePacket? FromJson(string json) =>
         JsonConvert.DeserializeObject<BasePacket>(json, SerializerSettings.Value);
 
