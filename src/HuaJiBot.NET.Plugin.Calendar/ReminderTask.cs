@@ -49,25 +49,6 @@ internal class ReminderTask : IDisposable
             _ = Service.TrySendGroupMessageAsync(group.GroupId, text);
     }
 
-    //public string formatTimeRange(DateTime start, DateTime end)
-    //{
-    //    var s = new StringBuilder();
-    //    var now = Utils.NetworkTime.Now; //现在
-    //    //same day
-    //    if (start.Date == end.Date)
-    //    {
-    //        s.Append(start.ToString("yyyy-MM-dd HH:mm"));
-    //        s.Append(" - ");
-    //        s.Append(end.ToString("HH:mm"));
-    //    }
-    //    else
-    //    {
-    //        s.Append(start.ToString("yyyy-MM-dd HH:mm"));
-    //        s.Append(" - ");
-    //        s.Append(end.ToString("yyyy-MM-dd HH:mm"));
-    //    }
-    //}
-
     [MethodImpl(MethodImplOptions.Synchronized)] //防止多线程同时更新时间节点
     private void InvokeCheck()
     {

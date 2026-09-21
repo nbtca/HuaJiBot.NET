@@ -1,3 +1,5 @@
+using HuaJiBot.NET.AI;
+
 namespace HuaJiBot.NET.Plugin.DailySummary.Config;
 
 public class PluginConfig : ConfigBase

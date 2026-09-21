@@ -21,11 +21,9 @@ public class MessageHistory : IDisposable
     private readonly LiteDatabase _db;
     private readonly ILiteCollection<GroupMessage> _messages;
     private bool _disposed = false;
-    private readonly IPluginService _service;
 
     public MessageHistory(IPluginService service, string dbName = "messages.db")
     {
-        _service = service;
         var dbPath = Path.Combine(service.GetPluginDataPath(), "database", dbName);
         // Ensure directory exists
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
@@ -43,17 +41,11 @@ public class MessageHistory : IDisposable
         if (message == null)
             throw new ArgumentNullException(nameof(message));
         _messages.Insert(message);
-        _service.LogDebug($"[LiteDB] [+] {message.MessageId}: {message.Content}");
     }
 
     public GroupMessage? GetMessage(string messageId)
     {
         return _messages.FindOne(x => x.MessageId == messageId);
-    }
-
-    public IEnumerable<GroupMessage> GetGroupMessages(string groupId, int limit = 100, int skip = 0)
-    {
-        return _messages.Find(x => x.GroupId == groupId, skip, limit);
     }
 
     public GroupMessage? GetGroupMessageLastEndWith(string groupId, string text)
@@ -110,30 +102,7 @@ public class MessageHistory : IDisposable
         return messages.FirstOrDefault();
     }
 
-    public IEnumerable<GroupMessage> GetUserMessages(string userId, int limit = 100, int skip = 0)
-    {
-        return _messages.Find(x => x.SenderId == userId, skip, limit);
-    }
-
-    public IEnumerable<GroupMessage> GetUserGroupMessages(
-        string userId,
-        string groupId,
-        int limit = 100,
-        int skip = 0
-    )
-    {
-        return _messages.Find(x => x.SenderId == userId && x.GroupId == groupId, skip, limit);
-    }
-
-    public IEnumerable<GroupMessage> GetMessagesByTimeRange(
-        DateTime start,
-        DateTime end,
-        int limit = 100,
-        int skip = 0
-    )
-    {
-        return _messages.Find(x => x.Timestamp >= start && x.Timestamp <= end, skip, limit);
-    }
+    public int DeleteBefore(DateTime time) => _messages.DeleteMany(x => x.Timestamp < time);
 
     public IEnumerable<GroupMessage> GetGroupMessagesByTimeRange(
         string groupId,
@@ -148,24 +117,6 @@ public class MessageHistory : IDisposable
             skip,
             limit
         );
-    }
-
-    public void DeleteMessage(string messageId)
-    {
-        _messages.DeleteMany(x => x.MessageId == messageId);
-    }
-
-    public bool UpdateMessage(GroupMessage message)
-    {
-        if (message == null)
-            throw new ArgumentNullException(nameof(message));
-
-        return _messages.Update(message);
-    }
-
-    public void ClearGroupHistory(string groupId)
-    {
-        _messages.DeleteMany(x => x.GroupId == groupId);
     }
 
     protected virtual void Dispose(bool disposing)

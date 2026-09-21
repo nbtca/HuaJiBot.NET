@@ -27,20 +27,4 @@ public static class TempFile
 
         public string FileName => _file;
     }
-
-    /// <summary>
-    /// 保存到临时文件
-    /// </summary>
-    /// <returns>自动删除文件</returns>
-    public static AutoDeleteFile SaveTempAutoDelete(Stream stream)
-    {
-        var tempName = Path.GetTempFileName();
-        var tempDir = Path.Combine(Environment.CurrentDirectory, "temp");
-        if (!Directory.Exists(tempDir))
-            Directory.CreateDirectory(tempDir);
-        var tempFile = Path.Combine(tempDir, tempName);
-        using var fs = File.OpenWrite(tempFile);
-
-        return new AutoDeleteFile(tempFile);
-    }
 }

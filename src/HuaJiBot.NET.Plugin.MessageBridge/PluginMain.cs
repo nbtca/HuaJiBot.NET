@@ -266,9 +266,6 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         case GetPlayerListResponsePacket playerListResponse:
                             ProcessPlayerListResponse(playerListResponse);
                             break;
-                        case ActiveBroadcastPacket activeBroadcast:
-                            ProcessActiveBroadcast(activeBroadcast);
-                            break;
                     }
                     break;
             }

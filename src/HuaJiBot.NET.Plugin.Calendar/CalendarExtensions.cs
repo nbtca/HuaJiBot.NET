@@ -62,42 +62,7 @@ internal static class CalendarExtensions
         DateTimeOffset start,
         DateTimeOffset end
     )
-    { /* ## 已经修复 ##
-        //ical.net时区bug，故使用两个时区获取
-        //https://github.com/rianjs/ical.net/issues/569
-        var occWithTimeZone = @this.GetOccurrences(
-            new CalDateTime(
-                start.ToOffset(NetworkTime.LocalTimeZoneOffset).DateTime,
-                NetworkTime.LocalTimeZoneName
-            ),
-            new CalDateTime(
-                end.ToOffset(NetworkTime.LocalTimeZoneOffset).DateTime,
-                NetworkTime.LocalTimeZoneName
-            )
-        ); //+8时区的事件
-        var occUtc = @this.GetOccurrences(
-            new CalDateTime(start.UtcDateTime, "UTC"),
-            new CalDateTime(end.UtcDateTime, "UTC")
-        ); //UTC时区的事件
-        var allOcc = occWithTimeZone.Concat(occUtc).Distinct(); //合并并去重
-        return from occurrence in allOcc
-            select //选择
-            occurrence.Source switch
-            {
-                CalendarEvent calendarEvent => (
-                    Period: new Period(occurrence.Period),
-                    calendarEvent
-                ),
-                _ => throw new ArgumentOutOfRangeException(
-                    "not impl " + occurrence.Source.GetType()
-                ),
-            } into tuple
-            orderby tuple.Period.StartTime ascending //按照开始时间排序
-            where //确保时间范围内
-                tuple.Period.StartTime < end && tuple.Period.EndTime > start
-            select tuple;
-        //映射
-        */
+    {
         var startArg = new CalDateTime(start.UtcDateTime, "UTC");
         var endArg = new CalDateTime(end.UtcDateTime, "UTC");
         var allOcc = @this.GetOccurrences(startArg).TakeWhileBefore(endArg);
@@ -118,14 +83,6 @@ internal static class CalendarExtensions
                    tuple.Period.StartTime < end && tuple.Period.EndTime > start
                select tuple;
     }
-
-    //todo: 生成图片
-    //public static CardBuilder.AutoDeleteFile BuildCardOutput(
-    //    this IEnumerable<(Period period, CalendarEvent e)> @this,
-    //    DateTime now
-    //)
-    //{
-    //}
 
     /// <summary>
     /// 输出日程的文本

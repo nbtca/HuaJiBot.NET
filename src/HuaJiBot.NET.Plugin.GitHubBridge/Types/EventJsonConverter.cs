@@ -37,8 +37,6 @@ internal class EventJsonConverter : JsonConverter<Event>
             {
                 ["push"] => //仓库提交事件（commit）
                 bodyJsonObj.ToObject<PushEventBody.PushEventBody>(serializer),
-                ["workflow_run"] => //Workflow运行事件
-                bodyJsonObj.ToObject<WorkflowRunEventBody.WorkflowRunEventBody>(serializer),
                 ["issues"] => //issue变更
                 bodyJsonObj.ToObject<IssuesEventBody.IssuesEventBody>(serializer),
                 ["issue_comment"] => //issue评论

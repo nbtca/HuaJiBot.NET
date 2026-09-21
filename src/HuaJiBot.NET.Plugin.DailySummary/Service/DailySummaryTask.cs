@@ -52,22 +52,13 @@ internal class DailySummaryTask : IDisposable
             _service.Log("[每日总结] 开始执行每日总结任务");
 
             foreach (var groupId in _config.GroupIds)
-            {
-                try
-                {
-                    await _generateSummary(groupId);
-                }
-                catch (Exception ex)
-                {
-                    _service.LogError($"[每日总结] 群组 {groupId} 总结失败", ex.Message);
-                }
-            }
+                await _generateSummary(groupId);
 
             _service.Log("[每日总结] 每日总结任务完成");
         }
         catch (Exception ex)
         {
-            _service.LogError("[每日总结] 定时任务异常", ex.Message);
+            _service.LogError("[每日总结] 定时任务异常", ex);
         }
     }
 

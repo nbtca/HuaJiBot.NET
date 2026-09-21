@@ -1,4 +1,6 @@
-﻿namespace HuaJiBot.NET.Plugin.AIChat.Config;
+﻿using HuaJiBot.NET.AI;
+
+namespace HuaJiBot.NET.Plugin.AIChat.Config;
 
 public class PluginConfig : ConfigBase
 {

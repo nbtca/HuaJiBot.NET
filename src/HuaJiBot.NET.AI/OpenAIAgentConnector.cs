@@ -1,14 +1,14 @@
 using System.ClientModel;
 using HuaJiBot.NET.Interfaces;
 using HuaJiBot.NET.Logger;
-using HuaJiBot.NET.Plugin.DailySummary.Config;
 using Microsoft.Extensions.Logging;
 using OpenAI;
 using OpenAI.Chat;
 
-namespace HuaJiBot.NET.Plugin.DailySummary.Service.Connector;
+namespace HuaJiBot.NET.AI;
 
-public class GoogleAgentConnector(IPluginService service, ModelConfig modelConfig)
+// ReSharper disable once InconsistentNaming
+public class OpenAIAgentConnector(IPluginService service, ModelConfig modelConfig)
     : AgentConnector(modelConfig)
 {
     private OpenAIClient? _client;
@@ -21,16 +21,13 @@ public class GoogleAgentConnector(IPluginService service, ModelConfig modelConfi
         {
             if (_client is null)
             {
-                var endpoint = string.IsNullOrEmpty(ModelConfig.Endpoint)
-                    ? "https://generativelanguage.googleapis.com/v1beta/openai/"
-                    : ModelConfig.Endpoint;
                 _client = new OpenAIClient(
                     new ApiKeyCredential(
                         string.IsNullOrEmpty(ModelConfig.ApiKey) ? "null" : ModelConfig.ApiKey
                     ),
                     new OpenAIClientOptions
                     {
-                        Endpoint = new Uri(endpoint),
+                        Endpoint = new Uri(ModelConfig.Endpoint),
                         ClientLoggingOptions = new()
                         {
                             EnableLogging = ModelConfig.Logging,

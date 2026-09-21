@@ -1,8 +1,7 @@
 ﻿using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Diagnostics;
-using HuaJiBot.NET.Plugin.AIChat.Config;
-using HuaJiBot.NET.Plugin.AIChat.Service.Connector;
+using HuaJiBot.NET.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;

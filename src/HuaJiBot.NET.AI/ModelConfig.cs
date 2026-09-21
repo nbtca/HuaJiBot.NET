@@ -1,4 +1,4 @@
-namespace HuaJiBot.NET.Plugin.DailySummary.Config;
+﻿namespace HuaJiBot.NET.AI;
 
 public record ModelConfig(
     ModelProvider Provider = ModelProvider.OpenAI,

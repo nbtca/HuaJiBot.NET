@@ -1,12 +1,11 @@
 using System.ClientModel;
 using HuaJiBot.NET.Interfaces;
 using HuaJiBot.NET.Logger;
-using HuaJiBot.NET.Plugin.AIChat.Config;
 using Microsoft.Extensions.Logging;
 using OpenAI;
 using OpenAI.Chat;
 
-namespace HuaJiBot.NET.Plugin.AIChat.Service.Connector;
+namespace HuaJiBot.NET.AI;
 
 public class GoogleAgentConnector(IPluginService service, ModelConfig modelConfig)
     : AgentConnector(modelConfig)

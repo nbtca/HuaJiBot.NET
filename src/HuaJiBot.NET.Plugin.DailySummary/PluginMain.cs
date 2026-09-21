@@ -1,8 +1,8 @@
+using HuaJiBot.NET.AI;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.DataBase;
 using HuaJiBot.NET.Plugin.DailySummary.Config;
 using HuaJiBot.NET.Plugin.DailySummary.Service;
-using HuaJiBot.NET.Plugin.DailySummary.Service.Connector;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Newtonsoft.Json;
@@ -17,24 +17,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     public PluginConfig Config { get; } = new();
 
-    private AgentConnector Connector
-    {
-        get
-        {
-            return Config.Model switch
-            {
-                { Provider: ModelProvider.OpenAI } => new OpenAIAgentConnector(
-                    Service,
-                    Config.Model
-                ),
-                { Provider: ModelProvider.Google } => new GoogleAgentConnector(
-                    Service,
-                    Config.Model
-                ),
-                _ => throw new ArgumentOutOfRangeException(nameof(Config.Model.Provider)),
-            };
-        }
-    }
+    private AgentConnector Connector => AgentConnector.Create(Service, Config.Model);
 
     protected override async Task InitializeAsync()
     {
@@ -63,7 +46,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 MessageId = e.MessageId,
                 GroupId = e.GroupId,
                 SenderId = e.SenderId,
-                SenderName = e.SenderMemberCard ?? "未知用户",
+                SenderName = e.SenderMemberCard,
                 Content = e.TextMessage,
                 IsBot = false,
                 ReplyToMessageId = null,
@@ -84,10 +67,13 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             var today = Utils.NetworkTime.Now.Date;
             var yesterday = today.AddDays(-1);
             var offset = Utils.NetworkTime.LocalTimeZoneOffset;
+            var start = new DateTimeOffset(yesterday, offset).LocalDateTime;
+            // Nothing older than yesterday is read again.
+            _history.DeleteBefore(start);
             var messages = _history
                 .GetGroupMessagesByTimeRange(
                     groupId,
-                    new DateTimeOffset(yesterday, offset).LocalDateTime,
+                    start,
                     new DateTimeOffset(today, offset).LocalDateTime,
                     int.MaxValue
                 )

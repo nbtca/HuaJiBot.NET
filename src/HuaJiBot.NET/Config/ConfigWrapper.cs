@@ -19,10 +19,11 @@ public class ConfigWrapper(Config config)
 
     public string Save()
     {
-        foreach (var (key, value) in _plugins)
+        lock (Config.SaveLock)
         {
-            config.Plugins[key] = JObject.FromObject(value); //将插件配置转换为JObject(序列化)
+            foreach (var (key, value) in _plugins)
+                config.Plugins[key] = JObject.FromObject(value);
+            return config.Save();
         }
-        return config.Save();
     }
 }

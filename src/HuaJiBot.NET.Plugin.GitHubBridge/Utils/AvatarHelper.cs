@@ -6,6 +6,8 @@ namespace HuaJiBot.NET.Plugin.GitHubBridge.Utils;
 
 public static class AvatarHelper
 {
+    private static readonly HttpClient Client = new();
+
     private static string GetAvatarFileName(string avatarUrl)
     { //get md5
         var hash = MD5.HashData(Encoding.UTF8.GetBytes(avatarUrl));
@@ -80,13 +82,11 @@ public static class AvatarHelper
         {
             Console.WriteLine("get avatar failed");
             Console.WriteLine(avatarUrl);
-            using HttpClient client = new();
-            return await client.GetByteArrayAsync("https://i.nbtca.space/favicon.png");
+            return await Client.GetByteArrayAsync("https://i.nbtca.space/favicon.png");
         }
         async Task<byte[]> TryUpdate()
         {
-            using HttpClient client = new();
-            var result = await client.GetByteArrayAsync(avatarUrl);
+            var result = await Client.GetByteArrayAsync(avatarUrl);
             SaveToCache(name, result);
             return result;
         }
