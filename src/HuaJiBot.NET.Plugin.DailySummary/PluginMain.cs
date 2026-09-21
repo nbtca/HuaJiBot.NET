@@ -1,3 +1,4 @@
+using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.DataBase;
 using HuaJiBot.NET.Plugin.DailySummary.Config;
 using HuaJiBot.NET.Plugin.DailySummary.Service;
@@ -40,26 +41,20 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         _history = new MessageHistory(Service, "daily_summary_messages.db");
 
         // 记录群聊消息
-        Service.Events.OnGroupMessageReceived += (s, e) => _ = OnGroupMessageReceived(e);
+        Service.Events.OnGroupMessageReceived += (_, e) => OnGroupMessageReceived(e);
 
         // 启动定时总结任务
-        _summaryTask = new DailySummaryTask(
-            Service,
-            Config,
-            GenerateSummaryAsync,
-            _history.GetGroupIds
-        );
+        _summaryTask = new DailySummaryTask(Service, Config, GenerateSummaryAsync);
         _summaryTask.Start();
 
         Info("启动成功");
     }
 
-    private async Task OnGroupMessageReceived(Events.GroupMessageEventArgs e)
+    private void OnGroupMessageReceived(Events.GroupMessageEventArgs e)
     {
         try
         {
-            // 检查是否在监听的群组列表中
-            if (Config.GroupIds.Count > 0 && !Config.GroupIds.Contains(long.Parse(e.GroupId)))
+            if (!Config.GroupIds.Contains(e.GroupId))
                 return;
 
             // 存储消息
@@ -77,7 +72,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
         catch (Exception ex)
         {
-            Error("记录消息失败", ex.Message);
+            Error("记录消息失败", ex);
         }
     }
 
@@ -85,11 +80,17 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     {
         try
         {
-            // 查询完整的前一个自然日，避免非午夜执行时重复当天消息。
-            var today = DateTime.Today;
+            // 基础镜像没有 tzdata，DateTime.Now 是 UTC，日界按 NetworkTime 的 UTC+8 计算
+            var today = Utils.NetworkTime.Now.Date;
             var yesterday = today.AddDays(-1);
+            var offset = Utils.NetworkTime.LocalTimeZoneOffset;
             var messages = _history
-                .GetGroupMessagesByTimeRange(groupId, yesterday, today)
+                .GetGroupMessagesByTimeRange(
+                    groupId,
+                    new DateTimeOffset(yesterday, offset).LocalDateTime,
+                    new DateTimeOffset(today, offset).LocalDateTime,
+                    int.MaxValue
+                )
                 .ToList();
 
             // 检查消息数量
@@ -105,7 +106,9 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
             foreach (var msg in messages)
             {
-                var time = msg.Timestamp.ToString("HH:mm");
+                var time = new DateTimeOffset(msg.Timestamp)
+                    .ToOffset(offset)
+                    .ToString("HH:mm");
                 var sender = msg.IsBot ? "机器人" : msg.SenderName;
                 messageBuilder.AppendLine($"[{time}] {sender}: {msg.Content}");
             }
@@ -113,43 +116,37 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             // 调用 AI 生成总结
             var summary = await InvokeLlmAsync(messageBuilder.ToString());
 
-            // 发送总结到群组
-            var header = $"📊 **每日聊天总结** ({yesterday:yyyy-MM-dd})\n\n";
-            await Service.SendGroupMessageAsync(groupId, header + summary);
+            var content = new RichContent(
+                $"📊 **每日聊天总结** ({yesterday:yyyy-MM-dd})\n\n{summary}"
+            );
+            await Service.SendRichMessageAsync(
+                null,
+                groupId,
+                content,
+                () => Task.FromResult<SendingMessageBase[]>([content.ToPlainText()])
+            );
 
             Info($"已发送群组 {groupId} 的每日总结");
         }
         catch (Exception ex)
         {
-            Error("生成总结失败", ex.Message);
+            Error($"群组 {groupId} 生成总结失败", ex);
         }
     }
 
     private async Task<string> InvokeLlmAsync(string userMessage)
     {
-        try
-        {
-            var connector = Connector;
-            var session = await connector.CreateSessionAsync();
-            var agent = connector.CreateAIAgentWithOptions(
-                Config.SystemPrompt,
-                functionTools: null,
-                mcpTools: null
-            );
-
-            var messages = new List<ChatMessage>
-            {
-                new ChatMessage(ChatRole.User, userMessage)
-            };
-
-            var response = await agent.RunAsync(messages, session);
-            return response.Text ?? "无法生成总结";
-        }
-        catch (Exception ex)
-        {
-            Error("AI调用失败", ex.Message);
-            return $"AI调用失败: {ex.Message}";
-        }
+        var connector = Connector;
+        var session = await connector.CreateSessionAsync();
+        var agent = connector.CreateAIAgentWithOptions(
+            Config.SystemPrompt,
+            functionTools: null,
+            mcpTools: null
+        );
+        var response = await agent.RunAsync([new ChatMessage(ChatRole.User, userMessage)], session);
+        return string.IsNullOrWhiteSpace(response.Text)
+            ? throw new InvalidOperationException("AI 返回了空总结")
+            : response.Text;
     }
 
     protected override void Unload()

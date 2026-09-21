@@ -9,21 +9,18 @@ internal class DailySummaryTask : IDisposable
     private readonly IPluginService _service;
     private readonly PluginConfig _config;
     private readonly Func<string, Task> _generateSummary;
-    private readonly Func<IEnumerable<string>> _getActiveGroupIds;
     private readonly Timer _timer;
     private DateTime _lastRunDate = DateTime.MinValue;
 
     public DailySummaryTask(
         IPluginService service,
         PluginConfig config,
-        Func<string, Task> generateSummary,
-        Func<IEnumerable<string>> getActiveGroupIds
+        Func<string, Task> generateSummary
     )
     {
         _service = service;
         _config = config;
         _generateSummary = generateSummary;
-        _getActiveGroupIds = getActiveGroupIds;
 
         // 每分钟检查一次
         _timer = new Timer(TimeSpan.FromMinutes(1));
@@ -41,7 +38,7 @@ internal class DailySummaryTask : IDisposable
     {
         try
         {
-            var now = DateTime.Now;
+            var now = Utils.NetworkTime.Now;
 
             // 检查是否到了执行时间
             if (now.Hour != _config.SummaryHour || now.Minute != _config.SummaryMinute)
@@ -51,16 +48,10 @@ internal class DailySummaryTask : IDisposable
             if (_lastRunDate.Date == now.Date)
                 return;
 
-            _lastRunDate = now;
+            _lastRunDate = now.Date;
             _service.Log("[每日总结] 开始执行每日总结任务");
 
-            // 获取要处理的群组列表
-            var groupIds = _config.GroupIds.Count > 0
-                ? _config.GroupIds.Select(id => id.ToString()).ToList()
-                : _getActiveGroupIds().ToList();
-
-            // 为每个群组生成总结
-            foreach (var groupId in groupIds)
+            foreach (var groupId in _config.GroupIds)
             {
                 try
                 {

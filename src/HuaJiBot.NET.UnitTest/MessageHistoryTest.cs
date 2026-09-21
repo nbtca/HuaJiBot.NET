@@ -26,7 +26,6 @@ internal class MessageHistoryTest
                 .ToList();
 
             Assert.That(messages.Select(message => message.MessageId), Is.EqualTo(["group-a-yesterday"]));
-            Assert.That(history.GetGroupIds(), Is.EquivalentTo(["group-a", "group-b"]));
         }
         finally
         {

@@ -150,11 +150,6 @@ public class MessageHistory : IDisposable
         );
     }
 
-    public IEnumerable<string> GetGroupIds()
-    {
-        return _messages.FindAll().Select(message => message.GroupId).Distinct();
-    }
-
     public void DeleteMessage(string messageId)
     {
         _messages.DeleteMany(x => x.MessageId == messageId);
