@@ -7,7 +7,7 @@ namespace HuaJiBot.NET.Plugin.Calendar;
 internal class RemoteSync(
     IPluginService service,
     int updateDurationInMinutes = 15,
-    string icalUrl = "https://ical.nbtca.space/"
+    string icalUrl = "https://ical.nbtca.space/events.ics"
 )
 {
     private DateTimeOffset _lastLoadTime = DateTimeOffset.MinValue;
@@ -50,6 +50,7 @@ internal class RemoteSync(
         }
         catch (Exception ex)
         {
+            _lastLoadTime = DateTimeOffset.MinValue; //失败后下次调用立即重试
             service.LogError(nameof(UpdateCalendarAsync), ex);
         }
     }

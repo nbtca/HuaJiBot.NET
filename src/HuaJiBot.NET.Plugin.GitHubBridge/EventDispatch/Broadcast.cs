@@ -1,5 +1,6 @@
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Interfaces;
+using HuaJiBot.NET.Plugin.GitHubBridge.Types.Generic;
 
 namespace HuaJiBot.NET.Plugin.GitHubBridge.EventDispatch;
 
@@ -14,6 +15,18 @@ internal static class Broadcast
     {
         Task<SendingMessageBase[]>? once = null;
         foreach (var target in targets)
-            await service.SendRichMessageAsync(null, target, content, () => once ??= fallback());
+        {
+            try
+            {
+                await service.SendRichMessageAsync(null, target, content, () => once ??= fallback());
+            }
+            catch (Exception e)
+            {
+                service.LogError($"推送到 {target} 失败", e);
+            }
+        }
     }
+
+    internal static bool IsBot(Sender sender) =>
+        sender.Type == "Bot" || sender.Login.EndsWith("[bot]");
 }

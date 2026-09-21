@@ -181,7 +181,7 @@ public abstract class CommonCommandReader : CommandReader
                                     else
                                     { //不是引号开头(或者没有匹配的引号)
                                       //找到第一个空格
-                                        end = text.IndexOf(' ');
+                                        end = Array.FindIndex(text.ToCharArray(), char.IsWhiteSpace);
                                         //如果没有找到空格，说明这是最后一个参数
                                         if (end == -1)
                                         {

@@ -3,13 +3,13 @@ using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Adapter.OneBot.Message.Entity;
 
-internal class AtMessageEntity(uint at) : MessageEntity
+internal class AtMessageEntity(string at) : MessageEntity
 {
     public AtMessageEntity()
-        : this(0) { }
+        : this("") { }
 
     [JsonProperty("qq")]
-    public string At { get; set; } = at.ToString();
+    public string At { get; set; } = at;
 
     [JsonIgnore]
     public bool IsAll => At == "all";

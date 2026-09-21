@@ -1,6 +1,5 @@
 ﻿using System.Text;
-using HuaJiBot.NET.Commands;
-using HuaJiBot.NET.Events;
+using HuaJiBot.NET.Interfaces;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -22,6 +21,11 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     protected override void Initialize()
     {
+        if (string.IsNullOrWhiteSpace(Config.NsqUrl) || string.IsNullOrWhiteSpace(Config.NsqTopic))
+        {
+            Service.Warn("[RepairTeam] 未配置 NsqUrl 或 NsqTopic，不接收维修事件");
+            return;
+        }
         _nsq = new(Config.NsqUrl, Config.NsqTopic, Config.NsqChannel, Config.NsqSecret);
         Service.Log("[RepairTem] 启动成功！");
         _nsq.MessageReceived += OnMessageReceived;
@@ -74,10 +78,19 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     {
         Service.Log(msg);
         if (!string.IsNullOrWhiteSpace(Config.PushRawGroup))
-            Service.SendGroupMessageAsync(null, Config.PushRawGroup, msg);
+            _ = Service.TrySendGroupMessageAsync(Config.PushRawGroup, msg);
         if (Config.PushInfoGroup.Length != 0)
         {
-            var e = JsonConvert.DeserializeObject<LogEventEntity>(msg)!;
+            LogEventEntity e;
+            try
+            {
+                e = JsonConvert.DeserializeObject<LogEventEntity>(msg)!;
+            }
+            catch (JsonException ex)
+            {
+                Service.LogError("[RepairTeam] 无法解析维修事件", ex);
+                return;
+            }
             var s = new StringBuilder();
             s.AppendLine($"---维修事件---");
             s.AppendLine($"ID：{e.EventId}");
@@ -92,37 +105,9 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             if (!string.IsNullOrWhiteSpace(e.Description))
                 s.AppendLine($"描述：{e.Description}");
             var str = s.ToString();
-            Task.Run(() =>
-            {
-                foreach (var group in Config.PushInfoGroup)
-                {
-                    Service.SendGroupMessageAsync(null, group, str);
-                }
-            });
+            foreach (var group in Config.PushInfoGroup)
+                _ = Service.TrySendGroupMessageAsync(group, str);
         }
-    }
-
-    //[CommandEnum("test")]
-    //enum TEST
-    //{
-    //    [CommandEnumItem("ss", "")]
-    //    s,
-    //    [CommandEnumItem("aa", "")]
-    //    a
-    //}
-    [Command("test", "")]
-    // ReSharper disable once UnusedMember.Global
-    public void TestCommand(
-        [CommandArgumentString("test")] string? a,
-        GroupMessageEventArgs e
-    //[CommandArgumentEnum<TEST>("test")] TEST b
-    )
-    {
-        if (!string.IsNullOrWhiteSpace(a))
-        {
-            e.Reply(a);
-        }
-        Console.WriteLine(e.TextMessage);
     }
 
     protected override void Unload() { }

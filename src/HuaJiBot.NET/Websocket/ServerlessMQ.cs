@@ -56,6 +56,8 @@ public class ServerlessMQ : IServerlessMQ
     public event Func<ActiveBroadcastPacketData, ValueTask>? OnClientChanged;
     public event Func<JToken, ValueTask>? OnPacket;
 
+    public Task StartAsync() => _client.StartAsync();
+
     public void Send(string msg) => _client.Send(msg);
 
     public void Dispose() => _client.Dispose();

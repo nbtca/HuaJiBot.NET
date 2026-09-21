@@ -28,7 +28,7 @@ public class PluginConfig : ConfigBase
     public ModelConfig Model = new();
 
     /// <summary>
-    /// 监听的群组列表（为空则监听所有群组）
+    /// 记录并总结的群组列表，为空则不记录任何群组
     /// </summary>
-    public List<long> GroupIds = [];
+    public List<string> GroupIds = [];
 }

@@ -94,10 +94,18 @@ public class PluginManager
             }
             api.Log($"开始加载插件 {entryPoint.Name} 描述：{entryPoint.Description}");
             var sw = Stopwatch.StartNew(); //计时
-            api.SetupCommands(plugin); //加载命令
-            // ReSharper disable once MethodHasAsyncOverload
-            plugin.Initialize(); //同步初始化
-            await plugin.InitializeAsync(); //异步初始化
+            try
+            {
+                api.SetupCommands(plugin); //加载命令
+                // ReSharper disable once MethodHasAsyncOverload
+                plugin.Initialize(); //同步初始化
+                await plugin.InitializeAsync(); //异步初始化
+            }
+            catch (Exception e)
+            {
+                api.LogError($"加载插件 {entryPoint.Name} 失败，已跳过", e);
+                continue;
+            }
             sw.Stop(); //停止计时
             api.Log($"加载插件 {entryPoint.Name} 完成，耗时 {sw.ElapsedMilliseconds} ms");
         }

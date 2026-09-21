@@ -15,5 +15,6 @@ public interface IWebsocketClient : IDisposable
     public event Func<JToken, ValueTask>? OnMessage;
     public event Action<ConnectionInfo>? OnConnected;
     public event Action<DisconnectionInfo>? OnClosed;
+    public Task StartAsync();
     public void Send(string msg);
 }

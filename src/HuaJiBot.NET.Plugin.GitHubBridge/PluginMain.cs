@@ -1,6 +1,7 @@
 ﻿using HuaJiBot.NET.Websocket;
 using HuaJiBot.NET.Plugin.GitHubBridge.EventDispatch;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types;
+using HuaJiBot.NET.Plugin.GitHubBridge.Types.Generic;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssueCommentEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssuesEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.PushEventBody;
@@ -23,10 +24,13 @@ public partial class PluginMain
 {
     internal ShortLinkApi ShortLinkApi = null!;
 
-    internal IEnumerable<string> GetBroadcastTargets(string fullName)
+    internal IEnumerable<string> GetBroadcastTargets(Repository repository)
     {
+        var fullName = repository.FullName;
         if (!Config.BroadcastMap.TryGetValue(fullName, out var group))
         {
+            if (repository.Private)
+                return []; //私有仓库需要手动配置才会推送
             group = "default";
             Config.BroadcastMap.Add(fullName, group);
             Service.Config.Save();
@@ -91,16 +95,22 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             var data = clients.Clients;
             var clientsStr = data.Select(x =>
-                    x.Address
-                    + "("
-                    + (x.Headers.GetValueOrDefault("Cf-Ipcountry")?[0] ?? "?")
-                    + ":"
-                    + (x.Headers.GetValueOrDefault("X-Forwarded-For")?[0] ?? "?")
-                    + ")"
-                )
+                {
+                    var headers = new Dictionary<string, string[]>(
+                        x.Headers,
+                        StringComparer.OrdinalIgnoreCase
+                    );
+                    return x.Address
+                        + "("
+                        + (headers.GetValueOrDefault("Cf-Ipcountry")?[0] ?? "?")
+                        + ":"
+                        + (headers.GetValueOrDefault("X-Forwarded-For")?[0] ?? "?")
+                        + ")";
+                })
                 .ToArray();
             Info("当前在线客户端：" + string.Join(", ", clientsStr));
         };
+        _ = client.StartAsync();
 
         Info("启动成功！");
     }

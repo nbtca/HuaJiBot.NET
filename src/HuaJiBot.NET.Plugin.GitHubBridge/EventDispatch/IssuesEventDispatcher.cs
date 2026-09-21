@@ -9,23 +9,28 @@ namespace HuaJiBot.NET.Plugin.GitHubBridge.EventDispatch;
 
 internal static class IssuesEventDispatcher
 {
+    // edited、labeled 等动作不推送，否则勾选 checkbox 之类的小改动也会刷屏
+    internal static bool ShouldBroadcast(IssuesEventBody body) =>
+        body.Action is "opened" or "closed" or "reopened" && !Broadcast.IsBot(body.Sender);
+
+    internal static bool ShouldBroadcast(IssueCommentEventBody body) =>
+        body.Action is "created" && !Broadcast.IsBot(body.Sender);
+
     public static async Task DispatchIssueCommentEventAsync(
         this PluginMain plugin,
         IssueCommentEventBody body
     )
     {
         var repositoryFullName = body.Repository.FullName;
-        plugin.Info("IssueCommentEvent " + repositoryFullName);
-        if (body.Action is "assigned")
-        {
+        plugin.Info($"IssueCommentEvent {repositoryFullName} {body.Action}");
+        if (!ShouldBroadcast(body))
             return;
-        }
         TempFile.AutoDeleteFile? tempImage = null;
         try
         {
             await Broadcast.SendAsync(
                 plugin.Service,
-                plugin.GetBroadcastTargets(repositoryFullName),
+                plugin.GetBroadcastTargets(body.Repository),
                 RichMarkdown.IssueComment(body),
                 async () =>
                     [
@@ -109,17 +114,15 @@ internal static class IssuesEventDispatcher
     public static async Task DispatchIssuesEventAsync(this PluginMain plugin, IssuesEventBody body)
     {
         var repositoryFullName = body.Repository.FullName;
-        plugin.Info("IssuesEvent " + repositoryFullName);
-        if (body.Action is "assigned")
-        {
+        plugin.Info($"IssuesEvent {repositoryFullName} {body.Action}");
+        if (!ShouldBroadcast(body))
             return;
-        }
         TempFile.AutoDeleteFile? tempImage = null;
         try
         {
             await Broadcast.SendAsync(
                 plugin.Service,
-                plugin.GetBroadcastTargets(repositoryFullName),
+                plugin.GetBroadcastTargets(body.Repository),
                 RichMarkdown.Issue(body),
                 async () =>
                     [
@@ -141,7 +144,7 @@ internal static class IssuesEventDispatcher
         var avatar = await Utils.AvatarHelper.GetAsync($"{body.Sender.AvatarUrl}?s=96");
         var icon = body.Action switch
         {
-            "open" => CardBuilder.CharToImage(
+            "opened" or "reopened" => CardBuilder.CharToImage(
                 IconFonts.IssueOpened,
                 IconFonts.IcoMoonFont(25),
                 Color.FromRgb(248, 81, 73),

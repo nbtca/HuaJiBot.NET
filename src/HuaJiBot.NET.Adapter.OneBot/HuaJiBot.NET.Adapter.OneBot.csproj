@@ -14,4 +14,8 @@
     <ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="HuaJiBot.NET.UnitTest" />
+  </ItemGroup>
+
 </Project>

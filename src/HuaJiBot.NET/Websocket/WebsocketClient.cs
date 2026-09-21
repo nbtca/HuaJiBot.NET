@@ -1,4 +1,4 @@
-using System.Net.WebSockets;
+﻿using System.Net.WebSockets;
 using System.Text;
 using HuaJiBot.NET.Logger;
 using Newtonsoft.Json.Linq;
@@ -69,35 +69,12 @@ public class WebsocketClient : IWebsocketClient
         _client.ServerConnected += OnServerConnected;
         _client.ServerDisconnected += OnServerDisconnected;
         _client.MessageReceived += OnMessageReceived;
-
-        // Start connection
-        _ = StartConnectionAsync();
     }
 
-    private async Task StartConnectionAsync()
+    public async Task StartAsync()
     {
-        try
-        {
-            await Task.Run(() => _client.Start(), _cancellationTokenSource.Token);
-
-            // 重置重连计数
-            _connectAttempts = 0;
-        }
-        catch (Exception e)
-        {
-            _logger?.LogError(e, "Error starting WebSocket connection");
-            OnClosed?.Invoke(
-                new DisconnectionInfo
-                {
-                    Type = DisconnectionType.Error,
-                    Reason = e.Message,
-                    Exception = e,
-                }
-            );
-        }
-
-        // Start health check
-        _healthCheckTask = RunHealthCheckAsync();
+        await ConnectAsync();
+        _healthCheckTask ??= RunHealthCheckAsync();
     }
 
     private void OnServerConnected(object? sender, EventArgs e)
@@ -139,16 +116,18 @@ public class WebsocketClient : IWebsocketClient
         {
             try
             {
+                if (_client.Connected)
+                    return;
                 _connectAttempts++;
-                _logger?.Log("Reconnected successfully");
-                if (await _client.StartWithTimeoutAsync(10))
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                if (await _client.StartWithTimeoutAsync(10, token: timeout.Token))
                 {
                     _connectAttempts = 0;
                 }
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, $"Reconnect attempt {_connectAttempts} failed");
+                _logger?.LogError(ex, $"Connect attempt {_connectAttempts} failed");
             }
             finally
             {
@@ -171,7 +150,7 @@ public class WebsocketClient : IWebsocketClient
                 {
                     // 计算延迟时间（简化的指数退避，1秒到30秒）
                     var delay = Math.Min(
-                        InitialReconnectDelay << Math.Min(_connectAttempts - 1, 5),
+                        InitialReconnectDelay << Math.Clamp(_connectAttempts - 1, 0, 5),
                         MaxReconnectDelay
                     );
 

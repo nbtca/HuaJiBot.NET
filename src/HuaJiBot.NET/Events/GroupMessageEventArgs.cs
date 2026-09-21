@@ -43,6 +43,9 @@ public class GroupMessageEventArgs(
 
     /// <summary>发送者群名片</summary>
     public required string SenderMemberCard { get; init; }
+
+    /// <summary>发送者群身份，适配器未提供时为 Unknown</summary>
+    public MemberType SenderMemberType { get; init; }
     public required Lazy<string> TextMessageLazy { get; init; }
     public string TextMessage => TextMessageLazy.Value;
     public CommandReader CommandReader => createCommandReader();
@@ -54,6 +57,20 @@ public class GroupMessageEventArgs(
     public async Task<string[]> Reply(string message)
     {
         return await Service.FeedbackAt(RobotId, GroupId, MessageId, message);
+    }
+
+    /// <summary>
+    /// 回复 Markdown，不支持富文本的平台发送纯文本
+    /// </summary>
+    public Task<string[]> ReplyMarkdown(string markdown)
+    {
+        var content = new RichContent(markdown, MessageId);
+        return Service.SendRichMessageAsync(
+            RobotId,
+            GroupId,
+            content,
+            () => Task.FromResult<SendingMessageBase[]>([content.ToPlainText()])
+        );
     }
 
     /// <summary>群名称</summary>
