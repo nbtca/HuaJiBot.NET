@@ -185,13 +185,17 @@ public abstract class ImageBuilder
     /// <returns>自动删除文件</returns>
     public TempFile.AutoDeleteFile SaveTempAutoDelete(bool autoHeight = false)
     {
-        var tempName = Path.GetTempFileName();
-        var tempDir = Path.Combine(Environment.CurrentDirectory, "temp");
-        if (!Directory.Exists(tempDir))
-            Directory.CreateDirectory(tempDir);
-        var tempFile = Path.Combine(tempDir, tempName);
-        Generate(tempFile, autoHeight);
-        return new TempFile.AutoDeleteFile(tempFile);
+        var tempFile = new TempFile.AutoDeleteFile(Path.GetTempFileName());
+        try
+        {
+            Generate(tempFile, autoHeight);
+            return tempFile;
+        }
+        catch
+        {
+            tempFile.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -222,7 +226,14 @@ public class CardBuilder : ImageBuilder
     public byte[]? FooterIcon;
     public required byte[] Icon;
 
-    public static IEnumerable<TextRun> MarkdownRender(string markdown)
+    public static IEnumerable<TextRun> MarkdownRender(string? markdown)
+    {
+        if (string.IsNullOrWhiteSpace(markdown))
+            return [];
+        return MarkdownRenderCore(markdown);
+    }
+
+    private static IEnumerable<TextRun> MarkdownRenderCore(string markdown)
     {
         string GetRawText(SourceSpan span)
         {

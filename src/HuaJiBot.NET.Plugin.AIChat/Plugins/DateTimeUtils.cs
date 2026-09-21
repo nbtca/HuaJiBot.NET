@@ -12,25 +12,25 @@ public sealed class DateTimeUtils
     [Description("Get the current date and time")]
     public string GetCurrentDateTime()
     {
-        return DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+        return Utils.NetworkTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
     }
 
     [Description("Get the current date")]
     public string GetCurrentDate()
     {
-        return DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        return Utils.NetworkTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
     }
 
     [Description("Get the current time")]
     public string GetCurrentTime()
     {
-        return DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+        return Utils.NetworkTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
     }
 
     [Description("Get the current day of week")]
     public string GetDayOfWeek()
     {
-        return DateTime.Now.DayOfWeek.ToString();
+        return Utils.NetworkTime.Now.DayOfWeek.ToString();
     }
 
     [Description("Calculate time difference between two timestamps")]

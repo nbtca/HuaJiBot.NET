@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Interfaces;
@@ -56,17 +56,23 @@ internal class ClubAffairsReminder : IDisposable
             var now = Utils.NetworkTime.Now;
 
             // 检查是否应该发送每周汇总
-            if (Config.ClubAffairsReminder.EnableWeeklySummary && ShouldSendWeeklySummary(now))
+            if (
+                Config.ClubAffairsReminder.EnableWeeklySummary
+                && ShouldSendWeeklySummary(now)
+                && SendWeeklySummary(now)
+            )
             {
-                SendWeeklySummary(now);
                 _lastWeeklySummaryDate = now.Date;
                 SaveSentState();
             }
 
             // 检查是否应该发送每日提醒
-            if (Config.ClubAffairsReminder.EnableDailyReminder && ShouldSendDailyReminder(now))
+            if (
+                Config.ClubAffairsReminder.EnableDailyReminder
+                && ShouldSendDailyReminder(now)
+                && SendDailyReminder(now)
+            )
             {
-                SendDailyReminder(now);
                 _lastDailyReminderDate = now.Date;
                 SaveSentState();
             }
@@ -134,136 +140,58 @@ internal class ClubAffairsReminder : IDisposable
         return now.Date != _lastDailyReminderDate.Date;
     }
 
-    private void SendWeeklySummary(DateTimeOffset now)
+    /// <returns>false when the calendar is not loaded yet, so the check retries later.</returns>
+    internal bool SendWeeklySummary(DateTimeOffset now)
     {
         if (Calendar is null)
         {
-            Service.Log("[社团事务] 日历为空，跳过每周汇总发送");
-            return;
+            Service.Log("[社团事务] 日历为空，稍后重试每周汇总");
+            return false;
         }
-
-        var weekStart = now;
         var weekEnd = now.AddDays(7);
-
-        var upcomingEvents = Calendar
-            .GetEvents(weekStart, weekEnd)
-            .OrderBy(x => x.period.StartTime)
-            .ToList();
-
-        if (upcomingEvents.Count == 0)
-        {
-            Service.Log("[社团事务] 本周无即将到期的事务");
-            return;
-        }
-
-        var message = BuildWeeklySummaryMessage(now, weekEnd, upcomingEvents);
-
+        var events = Calendar.GetEvents(now, weekEnd).OrderBy(x => x.period.StartTime).ToList();
         foreach (var group in Config.ReminderGroups)
         {
-            if (group.Mode == PluginConfig.ReminderFilterConfig.FilterMode.Default ||
-                ShouldSendToGroup(upcomingEvents, group))
-            {
-                _ = Service.TrySendGroupMessageAsync(group.GroupId, message);
-                Service.Log($"[社团事务] 已向群组 {group.GroupId} 发送每周汇总");
-            }
+            var groupEvents = events.Where(x => group.Matches(x.e)).ToList();
+            if (groupEvents.Count == 0)
+                continue;
+            _ = Service.TrySendGroupMessageAsync(
+                group.GroupId,
+                BuildWeeklySummaryMessage(now, weekEnd, groupEvents)
+            );
+            Service.Log($"[社团事务] 已向群组 {group.GroupId} 发送每周汇总");
         }
+        return true;
     }
 
-    private void SendDailyReminder(DateTimeOffset now)
+    /// <returns>false when the calendar is not loaded yet, so the check retries later.</returns>
+    internal bool SendDailyReminder(DateTimeOffset now)
     {
         if (Calendar is null)
         {
-            Service.Log("[社团事务] 日历为空，跳过每日提醒发送");
-            return;
+            Service.Log("[社团事务] 日历为空，稍后重试每日提醒");
+            return false;
         }
-
-        // 创建明天和后天的DateTimeOffset，时间设置为00:00:00以获取整天的事务
         var tomorrow = new DateTimeOffset(now.Date.AddDays(1), now.Offset);
-        var dayAfterTomorrow = new DateTimeOffset(now.Date.AddDays(2), now.Offset);
-
-        var tomorrowEvents = Calendar
+        var dayAfterTomorrow = tomorrow.AddDays(1);
+        // Only events starting tomorrow, so a multi-day event is not repeated every day.
+        var events = Calendar
             .GetEvents(tomorrow, dayAfterTomorrow)
+            .Where(x => x.period.StartTime >= tomorrow)
             .OrderBy(x => x.period.StartTime)
             .ToList();
-
-        if (tomorrowEvents.Count == 0)
-        {
-            Service.Log("[社团事务] 明天无即将到期的事务");
-            return;
-        }
-
-        var message = BuildDailyReminderMessage(tomorrow, tomorrowEvents);
-
         foreach (var group in Config.ReminderGroups)
         {
-            var groupEvents = FilterEventsForGroup(tomorrowEvents, group);
-            if (groupEvents.Count > 0)
-            {
-                var groupMessage = BuildDailyReminderMessage(tomorrow, groupEvents);
-                _ = Service.TrySendGroupMessageAsync(group.GroupId, groupMessage);
-                Service.Log($"[社团事务] 已向群组 {group.GroupId} 发送每日提醒");
-            }
+            var groupEvents = events.Where(x => group.Matches(x.e)).ToList();
+            if (groupEvents.Count == 0)
+                continue;
+            _ = Service.TrySendGroupMessageAsync(
+                group.GroupId,
+                BuildDailyReminderMessage(tomorrow, groupEvents)
+            );
+            Service.Log($"[社团事务] 已向群组 {group.GroupId} 发送每日提醒");
         }
-    }
-
-    private bool ShouldSendToGroup(
-        List<(CalendarExtensions.Period period, CalendarEvent e)> events,
-        PluginConfig.ReminderFilterConfig group
-    )
-    {
-        if (group.Mode == PluginConfig.ReminderFilterConfig.FilterMode.Default)
-            return true;
-
-        return events.Any(evt =>
-        {
-            var e = evt.e;
-            var list = group.Keywords;
-            return group.Mode switch
-            {
-                PluginConfig.ReminderFilterConfig.FilterMode.WhiteList => list.Any(x =>
-                    (e.Summary?.Contains(x) ?? false)
-                    || (e.Description?.Contains(x) ?? false)
-                    || (e.Location ?? "").Contains(x)
-                ),
-                PluginConfig.ReminderFilterConfig.FilterMode.BlackList => !list.Any(x =>
-                    (e.Summary?.Contains(x) ?? false)
-                    || (e.Description?.Contains(x) ?? false)
-                    || (e.Location ?? "").Contains(x)
-                ),
-                _ => false,
-            };
-        });
-    }
-
-    private List<(CalendarExtensions.Period period, CalendarEvent e)> FilterEventsForGroup(
-        List<(CalendarExtensions.Period period, CalendarEvent e)> events,
-        PluginConfig.ReminderFilterConfig group
-    )
-    {
-        if (group.Mode == PluginConfig.ReminderFilterConfig.FilterMode.Default)
-            return events;
-
-        return events
-            .Where(evt =>
-            {
-                var e = evt.e;
-                var list = group.Keywords;
-                return group.Mode switch
-                {
-                    PluginConfig.ReminderFilterConfig.FilterMode.WhiteList => list.Any(x =>
-                        (e.Summary?.Contains(x) ?? false)
-                        || (e.Description?.Contains(x) ?? false)
-                        || (e.Location ?? "").Contains(x)
-                    ),
-                    PluginConfig.ReminderFilterConfig.FilterMode.BlackList => !list.Any(x =>
-                        (e.Summary?.Contains(x) ?? false)
-                        || (e.Description?.Contains(x) ?? false)
-                        || (e.Location ?? "").Contains(x)
-                    ),
-                    _ => true,
-                };
-            })
-            .ToList();
+        return true;
     }
 
     private string BuildWeeklySummaryMessage(

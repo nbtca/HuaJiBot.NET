@@ -3,6 +3,7 @@ using System.Text;
 using HuaJiBot.NET.Agent;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
+using Ical.Net.CalendarComponents;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -50,6 +51,21 @@ public class PluginConfig : ConfigBase
         public string GroupId { get; set; } = "";
         public FilterMode Mode { get; set; } = FilterMode.WhiteList;
         public string[] Keywords { get; set; } = [];
+
+        public bool Matches(CalendarEvent e)
+        {
+            var hit = Keywords.Any(x =>
+                (e.Summary?.Contains(x) ?? false)
+                || (e.Description?.Contains(x) ?? false)
+                || (e.Location?.Contains(x) ?? false)
+            );
+            return Mode switch
+            {
+                FilterMode.WhiteList => hit,
+                FilterMode.BlackList => !hit,
+                _ => true,
+            };
+        }
 
         [JsonConverter(typeof(StringEnumConverter))]
         public enum FilterMode

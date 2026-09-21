@@ -1,111 +1,88 @@
+using HuaJiBot.NET.Plugin.Calendar;
+using Ical.Net.CalendarComponents;
+using Ical.Net.DataTypes;
+using FilterMode = HuaJiBot.NET.Plugin.Calendar.PluginConfig.ReminderFilterConfig.FilterMode;
+
 namespace HuaJiBot.NET.UnitTest;
 
 internal class ClubAffairsReminderTest
 {
-    [Test]
-    public void TestWeeklySummaryDayOfWeek()
-    {
-        // Test that Monday is correctly identified for weekly summary
-        var monday = new DateTimeOffset(2024, 10, 21, 9, 0, 0, TimeSpan.FromHours(8)); // Monday
-        var tuesday = new DateTimeOffset(2024, 10, 22, 9, 0, 0, TimeSpan.FromHours(8)); // Tuesday
+    private static readonly DateTimeOffset Now = new(2026, 9, 21, 9, 0, 0, TimeSpan.FromHours(8));
 
-        Assert.That(monday.DayOfWeek, Is.EqualTo(DayOfWeek.Monday));
-        Assert.That(tuesday.DayOfWeek, Is.Not.EqualTo(DayOfWeek.Monday));
-    }
-
-    [Test]
-    public void TestTimeComparison()
-    {
-        // Test that hour comparison works correctly for reminder timing
-        var nineAm = new DateTimeOffset(2024, 10, 21, 9, 0, 0, TimeSpan.FromHours(8));
-        var tenAm = new DateTimeOffset(2024, 10, 21, 10, 0, 0, TimeSpan.FromHours(8));
-
-        Assert.That(nineAm.Hour, Is.EqualTo(9));
-        Assert.That(tenAm.Hour, Is.EqualTo(10));
-    }
-
-    [Test]
-    public void TestDateComparison()
-    {
-        // Test date comparison for preventing duplicate reminders
-        var date1 = new DateTimeOffset(2024, 10, 21, 9, 0, 0, TimeSpan.FromHours(8));
-        var date2 = new DateTimeOffset(2024, 10, 21, 10, 0, 0, TimeSpan.FromHours(8));
-        var date3 = new DateTimeOffset(2024, 10, 22, 9, 0, 0, TimeSpan.FromHours(8));
-
-        Assert.That(date1.Date, Is.EqualTo(date2.Date));
-        Assert.That(date1.Date, Is.Not.EqualTo(date3.Date));
-    }
-
-    [Test]
-    public void TestWeekRange()
-    {
-        // Test that week range calculation is correct
-        var start = new DateTimeOffset(2024, 10, 21, 9, 0, 0, TimeSpan.FromHours(8));
-        var end = start.AddDays(7);
-
-        var expectedEnd = new DateTimeOffset(2024, 10, 28, 9, 0, 0, TimeSpan.FromHours(8));
-        Assert.That(end, Is.EqualTo(expectedEnd));
-    }
-
-    [Test]
-    public void TestDayRange()
-    {
-        // Test that tomorrow calculation is correct
-        // 创建午夜时间的DateTimeOffset以匹配生产代码中用于日期范围查询的行为
-        var today = new DateTimeOffset(2024, 10, 21, 9, 0, 0, TimeSpan.FromHours(8));
-        var tomorrow = new DateTimeOffset(today.Date.AddDays(1), today.Offset);
-        var dayAfterTomorrow = new DateTimeOffset(today.Date.AddDays(2), today.Offset);
-
-        var expectedTomorrow = new DateTimeOffset(2024, 10, 22, 0, 0, 0, TimeSpan.FromHours(8));
-        var expectedDayAfter = new DateTimeOffset(2024, 10, 23, 0, 0, 0, TimeSpan.FromHours(8));
-
-        Assert.That(tomorrow, Is.EqualTo(expectedTomorrow));
-        Assert.That(dayAfterTomorrow, Is.EqualTo(expectedDayAfter));
-    }
-
-    [Test]
-    public void TestNumberEmoji()
-    {
-        // Test emoji mapping
-        var testCases = new Dictionary<int, string>
+    private static CalendarEvent Event(string summary, DateTimeOffset start, DateTimeOffset end) =>
+        new()
         {
-            { 1, "1️⃣" },
-            { 2, "2️⃣" },
-            { 3, "3️⃣" },
-            { 4, "4️⃣" },
-            { 5, "5️⃣" },
-            { 6, "6️⃣" },
-            { 7, "7️⃣" },
-            { 8, "8️⃣" },
-            { 9, "9️⃣" },
-            { 10, "🔟" },
+            Summary = summary,
+            Start = new CalDateTime(start.UtcDateTime, "UTC"),
+            End = new CalDateTime(end.UtcDateTime, "UTC"),
         };
 
-        foreach (var testCase in testCases)
+    private static (RecordingAdapter adapter, ClubAffairsReminder reminder) Setup()
+    {
+        var calendar = new Ical.Net.Calendar();
+        // Starts tomorrow at 10:00.
+        calendar.Events.Add(Event("招新宣讲", Now.AddHours(25), Now.AddHours(27)));
+        // Started yesterday and runs until the day after tomorrow.
+        calendar.Events.Add(Event("例会筹备", Now.AddDays(-1), Now.AddDays(2)));
+        var config = new PluginConfig
         {
-            var emoji = GetNumberEmoji(testCase.Key);
-            Assert.That(emoji, Is.EqualTo(testCase.Value));
-        }
-
-        // Test fallback for numbers > 10
-        Assert.That(GetNumberEmoji(11), Is.EqualTo("11."));
+            ReminderGroups =
+            [
+                new() { GroupId = "white", Mode = FilterMode.WhiteList, Keywords = ["招新"] },
+                new() { GroupId = "all", Mode = FilterMode.BlackList, Keywords = [] },
+                new() { GroupId = "none", Mode = FilterMode.WhiteList, Keywords = ["不存在"] },
+            ],
+        };
+        var adapter = new RecordingAdapter();
+        return (adapter, new ClubAffairsReminder(adapter, config, () => calendar));
     }
 
-    private string GetNumberEmoji(int number)
+    private static string SentTo(RecordingAdapter adapter, string group) =>
+        string.Concat(
+            adapter.Sends.Where(x => x.Target == group).SelectMany(x => x.Messages).OfType<Bot.TextMessage>().Select(x => x.Text)
+        );
+
+    [Test]
+    public void WeeklySummary_SendsEachGroupOnlyItsOwnEvents()
     {
-        return number switch
+        var (adapter, reminder) = Setup();
+
+        Assert.That(reminder.SendWeeklySummary(Now), Is.True);
+
+        Assert.Multiple(() =>
         {
-            1 => "1️⃣",
-            2 => "2️⃣",
-            3 => "3️⃣",
-            4 => "4️⃣",
-            5 => "5️⃣",
-            6 => "6️⃣",
-            7 => "7️⃣",
-            8 => "8️⃣",
-            9 => "9️⃣",
-            10 => "🔟",
-            _ => $"{number}.",
-        };
+            Assert.That(SentTo(adapter, "white"), Does.Contain("招新宣讲").And.Not.Contain("例会筹备"));
+            Assert.That(SentTo(adapter, "all"), Does.Contain("招新宣讲").And.Contain("例会筹备"));
+            Assert.That(adapter.Sends.Select(x => x.Target), Does.Not.Contain("none"));
+        });
+    }
+
+    [Test]
+    public void DailyReminder_SkipsEventsThatStartedEarlier()
+    {
+        var (adapter, reminder) = Setup();
+
+        Assert.That(reminder.SendDailyReminder(Now), Is.True);
+
+        Assert.That(SentTo(adapter, "all"), Does.Contain("招新宣讲").And.Not.Contain("例会筹备"));
+    }
+
+    [Test]
+    public void Reminders_WithoutCalendar_AreRetriedLater()
+    {
+        var adapter = new RecordingAdapter();
+        var reminder = new ClubAffairsReminder(adapter, new PluginConfig(), () => null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(reminder.SendWeeklySummary(Now), Is.False);
+            Assert.That(reminder.SendDailyReminder(Now), Is.False);
+        });
+    }
+
+    [Test]
+    public void MarkdownRender_NullBody_RendersNothing()
+    {
+        Assert.That(Utils.CardBuilder.MarkdownRender(null), Is.Empty);
     }
 }
