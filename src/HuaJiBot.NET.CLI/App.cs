@@ -71,7 +71,9 @@ api.Events.OnBotLogin += (_, eventArgs) =>
     );
     accountId = eventArgs.Accounts.FirstOrDefault();
 };
-var pluginDir = Path.Combine(Environment.CurrentDirectory, "plugins"); //插件目录
+var pluginDir =
+    Environment.GetEnvironmentVariable("HUAJIBOT_PLUGIN_DIR")
+    ?? Path.Combine(Environment.CurrentDirectory, "plugins"); //插件目录
 #region 额外插件
 //复制额外插件（主要开发使用）
 if (config.ExtraPlugins is { Length: > 0 } extraPluginsList)
@@ -116,29 +118,27 @@ catch
 }
 
 if (hasTty)
-    while (true)
+    while (Console.ReadLine() is { } line)
     {
-        if (Console.ReadLine() is { } line)
+        var cmds = line.Split(' ');
+        switch (cmds)
         {
-            var cmds = line.Split(' ');
-            switch (cmds)
-            {
-                case ["quit" or "q"]:
-                    break;
-                case ["r" or "rc"]:
-                    adapterApi.Reconnect();
-                    break;
-                case ["save"]:
-                    var result = api.Config.Save();
-                    api.Log("配置文件保存成功：" + result);
-                    break;
-                case ["send", var targetGroup, var message]:
-                    await api.SendGroupMessageAsync(accountId, targetGroup, message);
-                    break;
-                default:
-                    Console.WriteLine($"未知的命令 {line} .");
-                    break;
-            }
+            case ["quit" or "q"]:
+                pluginManager.Shutdown(api);
+                return;
+            case ["r" or "rc"]:
+                adapterApi.Reconnect();
+                break;
+            case ["save"]:
+                var result = api.Config.Save();
+                api.Log("配置文件保存成功：" + result);
+                break;
+            case ["send", var targetGroup, var message]:
+                await api.SendGroupMessageAsync(accountId, targetGroup, message);
+                break;
+            default:
+                Console.WriteLine($"未知的命令 {line} .");
+                break;
         }
     }
 var cts = new CancellationTokenSource();

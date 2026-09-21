@@ -19,11 +19,11 @@ RUN dotnet fsi build_plugins.fsx
 FROM mcr.microsoft.com/dotnet/runtime:10.0-azurelinux3.0-distroless
 
 ENV TZ=Asia/Shanghai
+ENV HUAJIBOT_PLUGIN_DIR=/app/plugins
 
 COPY --from=build-env /root/out /app/bin
-COPY --from=build-env /root/build/bin/plugins /app/data/plugins
+COPY --from=build-env /root/build/bin/plugins /app/plugins
 
 USER app
 WORKDIR /app/data
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD ["dotnet", "--info"]
 ENTRYPOINT ["/app/bin/HuaJiBot.NET.CLI"]
