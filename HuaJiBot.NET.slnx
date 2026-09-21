@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="src/HuaJiBot.NET.AI/HuaJiBot.NET.AI.csproj" />
   <Project Path="src/HuaJiBot.NET.Adapter.OneBot/HuaJiBot.NET.Adapter.OneBot.csproj" />
   <Project Path="src/HuaJiBot.NET.Adapter.Satori/HuaJiBot.NET.Adapter.Satori.csproj" />
   <Project Path="src/HuaJiBot.NET.Adapter.Telegram/HuaJiBot.NET.Adapter.Telegram.csproj" />

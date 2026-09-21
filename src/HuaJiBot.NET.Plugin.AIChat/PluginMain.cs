@@ -1,6 +1,6 @@
-﻿using HuaJiBot.NET.DataBase;
+﻿using HuaJiBot.NET.AI;
+using HuaJiBot.NET.DataBase;
 using HuaJiBot.NET.Plugin.AIChat.Config;
-using HuaJiBot.NET.Plugin.AIChat.Service.Connector;
 using HuaJiBot.NET.Plugin.AIChat.Service;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -17,24 +17,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     private static readonly TimeSpan SessionIdleTimeout = TimeSpan.FromHours(1);
     private readonly ConcurrentDictionary<string, GroupSession> _sessions = new();
-    private AgentConnector Connector
-    {
-        get
-        {
-            return Config.Model switch
-            {
-                { Provider: ModelProvider.OpenAI } => new OpenAIAgentConnector(
-                    Service,
-                    Config.Model
-                ),
-                { Provider: ModelProvider.Google } => new GoogleAgentConnector(
-                    Service,
-                    Config.Model
-                ),
-                _ => throw new ArgumentOutOfRangeException(nameof(Config.Model.Provider)),
-            };
-        }
-    }
+    private AgentConnector Connector => AgentConnector.Create(Service, Config.Model);
 
     private AIFunction[]? _tools;
 

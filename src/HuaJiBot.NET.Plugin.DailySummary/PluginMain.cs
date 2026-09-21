@@ -1,8 +1,8 @@
+using HuaJiBot.NET.AI;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.DataBase;
 using HuaJiBot.NET.Plugin.DailySummary.Config;
 using HuaJiBot.NET.Plugin.DailySummary.Service;
-using HuaJiBot.NET.Plugin.DailySummary.Service.Connector;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Newtonsoft.Json;
@@ -17,24 +17,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     public PluginConfig Config { get; } = new();
 
-    private AgentConnector Connector
-    {
-        get
-        {
-            return Config.Model switch
-            {
-                { Provider: ModelProvider.OpenAI } => new OpenAIAgentConnector(
-                    Service,
-                    Config.Model
-                ),
-                { Provider: ModelProvider.Google } => new GoogleAgentConnector(
-                    Service,
-                    Config.Model
-                ),
-                _ => throw new ArgumentOutOfRangeException(nameof(Config.Model.Provider)),
-            };
-        }
-    }
+    private AgentConnector Connector => AgentConnector.Create(Service, Config.Model);
 
     protected override async Task InitializeAsync()
     {

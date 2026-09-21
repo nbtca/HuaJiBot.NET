@@ -1,9 +1,9 @@
-using HuaJiBot.NET.Plugin.DailySummary.Config;
+using HuaJiBot.NET.Interfaces;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using OpenAI.Chat;
 
-namespace HuaJiBot.NET.Plugin.DailySummary.Service.Connector;
+namespace HuaJiBot.NET.AI;
 
 public abstract class AgentConnector
 {
@@ -16,6 +16,14 @@ public abstract class AgentConnector
 
     protected abstract ChatClient CreateChatClient();
 
+    public static AgentConnector Create(IPluginService service, ModelConfig model) =>
+        model.Provider switch
+        {
+            ModelProvider.OpenAI => new OpenAIAgentConnector(service, model),
+            ModelProvider.Google => new GoogleAgentConnector(service, model),
+            _ => throw new ArgumentOutOfRangeException(nameof(model), model.Provider, null),
+        };
+
     public AIAgent CreateAIAgent(string systemPrompt, AIFunction[]? tools = null)
     {
         return CreateChatClient().AsAIAgent(
@@ -27,8 +35,7 @@ public abstract class AgentConnector
     public AIAgent CreateAIAgentWithOptions(
         string systemPrompt,
         AIFunction[]? functionTools = null,
-        AITool[]? mcpTools = null,
-        ChatOptions? chatOptions = null)
+        AITool[]? mcpTools = null)
     {
         // Combine function tools and MCP tools
         var allTools = new List<AITool>();
@@ -46,13 +53,6 @@ public abstract class AgentConnector
                 Tools = allTools.Count > 0 ? [.. allTools] : null,
             },
         };
-        if (chatOptions is not null)
-        {
-            if (chatOptions.Temperature.HasValue)
-                options.ChatOptions.Temperature = chatOptions.Temperature;
-            if (chatOptions.MaxOutputTokens.HasValue)
-                options.ChatOptions.MaxOutputTokens = chatOptions.MaxOutputTokens;
-        }
         return CreateChatClient().AsAIAgent(options: options);
     }
 
