@@ -64,4 +64,15 @@ internal class CommandMatchTest
         var service = new CommandService(_adapter);
         Assert.That(service.ProcessHelp(Message(text)), Is.EqualTo(expected));
     }
+
+    [Test]
+    public void RestOfMessage_WithReplyInTheMiddle_HasNoRecordText()
+    {
+        var reader = new DefaultCommandReader(
+            ["看看 ", new CommonCommandReader.ReaderReply(new(messageId: "1")), "这条", new CommonCommandReader.ReaderAt("10001")]
+        );
+
+        Assert.That(reader.Input(out var text, true), Is.True);
+        Assert.That(text, Is.EqualTo("看看 这条@10001 "));
+    }
 }
