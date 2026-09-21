@@ -2,6 +2,7 @@
 using System.Text;
 using HuaJiBot.NET.Utils.Fonts;
 using Markdig;
+using Markdig.Extensions.TaskLists;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using SixLabors.Fonts;
@@ -48,7 +49,7 @@ public abstract class ImageBuilder
     /// </summary>
     /// <param name="runs"></param>
     /// <returns></returns>
-    protected (string text, IReadOnlyList<RichTextRun> runs) BuildTextRuns(
+    protected static (string text, IReadOnlyList<RichTextRun> runs) BuildTextRuns(
         IEnumerable<TextRun> runs
     )
     {
@@ -226,6 +227,10 @@ public class CardBuilder : ImageBuilder
     public byte[]? FooterIcon;
     public required byte[] Icon;
 
+    private static readonly MarkdownPipeline TaskListPipeline = new MarkdownPipelineBuilder()
+        .UseTaskLists()
+        .Build();
+
     public static IEnumerable<TextRun> MarkdownRender(string? markdown)
     {
         if (string.IsNullOrWhiteSpace(markdown))
@@ -239,7 +244,7 @@ public class CardBuilder : ImageBuilder
         {
             return markdown[span.Start..span.End];
         }
-        var document = Markdown.Parse(markdown);
+        var document = Markdown.Parse(markdown, TaskListPipeline);
 
         TextRun newLine = new(Environment.NewLine) { FontSize = 0 };
 
@@ -282,6 +287,9 @@ public class CardBuilder : ImageBuilder
                                     Strikethrough = isStrikethrough,
                                 };
                         }
+                        break;
+                    case TaskList task:
+                        yield return new TextRun(task.Checked ? "✅ " : "⬜ ") { FontSize = fontSize };
                         break;
                     case LineBreakInline _:
                         yield return new TextRun(Environment.NewLine, Color.White)
@@ -400,9 +408,8 @@ public class CardBuilder : ImageBuilder
                     }
                     break;
                 case CodeBlock code:
-                    yield return new TextRun(GetRawText(code.Span), Color.LightSeaGreen)
+                    yield return new TextRun(code.Lines.ToString().TrimEnd(), Color.LightSeaGreen)
                     {
-                        Italic = true,
                         FontSize = fontSize,
                     };
                     break;
@@ -479,8 +486,8 @@ public class CardBuilder : ImageBuilder
 
     public static byte[] CharToImage(char text, Font font, Color color, int? size = null)
     {
-        var sizeInt = size ?? (int)font.Size;
-        return TextToImage(text.ToString(), font, color, sizeInt, sizeInt);
+        var sizeInt = (size ?? (int)font.Size) * Scale;
+        return TextToImage(text.ToString(), new Font(font, font.Size * Scale), color, sizeInt, sizeInt);
     }
 
     public static byte[] TextToImage(string text, Font font, Color color, int width, int height)
@@ -500,44 +507,83 @@ public class CardBuilder : ImageBuilder
     }
 
     /// <summary>
-    /// 生成图像
-    /// 并输出到 <see cref="Stream"/> 中
+    /// Renders the card into <paramref name="stream"/> as PNG. Layout is in logical pixels and
+    /// drawn at <see cref="Scale"/>x so it stays sharp on high-density screens.
     /// </summary>
-    /// <param name="stream">输出流</param>
-    /// <param name="autoHeight">自动测量高度</param>
+    /// <param name="autoHeight">Grow the card to fit the content, up to <see cref="MaxHeight"/>.</param>
     public override void Generate(Stream stream, bool autoHeight = false)
     {
         const int width = 500;
-        int height = 200;
-        using var image = new Image<Rgba32>(width, height);
-        // 选择字体、颜色和布局
+        const int iconWidth = 60;
+        const int contentTop = 68;
         var font = FontManager.ComicSansMs.CreateFont(20);
         var chineseFont = FontManager.MaoKenTangYuan.CreateFont(20);
         var emojiFont = FontManager.TwEmoji.CreateFont(20);
         var fallbackFontFamilies = new List<FontFamily> { chineseFont.Family, emojiFont.Family };
         var background = Color.Black;
-        const int iconWidth = 60;
         var secondaryBrush = new SolidBrush(Color.FromRgb(167, 169, 181));
-        using var iconStream = new MemoryStream(Icon);
-        //加载图标
-        var icon = Image.Load(iconStream);
-        icon.Mutate(x => x.Resize(30, 30, KnownResamplers.Bicubic));
-        var footerIcon = FooterIcon is not null ? Image.Load(new MemoryStream(FooterIcon)) : null;
-        image.Mutate(ctx => //变换
+
+        var (contentText, contentRuns) = BuildTextRuns(Content);
+        var contentOptions = new RichTextOptions(font)
+        {
+            WrappingLength = ContentWidth,
+            Origin = new PointF(iconWidth, contentTop),
+            FallbackFontFamilies = fallbackFontFamilies,
+            LineSpacing = 1.1f,
+            TextRuns = contentRuns,
+            ColorFontSupport = ColorFontSupport.MicrosoftColrFormat,
+        };
+        float contentHeight = MaxHeight;
+        try
+        {
+            contentHeight = TextMeasurer.MeasureSize(contentText, contentOptions).Height;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+        var height = autoHeight
+            ? Math.Clamp((int)contentHeight + contentTop + FooterHeight + 8, MinHeight, MaxHeight)
+            : MinHeight;
+        var contentBottom = height - FooterHeight;
+
+        using var image = new Image<Rgba32>(width * Scale, height * Scale);
+        using var icon = Image.Load(Icon);
+        icon.Mutate(x => x.Resize(30 * Scale, 30 * Scale, KnownResamplers.Bicubic));
+        using var footerIcon = FooterIcon is not null ? Image.Load(FooterIcon) : null;
+        image.Mutate(ctx =>
         {
             ctx.BackgroundColor(background)
-                // 绘制图标
-                .DrawImage(icon, new Point(15, 15), 1)
-                // 绘制标题文本
-                .DrawText(Title, chineseFont, secondaryBrush, new PointF(iconWidth, 10));
-            // 绘制副标题文本
+                .DrawImage(icon, new Point(15 * Scale, 15 * Scale), 1)
+                .SetDrawingTransform(Matrix3x2.CreateScale(Scale));
+            var topRight = TopRightContent is null ? default : BuildTextRuns(TopRightContent);
+            var topRightOptions = new RichTextOptions(font)
             {
-                var (text, runs) = BuildTextRuns(Subtitle);
+                Origin = new Vector2(width - 10, 10),
+                HorizontalAlignment = HorizontalAlignment.Right,
+                FallbackFontFamilies = fallbackFontFamilies,
+                TextRuns = topRight.runs ?? [],
+            };
+            var topRightWidth = topRight.text is { Length: > 0 }
+                ? TextMeasurer.MeasureSize(topRight.text, topRightOptions).Width + 12
+                : 0;
+            ctx.DrawText(
+                new RichTextOptions(chineseFont)
+                {
+                    Origin = new Vector2(iconWidth, 10),
+                    FallbackFontFamilies = fallbackFontFamilies,
+                },
+                Fit(Title, chineseFont, fallbackFontFamilies, width - iconWidth - 10 - topRightWidth),
+                secondaryBrush
+            );
+            if (topRight.text is { Length: > 0 })
+                ctx.DrawText(topRightOptions, topRight.text, secondaryBrush);
+            {
+                var (text, runs) = BuildTextRuns(FitRuns(Subtitle, font, fallbackFontFamilies, width - iconWidth - 10));
                 ctx.DrawText(
                     new RichTextOptions(font)
                     {
                         Origin = new Vector2(iconWidth, 45),
-                        HorizontalAlignment = HorizontalAlignment.Left,
                         VerticalAlignment = VerticalAlignment.Center,
                         FallbackFontFamilies = fallbackFontFamilies,
                         TextRuns = runs,
@@ -546,120 +592,122 @@ public class CardBuilder : ImageBuilder
                     secondaryBrush
                 );
             }
-            //图标下方的文字
-            ctx.DrawText(
-                new RichTextOptions(new Font(font.Family, 10))
-                {
-                    Origin = new Vector2(30, 45),
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                },
-                IconPlaceholder,
-                secondaryBrush
-            );
-            //右上角的内容
+            if (!string.IsNullOrEmpty(IconPlaceholder))
+                ctx.DrawText(
+                    new RichTextOptions(new Font(font.Family, 10))
+                    {
+                        Origin = new Vector2(30, 50),
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                    },
+                    IconPlaceholder,
+                    secondaryBrush
+                );
+            ctx.DrawText(contentOptions, contentText, new SolidBrush(Color.White));
+            if (contentTop + contentHeight > contentBottom)
             {
-                if (TopRightContent is not null)
-                {
-                    var (text, runs) = BuildTextRuns(TopRightContent);
-                    ctx.DrawText(
-                        new RichTextOptions(font)
-                        {
-                            Origin = new Vector2(width - 10, 10),
-                            HorizontalAlignment = HorizontalAlignment.Right,
-                            FallbackFontFamilies = fallbackFontFamilies,
-                            TextRuns = runs,
-                        },
-                        text,
-                        secondaryBrush
-                    );
-                }
+                // Fade out content that does not fit and hide it behind the footer.
+                ctx.Fill(
+                    new LinearGradientBrush(
+                        new PointF(0, contentBottom - 36),
+                        new PointF(0, contentBottom),
+                        GradientRepetitionMode.None,
+                        new ColorStop(0, Color.Transparent),
+                        new ColorStop(1, background)
+                    ),
+                    new RectangleF(0, contentBottom - 36, width, 36)
+                );
+                ctx.Fill(background, new RectangleF(0, contentBottom, width, height - contentBottom));
             }
-            // 绘制主体内容
-            {
-                var (text, runs) = BuildTextRuns(Content);
-                var richTextOptions = new RichTextOptions(font)
-                {
-                    WrappingLength = width - iconWidth - 20,
-                    Origin = new PointF(iconWidth, 60),
-                    FallbackFontFamilies = fallbackFontFamilies,
-                    LineSpacing = 1.1f,
-                    TextRuns = runs,
-                    ColorFontSupport = ColorFontSupport.MicrosoftColrFormat,
-                };
-                if (autoHeight)
-                {
-#if DEBUG
-                    var measureSizeOrNull = TextMeasurer.MeasureSize(text, richTextOptions); //测量文本大小
-#else
-                    FontRectangle? measureSizeOrNull;
-                    try
-                    {
-                        measureSizeOrNull = TextMeasurer.MeasureSize(text, richTextOptions); //测量文本大小
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        measureSizeOrNull = null;
-                    }
-#endif
-
-                    if (measureSizeOrNull is { } measureSize)
-                    {
-                        var originalHeight = height;
-                        height = (int)measureSize.Height + 130; //设置高度
-                        ctx.Resize(
-                            new ResizeOptions
-                            {
-                                Size = new Size(width, height),
-                                Position = AnchorPositionMode.Top,
-                                Mode = height < originalHeight ? ResizeMode.Crop : ResizeMode.Pad,
-                                PadColor = background,
-                            }
-                        ); //调整大小
-                    }
-                }
-                ctx.DrawText(richTextOptions, text, new SolidBrush(Color.White));
-            }
-            // 淡化下方超出范围的文本内容
-            ctx.Fill(
-                new LinearGradientBrush( //Gradient from opaque to background color
-                    new PointF(0, height - 90), //起点
-                    new PointF(0, height - 32), //终点
-                    GradientRepetitionMode.None,
-                    new ColorStop(0, Color.Transparent), //透明
-                    new ColorStop(1, background) //背景
-                ),
-                new RectangleF(0, 100, width, 100)
-            );
-            // 绘制底部文本
+            var footerX = iconWidth;
             if (footerIcon is not null)
             {
-                //头像
                 footerIcon.Mutate(x =>
                 {
-                    ApplyRoundedCorners(x, footerIcon.Width / 2f); //圆角
-                    x.Resize(25, 25, KnownResamplers.Bicubic); //缩放
+                    ApplyRoundedCorners(x, footerIcon.Width / 2f);
+                    x.Resize(24 * Scale, 24 * Scale, KnownResamplers.Bicubic);
                 });
-                ctx.DrawText(
-                        Footer,
-                        chineseFont,
-                        secondaryBrush,
-                        new PointF(iconWidth + 30, height - (200 - 160))
-                    )
-                    .DrawImage(footerIcon, new Point(iconWidth, height - (200 - 158)), 1);
+                ctx.DrawImage(footerIcon, new Point(iconWidth * Scale, (height - 38) * Scale), 1);
+                footerX += 32;
             }
-            else
-            {
-                ctx.DrawText(
-                    Footer,
-                    chineseFont,
-                    secondaryBrush,
-                    new PointF(iconWidth, height - (200 - 160))
-                );
-            }
-
-            ApplyRoundedCorners(ctx, 15);
+            ctx.DrawText(
+                new RichTextOptions(chineseFont)
+                {
+                    Origin = new Vector2(footerX, height - 26),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    FallbackFontFamilies = fallbackFontFamilies,
+                },
+                Fit(Footer, chineseFont, fallbackFontFamilies, width - footerX - 10),
+                secondaryBrush
+            );
+            ctx.SetDrawingTransform(Matrix3x2.Identity);
+            ApplyRoundedCorners(ctx, 15 * Scale);
         });
         image.SaveAsPng(stream);
+    }
+
+    public const int Scale = 2;
+
+    /// <summary>Width available to <see cref="Content"/>, in logical pixels.</summary>
+    public const int ContentWidth = 420;
+    private const int FooterHeight = 52;
+    private const int MinHeight = 200;
+    private const int MaxHeight = 600;
+
+    /// <summary>Truncates <paramref name="runs"/> so they fit on one line of <see cref="Content"/>.</summary>
+    public static IReadOnlyList<TextRun> FitContentLine(IEnumerable<TextRun> runs) =>
+        FitRuns(
+            runs,
+            FontManager.ComicSansMs.CreateFont(20),
+            [FontManager.MaoKenTangYuan.CreateFont(20).Family, FontManager.TwEmoji.CreateFont(20).Family],
+            ContentWidth
+        );
+
+    private static string Fit(string text, Font font, List<FontFamily> fallback, float maxWidth)
+    {
+        var options = new TextOptions(font) { FallbackFontFamilies = fallback };
+        if (TextMeasurer.MeasureSize(text, options).Width <= maxWidth)
+            return text;
+        var graphemes = Graphemes(text);
+        for (var n = graphemes.Count - 1; n > 0; n--)
+        {
+            var candidate = string.Concat(graphemes.Take(n)).TrimEnd() + "…";
+            if (TextMeasurer.MeasureSize(candidate, options).Width <= maxWidth)
+                return candidate;
+        }
+        return "…";
+    }
+
+    /// <summary>Drops trailing text from <paramref name="runs"/> until one line fits.</summary>
+    private static List<TextRun> FitRuns(
+        IEnumerable<TextRun> runs,
+        Font font,
+        List<FontFamily> fallback,
+        float maxWidth
+    )
+    {
+        var list = runs.ToList();
+        while (true)
+        {
+            var built = BuildTextRuns(list);
+            var options = new RichTextOptions(font) { FallbackFontFamilies = fallback, TextRuns = built.runs };
+            if (list.Count == 0 || TextMeasurer.MeasureSize(built.text, options).Width <= maxWidth)
+                return list;
+            var last = list[^1];
+            var graphemes = Graphemes(last.Text.TrimEnd('…'));
+            list[^1] = graphemes.Count <= 1
+                ? last with { Text = "" }
+                : last with { Text = string.Concat(graphemes.Take(graphemes.Count - 1)).TrimEnd() + "…" };
+            if (list[^1].Text.Length == 0)
+                list.RemoveAt(list.Count - 1);
+        }
+    }
+
+    private static List<string> Graphemes(string text)
+    {
+        var result = new List<string>();
+        var enumerator = new SpanGraphemeEnumerator(text);
+        while (enumerator.MoveNext())
+            result.Add(enumerator.Current.ToString());
+        return result;
     }
 }

@@ -64,14 +64,13 @@ internal static class PushEventDispatcher
         var addCount = 0;
         var removeCount = 0;
         var modifyCount = 0;
-        var commitList = new List<string>();
         foreach (var commit in body.Commits)
         {
             addCount += commit.Added.Length;
             removeCount += commit.Removed.Length;
             modifyCount += commit.Modified.Length;
-            commitList.Add(commit.Id[..7]);
         }
+        var summary = PushSummary.From(body.Commits);
         if (addCount > 0)
             editInfo.Add(new TextRun($" +{addCount}", Color.ParseHex("#2cbe4e")));
         if (removeCount > 0)
@@ -122,26 +121,48 @@ internal static class PushEventDispatcher
                         Add(IconFonts.IconLaw, license);
                     return list;
                 }).Invoke(),
-                Content = (
-                    from x in body.Commits
-                    select (IEnumerable<TextRun>)
-                        [
-                            new(x.Message),
-                            new($" by @{x.Author.Name}", Color.Gray),
-                            Environment.NewLine,
-                        ]
-                ).Aggregate((a, b) => a.Concat(b).ToArray()),
-                Footer =
-                    $"@{body.Sender.Login} pushed {body.Commits.Length} commit{(body.Commits.Length > 1 ? "s" : "")}.",
+                Content = PushContent(summary),
+                Footer = summary.PullRequest is { } number
+                    ? $"@{body.Sender.Login} merged #{number}"
+                    : $"@{body.Sender.Login} pushed {body.Commits.Length} commit{(body.Commits.Length > 1 ? "s" : "")}",
                 FooterIcon = avatar,
-                Icon = CardBuilder.CharToImage(
-                    IconFonts.IconCommit,
-                    IconFonts.IcoMoonFont(30),
-                    Color.White
-                ),
-                IconPlaceholder = string.Join(Environment.NewLine, commitList),
+                Icon = summary.PullRequest is null
+                    ? CardBuilder.CharToImage(IconFonts.IconCommit, IconFonts.IcoMoonFont(30), Color.White)
+                    : CardBuilder.CharToImage(IconFonts.IconPulls, IconFonts.IcoMoonFont(26), MergedColor, 30),
+                IconPlaceholder = "",
                 TopRightContent = editInfo,
             };
-        return card.SaveTempAutoDelete();
+        return card.SaveTempAutoDelete(true);
+    }
+
+    private static readonly Color MergedColor = Color.ParseHex("#a371f7");
+
+    private static IEnumerable<TextRun> PushContent(PushSummary summary)
+    {
+        var listSize = 17;
+        if (summary.PullRequest is { } number)
+        {
+            yield return new($"#{number} ", MergedColor);
+            yield return new(summary.PullRequestTitle ?? "Pull request") { Bold = true };
+            yield return Environment.NewLine;
+            listSize = 15;
+        }
+        foreach (var (sha, subject) in summary.Commits)
+        {
+            var line = CardBuilder.FitContentLine(
+                [
+                    new(sha + "  ", Color.FromRgb(110, 118, 129)) { FontSize = listSize - 3 },
+                    new(subject, summary.PullRequest is null ? Color.White : Color.FromRgb(201, 209, 217))
+                    {
+                        FontSize = listSize,
+                    },
+                ]
+            );
+            foreach (var run in line)
+                yield return run;
+            yield return Environment.NewLine;
+        }
+        if (summary.Hidden > 0)
+            yield return new($"…还有 {summary.Hidden} 个提交", Color.FromRgb(110, 118, 129)) { FontSize = listSize - 2 };
     }
 }
