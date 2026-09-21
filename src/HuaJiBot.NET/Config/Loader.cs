@@ -26,10 +26,20 @@ public partial class Config
     /// <summary>
     /// 序列号json并保存配置文件
     /// </summary>
+    internal static readonly object SaveLock = new();
+
     public string Save()
     {
-        var str = JsonConvert.SerializeObject(this, Formatting.Indented);
-        File.WriteAllText(ConfigFileName, str);
-        return str;
+        lock (SaveLock)
+        {
+            var str = JsonConvert.SerializeObject(this, Formatting.Indented);
+            // Write then rename, so a crash mid-write cannot leave a truncated config.
+            const string tempFile = ConfigFileName + ".tmp";
+            File.WriteAllText(tempFile, str);
+            if (!OperatingSystem.IsWindows() && File.Exists(ConfigFileName))
+                File.SetUnixFileMode(tempFile, File.GetUnixFileMode(ConfigFileName));
+            File.Move(tempFile, ConfigFileName, true);
+            return str;
+        }
     }
 }
