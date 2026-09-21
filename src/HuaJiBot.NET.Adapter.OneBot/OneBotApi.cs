@@ -42,17 +42,12 @@ internal class OneBotApi(BotService service, Action<string> send)
         try
         {
             send(str);
-            var res = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var res = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(30));
             var ret =
                 res.ToObject<ActionResponse<TR>>() ?? throw new Exception("Invalid response null");
             if (ret.Status != "ok")
             {
-                throw ret.Retcode switch
-                {
-                    1400 => new Exception("Invalid request"),
-                    1404 => new Exception("Action not found"),
-                    _ => new Exception("Unknown error: " + ret.Status),
-                };
+                throw new Exception($"{action} failed: retcode={ret.Retcode} {res["message"] ?? res["wording"]}");
             }
             return ret.Data;
         }
@@ -88,7 +83,7 @@ internal class OneBotApi(BotService service, Action<string> send)
     public class OneBotGetGroupInfo
     {
         [JsonProperty("group_id")]
-        public required uint GroupId { get; set; }
+        public required long GroupId { get; set; }
 
         [JsonProperty("no_cache")]
         public bool NoCache { get; set; }
@@ -97,7 +92,7 @@ internal class OneBotApi(BotService service, Action<string> send)
     public class OneBotGroup
     {
         [JsonProperty("group_id")]
-        public required uint GroupId { get; set; }
+        public required long GroupId { get; set; }
 
         [JsonProperty("group_name")]
         public required string GroupName { get; set; }
@@ -113,7 +108,7 @@ internal class OneBotApi(BotService service, Action<string> send)
     {
         var result = await SendAsync<OneBotGetGroupInfo, OneBotGroup>(
             "get_group_info",
-            new OneBotGetGroupInfo { GroupId = uint.Parse(groupId), NoCache = false }
+            new OneBotGetGroupInfo { GroupId = long.Parse(groupId), NoCache = false }
         );
         return result.GroupName;
     }
@@ -121,10 +116,7 @@ internal class OneBotApi(BotService service, Action<string> send)
     public class OneBotGroupMessageBase
     {
         [JsonProperty("group_id")]
-        public uint GroupId { get; set; }
-
-        [JsonProperty("auto_escape")]
-        public bool? AutoEscape { get; set; }
+        public long GroupId { get; set; }
     }
 
     public class OneBotMessageResponse
@@ -145,25 +137,6 @@ internal class OneBotApi(BotService service, Action<string> send)
         public MessageEntity Messages { get; set; } = entity;
     }
 
-    public class OneBotMessageText : OneBotGroupMessageBase
-    {
-        [JsonProperty("message")]
-        public string Messages { get; set; } = "";
-    }
-
-    public Task<OneBotMessageResponse> SendGroupMessageAsync(string targetGroup, string message)
-    {
-        return SendAsync<OneBotMessageText, OneBotMessageResponse>(
-            "send_group_msg",
-            new OneBotMessageText
-            {
-                AutoEscape = true,
-                GroupId = uint.Parse(targetGroup),
-                Messages = message,
-            }
-        );
-    }
-
     public async Task<OneBotMessageResponse> SendGroupMessageAsync(
         string targetGroup,
         params MessageEntity[] messages
@@ -171,7 +144,7 @@ internal class OneBotApi(BotService service, Action<string> send)
     {
         if (messages is [var entity])
         {
-            var msg = new OneBotMessageSimple(entity) { GroupId = uint.Parse(targetGroup) };
+            var msg = new OneBotMessageSimple(entity) { GroupId = long.Parse(targetGroup) };
             return await SendAsync<OneBotMessageSimple, OneBotMessageResponse>(
                 "send_group_msg",
                 msg
@@ -179,7 +152,7 @@ internal class OneBotApi(BotService service, Action<string> send)
         }
         else
         {
-            var msg = new OneBotMessage { GroupId = uint.Parse(targetGroup), Messages = messages };
+            var msg = new OneBotMessage { GroupId = long.Parse(targetGroup), Messages = messages };
             return await SendAsync<OneBotMessage, OneBotMessageResponse>("send_group_msg", msg);
         }
     }
@@ -190,7 +163,7 @@ internal class OneBotApi(BotService service, Action<string> send)
         public required int MessageId { get; set; }
     }
 
-    public Task RecallMessageAsync(string targetGroup, string messageId)
+    public Task RecallMessageAsync(string messageId)
     {
         var msg = new OneBotDeleteMsg { MessageId = int.Parse(messageId) };
         return SendAsync("delete_msg", msg);

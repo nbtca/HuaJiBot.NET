@@ -1,4 +1,6 @@
 ﻿using HuaJiBot.NET.Adapter.OneBot.Message;
+using HuaJiBot.NET.Adapter.OneBot.Message.Entity;
+using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Events;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -181,7 +183,6 @@ internal class OneBotMessageHandler(OneBotApi api, OneBotAdapter service)
                                 var userId = json.Value<string>("user_id")!;
                                 //var message_seq = json.Value<long>("message_seq");
                                 var message = json["message"]!.ToObject<List<MessageEntity>>()!;
-                                var rawMessage = json.Value<string>("raw_message")!;
                                 var sender = json["sender"]!;
                                 var card = sender.Value<string>("card");
                                 var msgId = json.Value<string>("message_id")!;
@@ -202,7 +203,14 @@ internal class OneBotMessageHandler(OneBotApi api, OneBotAdapter service)
                                         SenderMemberCard = string.IsNullOrWhiteSpace(card)
                                             ? sender.Value<string>("nickname") ?? ""
                                             : card,
-                                        TextMessageLazy = new(() => rawMessage),
+                                        SenderMemberType = sender.Value<string>("role") switch
+                                        {
+                                            "owner" => MemberType.Owner,
+                                            "admin" => MemberType.Admin,
+                                            "member" => MemberType.Member,
+                                            _ => MemberType.Unknown,
+                                        },
+                                        TextMessageLazy = new(() => ToPlainText(message)),
                                     }
                                 );
                             }
@@ -344,4 +352,23 @@ internal class OneBotMessageHandler(OneBotApi api, OneBotAdapter service)
         }
 #endif
     }
+
+    private static string ToPlainText(IEnumerable<MessageEntity> message) =>
+        string.Concat(
+            message.Select(x =>
+                x switch
+                {
+                    TextMessageEntity { Text: var text } => text,
+                    AtMessageEntity { At: var at } => $"@{at} ",
+                    FaceMessageEntity or UnknownMessageEntity { Type: "mface" } => "[表情]",
+                    ImageMessageEntity => "[图片]",
+                    RecordMessageEntity => "[语音]",
+                    VideoMessageEntity => "[视频]",
+                    UnknownMessageEntity { Type: "file" } => "[文件]",
+                    ForwardMessageEntity => "[聊天记录]",
+                    JsonMessageEntity => "[卡片]",
+                    _ => "",
+                }
+            )
+        );
 }

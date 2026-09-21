@@ -38,6 +38,7 @@ internal class MessageEntityConverter : JsonConverter<MessageEntity>
                 ReplyMessageEntity => "reply",
                 TextMessageEntity => "text",
                 VideoMessageEntity => "video",
+                UnknownMessageEntity { Type: var type } => type,
                 _ => throw new NotSupportedException(value?.GetType().Name)
             }
         );
@@ -84,7 +85,7 @@ internal class MessageEntityConverter : JsonConverter<MessageEntity>
             "reply" => Create<ReplyMessageEntity>(data, serializer),
             "text" => Create<TextMessageEntity>(data, serializer),
             "video" => Create<VideoMessageEntity>(data, serializer),
-            _ => throw new NotSupportedException(type)
+            _ => new UnknownMessageEntity(type ?? "", data),
         };
     }
 }

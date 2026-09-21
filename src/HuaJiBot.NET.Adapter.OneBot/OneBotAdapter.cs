@@ -42,7 +42,7 @@ public class OneBotAdapter : BotServiceBase
                         {
                             File = CommonResolver.EncodingBase64Async(path),
                         },
-                        AtMessage { Target: var target } => new AtMessageEntity(uint.Parse(target)),
+                        AtMessage { Target: var target } => new AtMessageEntity(target),
                         ReplyMessage { MessageId: var id } => new ReplyMessageEntity(id),
                         _ => throw new NotSupportedException(),
                     }
@@ -52,14 +52,22 @@ public class OneBotAdapter : BotServiceBase
         return [result.MessageId.ToString()];
     }
 
-    public override void RecallMessage(string? robotId, string targetGroup, string msgId)
-    {
-        _client.Api.RecallMessageAsync(targetGroup, msgId);
-    }
+    public override void RecallMessage(string? robotId, string targetGroup, string msgId) =>
+        LogFailure(_client.Api.RecallMessageAsync(msgId), $"撤回消息 {msgId} 失败");
 
-    protected override void SetGroupNameCore(string? robotId, string targetGroup, string groupName)
+    protected override void SetGroupNameCore(string? robotId, string targetGroup, string groupName) =>
+        LogFailure(_client.Api.SetGroupNameAsync(targetGroup, groupName), $"修改群 {targetGroup} 名称失败");
+
+    private async void LogFailure(Task task, string message)
     {
-        _client.Api.SetGroupNameAsync(targetGroup, groupName);
+        try
+        {
+            await task;
+        }
+        catch (Exception e)
+        {
+            LogError(message, e);
+        }
     }
 
     protected override MemberType GetMemberTypeCore(string robotId, string targetGroup, string userId)
