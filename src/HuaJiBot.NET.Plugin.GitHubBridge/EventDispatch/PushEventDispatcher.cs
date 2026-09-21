@@ -8,6 +8,10 @@ namespace HuaJiBot.NET.Plugin.GitHubBridge.EventDispatch;
 
 internal static class PushEventDispatcher
 {
+    // 只推送默认分支，功能分支和 PR 分支的每次推送都发会刷屏
+    internal static bool ShouldBroadcast(PushEventBody body) =>
+        body.Ref == $"refs/heads/{body.Repository.DefaultBranch}" && !Broadcast.IsBot(body.Sender);
+
     public static async Task DispatchPushEventAsync(this PluginMain plugin, PushEventBody body)
     {
         //排除如workflow的提交
@@ -22,10 +26,10 @@ internal static class PushEventDispatcher
             return;
         }
         var repositoryFullName = body.Repository.FullName;
-        plugin.Info("PushEvent " + repositoryFullName);
+        plugin.Info($"PushEvent {repositoryFullName} {body.Ref}");
         {
-            if (body.Sender.Login.EndsWith("[bot]"))
-                return; //github-actions[bot]\
+            if (!ShouldBroadcast(body))
+                return;
             #region 文本模式
             //var sb = new StringBuilder();
             //{
@@ -101,7 +105,7 @@ internal static class PushEventDispatcher
             {
                 await Broadcast.SendAsync(
                     plugin.Service,
-                    plugin.GetBroadcastTargets(repositoryFullName),
+                    plugin.GetBroadcastTargets(body.Repository),
                     RichMarkdown.Push(body),
                     async () =>
                         [

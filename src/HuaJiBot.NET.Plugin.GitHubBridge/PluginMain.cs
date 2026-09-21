@@ -1,6 +1,7 @@
 ﻿using HuaJiBot.NET.Websocket;
 using HuaJiBot.NET.Plugin.GitHubBridge.EventDispatch;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types;
+using HuaJiBot.NET.Plugin.GitHubBridge.Types.Generic;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssueCommentEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.IssuesEventBody;
 using HuaJiBot.NET.Plugin.GitHubBridge.Types.PushEventBody;
@@ -23,10 +24,13 @@ public partial class PluginMain
 {
     internal ShortLinkApi ShortLinkApi = null!;
 
-    internal IEnumerable<string> GetBroadcastTargets(string fullName)
+    internal IEnumerable<string> GetBroadcastTargets(Repository repository)
     {
+        var fullName = repository.FullName;
         if (!Config.BroadcastMap.TryGetValue(fullName, out var group))
         {
+            if (repository.Private)
+                return []; //私有仓库需要手动配置才会推送
             group = "default";
             Config.BroadcastMap.Add(fullName, group);
             Service.Config.Save();
