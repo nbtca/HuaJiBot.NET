@@ -80,7 +80,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     {
         try
         {
-            // 基础镜像没有 tzdata，DateTime.Now 是 UTC，日界按 NetworkTime 的 UTC+8 计算
+            // The distroless image has no tzdata, so DateTime.Now is UTC; split days at UTC+8.
             var today = Utils.NetworkTime.Now.Date;
             var yesterday = today.AddDays(-1);
             var offset = Utils.NetworkTime.LocalTimeZoneOffset;

@@ -30,7 +30,7 @@ public partial class PluginMain
         if (!Config.BroadcastMap.TryGetValue(fullName, out var group))
         {
             if (repository.Private)
-                return []; //私有仓库需要手动配置才会推送
+                return []; // Private repositories are broadcast only when mapped explicitly.
             group = "default";
             Config.BroadcastMap.Add(fullName, group);
             Service.Config.Save();

@@ -44,7 +44,7 @@ public class GroupMessageEventArgs(
     /// <summary>发送者群名片</summary>
     public required string SenderMemberCard { get; init; }
 
-    /// <summary>发送者群身份，适配器未提供时为 Unknown</summary>
+    /// <summary>Sender role in the group; Unknown when the adapter does not provide it.</summary>
     public MemberType SenderMemberType { get; init; }
     public required Lazy<string> TextMessageLazy { get; init; }
     public string TextMessage => TextMessageLazy.Value;
@@ -60,7 +60,7 @@ public class GroupMessageEventArgs(
     }
 
     /// <summary>
-    /// 回复 Markdown，不支持富文本的平台发送纯文本
+    /// Replies with Markdown, falling back to plain text where rich messages are unsupported.
     /// </summary>
     public Task<string[]> ReplyMarkdown(string markdown)
     {

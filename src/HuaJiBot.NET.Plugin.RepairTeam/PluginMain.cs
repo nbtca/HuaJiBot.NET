@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using HuaJiBot.NET.Interfaces;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+using HuaJiBot.NET.Utils;
 
 namespace HuaJiBot.NET.Plugin.RepairTeam;
 
@@ -31,26 +31,10 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         _nsq.MessageReceived += OnMessageReceived;
     }
 
-    private enum ActionType
-    {
-        // ReSharper disable InconsistentNaming
-        create = 1,
-        accept = 2,
-        cancel = 3,
-        commit = 4,
-        alterCommit = 5,
-        drop = 6,
-        close = 7,
-        reject = 8,
-        update = 9,
-        // ReSharper restore InconsistentNaming
-    }
-
-    private class LogEventEntity
+    internal class LogEventEntity
     {
         [JsonProperty("action")]
-        [JsonConverter(typeof(StringEnumConverter))]
-        public ActionType Action { get; set; }
+        public string? Action { get; set; }
 
         [JsonProperty("description")]
         public string? Description { get; set; }
@@ -74,6 +58,38 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         public string? Problem { get; set; }
     }
 
+    // Actions are defined in Saturday util/event-action.go.
+    private static string ActionText(string? action) =>
+        action switch
+        {
+            "create" => "新报修",
+            "accept" => "已接单",
+            "cancel" => "报修人已取消",
+            "drop" => "队员已放弃，重新待接单",
+            "commit" => "维修完成，待审核",
+            "alterCommit" => "维修记录已修改，待审核",
+            "reject" => "审核退回，需重新处理",
+            "close" => "审核通过，已结单",
+            "update" => "报修信息已更新",
+            _ => action ?? "未知动作",
+        };
+
+    internal static string FormatEvent(LogEventEntity e)
+    {
+        var s = new StringBuilder();
+        s.AppendLine($"【维修 #{e.EventId}】{ActionText(e.Action)}");
+        var time = e.GmtCreate.ToOffset(NetworkTime.LocalTimeZoneOffset).ToString("MM-dd HH:mm");
+        var member = string.IsNullOrWhiteSpace(e.MemberAlias) ? e.MemberId : e.MemberAlias;
+        s.AppendLine(string.IsNullOrWhiteSpace(member) ? time : $"{member} · {time}");
+        if (!string.IsNullOrWhiteSpace(e.Model))
+            s.AppendLine($"机型：{e.Model}");
+        if (!string.IsNullOrWhiteSpace(e.Problem))
+            s.AppendLine($"问题：{e.Problem}");
+        if (!string.IsNullOrWhiteSpace(e.Description))
+            s.AppendLine($"说明：{e.Description}");
+        return s.ToString().TrimEnd();
+    }
+
     private void OnMessageReceived(object? sender, string msg)
     {
         Service.Log(msg);
@@ -91,20 +107,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 Service.LogError("[RepairTeam] 无法解析维修事件", ex);
                 return;
             }
-            var s = new StringBuilder();
-            s.AppendLine($"---维修事件---");
-            s.AppendLine($"ID：{e.EventId}");
-            s.AppendLine($"类型：{e.Action}");
-            s.AppendLine($"时间：{e.GmtCreate.ToString("f")}");
-            if (!string.IsNullOrWhiteSpace(e.MemberId))
-                s.AppendLine($"人员：{e.MemberId}({e.MemberAlias})");
-            if (!string.IsNullOrWhiteSpace(e.Model))
-                s.AppendLine($"机型：{e.Model}");
-            if (!string.IsNullOrWhiteSpace(e.Problem))
-                s.AppendLine($"问题：{e.Problem}");
-            if (!string.IsNullOrWhiteSpace(e.Description))
-                s.AppendLine($"描述：{e.Description}");
-            var str = s.ToString();
+            var str = FormatEvent(e);
             foreach (var group in Config.PushInfoGroup)
                 _ = Service.TrySendGroupMessageAsync(group, str);
         }

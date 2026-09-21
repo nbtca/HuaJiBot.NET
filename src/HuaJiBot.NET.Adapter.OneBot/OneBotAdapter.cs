@@ -5,25 +5,21 @@ using HuaJiBot.NET.Logger;
 
 namespace HuaJiBot.NET.Adapter.OneBot;
 
-public class OneBotAdapter : BotServiceBase
+public class OneBotAdapter(string ws, string? token) : BotServiceBase
 {
-    private readonly ForwardWebSocketClient _client;
-
-    public OneBotAdapter(string ws, string? token)
-    {
-        _client = new ForwardWebSocketClient(this, ws, token);
-    }
+    // Created lazily: the init-only Logger is still null while the constructor runs.
+    private ForwardWebSocketClient Client => field ??= new(this, ws, token);
 
     public override required ILogger Logger { get; init; }
 
     protected override void ReconnectCore()
     {
-        _client.ConnectAsync();
+        Client.ConnectAsync();
     }
 
-    protected override Task SetupServiceAsyncCore() => _client.StartAsync();
+    protected override Task SetupServiceAsyncCore() => Client.StartAsync();
 
-    public override string[] AllRobots => _client.QQ is not null ? [_client.QQ] : [];
+    public override string[] AllRobots => Client.QQ is not null ? [Client.QQ] : [];
 
     public override async Task<string[]> SendGroupMessageAsync(
         string? robotId,
@@ -31,7 +27,7 @@ public class OneBotAdapter : BotServiceBase
         params SendingMessageBase[] messages
     )
     {
-        var result = await _client.Api.SendGroupMessageAsync(
+        var result = await Client.Api.SendGroupMessageAsync(
             targetGroup,
             messages
                 .Select<SendingMessageBase, MessageEntity>(x =>
@@ -53,10 +49,10 @@ public class OneBotAdapter : BotServiceBase
     }
 
     public override void RecallMessage(string? robotId, string targetGroup, string msgId) =>
-        LogFailure(_client.Api.RecallMessageAsync(msgId), $"撤回消息 {msgId} 失败");
+        LogFailure(Client.Api.RecallMessageAsync(msgId), $"撤回消息 {msgId} 失败");
 
     protected override void SetGroupNameCore(string? robotId, string targetGroup, string groupName) =>
-        LogFailure(_client.Api.SetGroupNameAsync(targetGroup, groupName), $"修改群 {targetGroup} 名称失败");
+        LogFailure(Client.Api.SetGroupNameAsync(targetGroup, groupName), $"修改群 {targetGroup} 名称失败");
 
     private async void LogFailure(Task task, string message)
     {

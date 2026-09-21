@@ -87,7 +87,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         Events.GroupMessageEventArgs e
     )
     {
-        // 每个群同一时间只处理一个 AI 请求，连续 @ 时不刷屏也不重复计费
+        // One request per group at a time, so repeated mentions neither spam nor bill twice.
         if (!_busyGroups.TryAdd(e.GroupId, 0))
             return;
         try
