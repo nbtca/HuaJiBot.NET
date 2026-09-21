@@ -27,7 +27,10 @@ public sealed record AtMessage(string Target) : SendingMessageBase;
 
 public sealed record ReplyMessage(string MessageId) : SendingMessageBase;
 
-public sealed record RichContent(string Markdown, string? ReplyToMessageId = null);
+public sealed record RichContent(string Markdown, string? ReplyToMessageId = null)
+{
+    public string ToPlainText() => Markdig.Markdown.ToPlainText(Markdown).Trim();
+}
 
 public abstract class BotServiceBase : BotService
 {

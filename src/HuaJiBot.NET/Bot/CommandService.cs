@@ -90,10 +90,7 @@ public class CommandService : ICommandService
             return;
         }
         var reader = e.CommandReader;
-        if (
-            reader.Match(_commands.Keys, out var matched)
-            && _commands.TryGetValue(matched, out var matchedItem)
-        )
+        if (reader.Input(out var matched) && _commands.TryGetValue(matched, out var matchedItem))
         {
             var (description, method, info) = matchedItem;
             _bot.LogDebug($"{description} : {e.TextMessage}");
