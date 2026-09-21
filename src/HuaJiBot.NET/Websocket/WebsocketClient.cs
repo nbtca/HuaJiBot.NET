@@ -110,7 +110,7 @@ public class WebsocketClient : IWebsocketClient
 
     public async ValueTask ConnectAsync()
     {
-        _logger?.LogDebug(nameof(ConnectAsync) + _url);
+        _logger?.LogDebug($"Connecting to {_url}");
         // 使用信号量防止并发重连
         if (await _reconnectLock.WaitAsync(0))
         {
@@ -221,7 +221,6 @@ public class WebsocketClient : IWebsocketClient
         try
         {
             var msg = Encoding.UTF8.GetString(e.Data);
-            _logger?.LogDebug($"Received message: {msg}");
             await ProcessMessageAsync(msg);
         }
         catch (Exception ex)
@@ -257,7 +256,6 @@ public class WebsocketClient : IWebsocketClient
             }
 
             await _client.SendAsync(msg, WebSocketMessageType.Text);
-            _logger?.LogDebug($"Sent message: {msg}");
         }
         catch (Exception e)
         {
