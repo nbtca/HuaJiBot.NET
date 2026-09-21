@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Plugin.GitHubBridge;
 
-internal class ShortLinkApi(string token)
+internal class ShortLinkApi(string token, string accessClientId, string accessClientSecret)
 {
     public record ShortLinkResult
     {
@@ -32,6 +32,11 @@ internal class ShortLinkApi(string token)
             Content = new StringContent(obj.ToString(Formatting.None), Encoding.UTF8, "application/json"),
         };
         request.Headers.Add("Authorization", $"Bearer {token}");
+        if (!string.IsNullOrEmpty(accessClientId))
+        {
+            request.Headers.Add("CF-Access-Client-Id", accessClientId);
+            request.Headers.Add("CF-Access-Client-Secret", accessClientSecret);
+        }
         using var response = await Client.SendAsync(request);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ShortLinkResult>()

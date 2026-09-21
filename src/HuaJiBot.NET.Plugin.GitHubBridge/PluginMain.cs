@@ -12,6 +12,12 @@ public class PluginConfig : ConfigBase
 {
     public string ShortLinkApi { get; set; } = "https://link.nbtca.space/api/shorten";
     public string ShortLinkToken { get; set; } = "";
+
+    /// <summary>
+    /// Cloudflare Access service token; the API sits behind Access, which rejects the bearer token alone.
+    /// </summary>
+    public string ShortLinkAccessClientId { get; set; } = "";
+    public string ShortLinkAccessClientSecret { get; set; } = "";
     public string Address { get; set; } = "ws://localhost:8080";
     public string AuthBearer { get; set; } = "";
     public Dictionary<string, string> BroadcastMap { get; set; } = new();
@@ -52,7 +58,11 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     //初始化
     protected override async Task InitializeAsync()
     {
-        ShortLinkApi = new ShortLinkApi(Config.ShortLinkToken);
+        ShortLinkApi = new ShortLinkApi(
+            Config.ShortLinkToken,
+            Config.ShortLinkAccessClientId,
+            Config.ShortLinkAccessClientSecret
+        );
         ServerlessMQ client = new(Config.Address, Config.AuthBearer);
         client.OnWebhook += async data =>
         {
