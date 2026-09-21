@@ -118,13 +118,7 @@ internal static class IssuesEventDispatcher
         CardBuilder card = new()
         {
             Title = repository.FullName.Replace("/", " / "),
-            Subtitle =
-            [
-                new("# ", langColor),
-                new(issue.Title.Length > 50 ? issue.Title[..50] + "..." : issue.Title, Color.Azure),
-                new("  by:", gray) { FontSize = 14 },
-                new(issue.User.Login, gray) { FontSize = 14 },
-            ],
+            Subtitle = [new($"#{issue.Number} ", langColor), new(issue.Title, Color.Azure)],
             Content = CardBuilder.MarkdownRender(content),
             Footer = footer,
             FooterIcon = avatar,
