@@ -34,6 +34,7 @@ internal class WebsocketTest
             tcs.SetResult(e);
             return ValueTask.CompletedTask;
         };
+        await MQ.StartAsync();
         var result = await tcs.Task;
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
     }
@@ -48,6 +49,7 @@ internal class WebsocketTest
             tcs.SetResult(e);
             return ValueTask.CompletedTask;
         };
+        await MQ.StartAsync();
         var result = await tcs.Task;
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
     }
@@ -62,6 +64,7 @@ internal class WebsocketTest
             tcs.SetResult(e);
             return ValueTask.CompletedTask;
         };
+        await MQ.StartAsync();
         var result = await tcs.Task;
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
     }

@@ -91,16 +91,22 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             var data = clients.Clients;
             var clientsStr = data.Select(x =>
-                    x.Address
-                    + "("
-                    + (x.Headers.GetValueOrDefault("Cf-Ipcountry")?[0] ?? "?")
-                    + ":"
-                    + (x.Headers.GetValueOrDefault("X-Forwarded-For")?[0] ?? "?")
-                    + ")"
-                )
+                {
+                    var headers = new Dictionary<string, string[]>(
+                        x.Headers,
+                        StringComparer.OrdinalIgnoreCase
+                    );
+                    return x.Address
+                        + "("
+                        + (headers.GetValueOrDefault("Cf-Ipcountry")?[0] ?? "?")
+                        + ":"
+                        + (headers.GetValueOrDefault("X-Forwarded-For")?[0] ?? "?")
+                        + ")";
+                })
                 .ToArray();
             Info("当前在线客户端：" + string.Join(", ", clientsStr));
         };
+        _ = client.StartAsync();
 
         Info("启动成功！");
     }

@@ -126,9 +126,10 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             };
 
             _clients.Add(clientInfo, client);
+            _ = client.StartAsync();
         }
 
-        Service.Events.OnGroupMessageReceived += (s, e) => _ = ProcessMessageFromGroupAsync(e);
+        Service.Events.OnGroupMessageReceived += (_, e) => _ = ProcessMessageFromGroupAsync(e);
         Service.Events.OnBotLogin += (_, e) =>
         {
             BasePacket.DefaultInformation = new SenderInformation(

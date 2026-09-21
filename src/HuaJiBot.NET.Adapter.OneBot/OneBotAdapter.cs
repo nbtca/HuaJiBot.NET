@@ -21,7 +21,7 @@ public class OneBotAdapter : BotServiceBase
         _client.ConnectAsync();
     }
 
-    protected override async Task SetupServiceAsyncCore() => await _client.ConnectAsync();
+    protected override Task SetupServiceAsyncCore() => _client.StartAsync();
 
     public override string[] AllRobots => _client.QQ is not null ? [_client.QQ] : [];
 
