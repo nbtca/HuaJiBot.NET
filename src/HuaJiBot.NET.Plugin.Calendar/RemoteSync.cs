@@ -50,7 +50,7 @@ internal class RemoteSync(
         }
         catch (Exception ex)
         {
-            _lastLoadTime = DateTimeOffset.MinValue; //失败后下次调用立即重试
+            _lastLoadTime = DateTimeOffset.MinValue; // Retry on the next call after a failure.
             service.LogError(nameof(UpdateCalendarAsync), ex);
         }
     }

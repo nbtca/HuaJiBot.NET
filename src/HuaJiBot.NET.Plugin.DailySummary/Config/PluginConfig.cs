@@ -28,7 +28,7 @@ public class PluginConfig : ConfigBase
     public ModelConfig Model = new();
 
     /// <summary>
-    /// 记录并总结的群组列表，为空则不记录任何群组
+    /// Groups to record and summarize. Empty records no group.
     /// </summary>
     public List<string> GroupIds = [];
 }

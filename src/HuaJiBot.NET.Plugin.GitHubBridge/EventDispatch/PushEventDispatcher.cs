@@ -8,7 +8,7 @@ namespace HuaJiBot.NET.Plugin.GitHubBridge.EventDispatch;
 
 internal static class PushEventDispatcher
 {
-    // 只推送默认分支，功能分支和 PR 分支的每次推送都发会刷屏
+    // Feature and PR branch pushes are too frequent to broadcast.
     internal static bool ShouldBroadcast(PushEventBody body) =>
         body.Ref == $"refs/heads/{body.Repository.DefaultBranch}" && !Broadcast.IsBot(body.Sender);
 

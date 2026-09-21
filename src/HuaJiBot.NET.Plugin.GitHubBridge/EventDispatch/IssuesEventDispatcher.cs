@@ -9,7 +9,7 @@ namespace HuaJiBot.NET.Plugin.GitHubBridge.EventDispatch;
 
 internal static class IssuesEventDispatcher
 {
-    // edited、labeled 等动作不推送，否则勾选 checkbox 之类的小改动也会刷屏
+    // Skip edited, labeled, etc.: ticking a task-list checkbox fires issues.edited.
     internal static bool ShouldBroadcast(IssuesEventBody body) =>
         body.Action is "opened" or "closed" or "reopened" && !Broadcast.IsBot(body.Sender);
 
