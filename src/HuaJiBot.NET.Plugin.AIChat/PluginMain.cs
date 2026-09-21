@@ -6,7 +6,6 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
-using System.Text;
 
 namespace HuaJiBot.NET.Plugin.AIChat;
 
@@ -51,7 +50,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             Info($"已连接 {_mcpClientManager.Tools.Count} 个MCP工具");
         }
 
-        Service.Events.OnGroupMessageReceived += (s, e) => _ = Events_OnGroupMessageReceived(e);
+        Service.Events.OnGroupMessageReceived += (_, e) => _ = OnGroupMessageReceivedAsync(e);
         Info("启动成功");
     }
 
@@ -80,7 +79,28 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
+    private readonly ConcurrentDictionary<string, byte> _busyGroups = new();
+
     private async Task InvokeLlmMessage(
+        string systemPrompt,
+        IList<ChatMessage> messages,
+        Events.GroupMessageEventArgs e
+    )
+    {
+        // 每个群同一时间只处理一个 AI 请求，连续 @ 时不刷屏也不重复计费
+        if (!_busyGroups.TryAdd(e.GroupId, 0))
+            return;
+        try
+        {
+            await InvokeLlmMessageCore(systemPrompt, messages, e);
+        }
+        finally
+        {
+            _busyGroups.TryRemove(e.GroupId, out _);
+        }
+    }
+
+    private async Task InvokeLlmMessageCore(
         string systemPrompt,
         IList<ChatMessage> messages,
         Events.GroupMessageEventArgs e
@@ -110,67 +130,13 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             LogToolCalls(update);
         }
-        var text = response.Text ?? "null";
-        var messageIds = await e.Reply(text);
-        //机器人回复后把自己的消息添加到数据库
-        foreach (var msgId in messageIds)
-        {
-            _history.StoreMessage( //AI回复记录
-                new GroupMessage
-                {
-                    Content = text,
-                    GroupId = e.GroupId,
-                    MessageId = msgId,
-                    SenderId = null,
-                    SenderName = "bot",
-                    IsBot = true,
-                    ReplyToMessageId = e.MessageId,
-                }
-            );
-        }
-    }
-
-    private async Task InvokeLlmMessageStreaming(
-        string systemPrompt,
-        IList<ChatMessage> messages,
-        Events.GroupMessageEventArgs e
-    )
-    {
-        Info(
-            "调用AI流式消息\n\t"
-                + JsonConvert
-                    .SerializeObject(
-                        messages,
-                        new JsonSerializerSettings
-                        {
-                            Formatting = Formatting.Indented,
-                            NullValueHandling = NullValueHandling.Ignore,
-                        }
-                    )
-                    .Replace("\n", "\n\t")
-        );
-        var session = GetOrCreateSession(e.GroupId);
-        var agent = Connector.CreateAIAgentWithOptions(
-            systemPrompt,
-            functionTools: GetFunctionTools(),
-            mcpTools: _mcpClientManager.Tools.Count > 0 ? [.. _mcpClientManager.Tools] : null);
-        var sb = new StringBuilder();
-        await foreach (var update in agent.RunStreamingAsync(messages, session))
-        {
-            // 记录工具调用
-            LogToolCalls(update);
-            if (!string.IsNullOrEmpty(update.Text))
-            {
-                sb.Append(update.Text);
-                Info($"流式文本块: {update.Text}");
-            }
-        }
-        var text = sb.ToString();
+        var text = response.Text;
         if (string.IsNullOrWhiteSpace(text))
         {
-            text = "null";
+            Warn("AI 返回了空回复");
+            return;
         }
-        var messageIds = await e.Reply(text);
+        var messageIds = await e.ReplyMarkdown(text);
         //机器人回复后把自己的消息添加到数据库
         foreach (var msgId in messageIds)
         {
@@ -189,7 +155,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    private async Task Events_OnGroupMessageReceived(Events.GroupMessageEventArgs e)
+    private async Task OnGroupMessageReceivedAsync(Events.GroupMessageEventArgs e)
     {
         var reader = e.CommandReader;
         if (reader.At(out var atId))
@@ -210,7 +176,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             GroupId = e.GroupId,
                             MessageId = e.MessageId,
                             SenderId = e.SenderId,
-                            SenderName = await e.GetGroupNameAsync(),
+                            SenderName = e.SenderMemberCard,
                             IsBot = false,
                             ReplyToMessageId = null,
                         }
@@ -307,7 +273,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         GroupId = e.GroupId,
                         MessageId = e.MessageId,
                         SenderId = e.SenderId,
-                        SenderName = await e.GetGroupNameAsync(),
+                        SenderName = e.SenderMemberCard,
                         IsBot = false,
                         ReplyToMessageId = replyMessageId,
                     }

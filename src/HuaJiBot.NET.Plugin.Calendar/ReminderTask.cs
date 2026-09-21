@@ -69,7 +69,7 @@ internal class ReminderTask : IDisposable
                 }
             )
             {
-                callback(str => Service.SendGroupMessageAsync(null, group.GroupId, str));
+                callback(str => _ = Service.TrySendGroupMessageAsync(group.GroupId, str));
             }
         }
     }

@@ -4,6 +4,7 @@ using System.Text;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
+using HuaJiBot.NET.Interfaces;
 using HuaJiBot.NET.Logger;
 using HuaJiBot.NET.Plugin.MessageBridge.Types;
 using HuaJiBot.NET.Plugin.MessageBridge.Types.Packet;
@@ -143,7 +144,6 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     private async Task ProcessMessageFromGroupAsync(GroupMessageEventArgs e)
     {
-        var groupName = await e.GetGroupNameAsync();
         List<Action<string>> sendActions = [];
         var groupId = e.GroupId.Split(":")[0];
         foreach (var clientInfo in Config.Clients)
@@ -159,26 +159,35 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             }
         }
 
-        if (sendActions.Any())
+        if (sendActions.Count == 0)
+            return;
+        string groupName;
+        try
         {
-            var pkt = new GroupMessagePacket
-            {
-                Data = new GroupMessagePacketData
-                {
-                    SenderName = e.SenderMemberCard,
-                    GroupName = groupName,
-                    SenderId = e.SenderId,
-                    GroupId = e.GroupId,
-                    Message =
-                        e.TextMessage //todo structure message
-                    ,
-                },
-                Source = BasePacket.DefaultInformation,
-            };
-            var str = pkt.ToJson();
-            foreach (var action in sendActions)
-                action(str);
+            groupName = await e.GetGroupNameAsync();
         }
+        catch (Exception ex)
+        {
+            Warn($"获取群 {e.GroupId} 名称失败：", ex);
+            groupName = e.GroupId;
+        }
+        var pkt = new GroupMessagePacket
+        {
+            Data = new GroupMessagePacketData
+            {
+                SenderName = e.SenderMemberCard,
+                GroupName = groupName,
+                SenderId = e.SenderId,
+                GroupId = e.GroupId,
+                Message =
+                    e.TextMessage //todo structure message
+                ,
+            },
+            Source = BasePacket.DefaultInformation,
+        };
+        var str = pkt.ToJson();
+        foreach (var action in sendActions)
+            action(str);
     }
 
     private readonly ConcurrentDictionary<
@@ -225,19 +234,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                                 foreach (var (groupId, msgIds) in allMsg)
                                 {
                                     foreach (var msgId in msgIds)
-                                    {
-                                        try
-                                        {
-                                            Service.RecallMessage(null, groupId, msgId);
-                                        }
-                                        catch (Exception e)
-                                        {
-                                            Warn(
-                                                $"撤回消息失败(groupId={groupId}, msgId={msgId})：",
-                                                e
-                                            );
-                                        }
-                                    }
+                                        Service.RecallMessage(null, groupId, msgId);
                                 }
                             }
                             break;
@@ -296,16 +293,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                           select config
         )
         {
-            msgIds.Add(
-                (
-                    config.GroupId,
-                    await Service.SendGroupMessageAsync(
-                        null,
-                        config.GroupId,
-                        new TextMessage(message)
-                    )
-                )
-            );
+            msgIds.Add((config.GroupId, await Service.TrySendGroupMessageAsync(config.GroupId, message)));
         }
         return msgIds.ToArray();
     }
@@ -348,6 +336,11 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         GroupMessageEventArgs e
     )
     {
+        if (!IsGroupAdmin(e))
+        {
+            e.Reply("只有群管理员可以修改事件转发设置");
+            return;
+        }
         if (typeOptional is not { } type)
         {
             var allStatus = new StringBuilder();
@@ -407,6 +400,24 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             }
         }
         e.Reply($"未找到群 {e.GroupId} 的配置");
+    }
+
+    private static bool IsGroupAdmin(GroupMessageEventArgs e)
+    {
+        var type = e.SenderMemberType;
+        if (type == MemberType.Unknown)
+        {
+            try
+            {
+                type = ((IAdapterService)e.Service).GetMemberType(
+                    e.RobotId ?? "",
+                    e.GroupId,
+                    e.SenderId
+                );
+            }
+            catch (NotImplementedException) { }
+        }
+        return type is MemberType.Admin or MemberType.Owner;
     }
 
     protected override void Unload()

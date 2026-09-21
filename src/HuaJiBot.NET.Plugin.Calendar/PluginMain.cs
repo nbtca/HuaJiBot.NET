@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Concurrent;
+using System.Text;
 using HuaJiBot.NET.Agent;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
@@ -111,7 +112,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    private readonly Dictionary<string, DateTimeOffset> _cache = new();
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _cache = new();
 
     [Command("最近日程", "查看最近一次日程详细信息")]
     // ReSharper disable once UnusedMember.Global
@@ -131,7 +132,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             }
         }
         _cache[e.SenderId] = now;
-        _ = Task.Delay(coldDown).ContinueWith(_ => _cache.Remove(e.SenderId));
+        _ = Task.Delay(coldDown).ContinueWith(_ => _cache.TryRemove(e.SenderId, out var _));
         if (Calendar is null)
         {
             await e.Reply("日历获取失败");
@@ -168,7 +169,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             }
         }
         _cache[e.SenderId] = now; //更新缓存
-        _ = Task.Delay(coldDown).ContinueWith(_ => _cache.Remove(e.SenderId)); //冷却时间后移除缓存
+        _ = Task.Delay(coldDown).ContinueWith(_ => _cache.TryRemove(e.SenderId, out var _)); //冷却时间后移除缓存
         var week = 1;
         if (!string.IsNullOrWhiteSpace(content)) //参数不为空
         {
@@ -255,6 +256,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     protected override void Unload()
     {
+        _reminderTask?.Dispose();
         _clubAffairsReminder?.Dispose();
     }
 }

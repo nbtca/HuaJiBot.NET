@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Interfaces;
 using Ical.Net.CalendarComponents;
@@ -20,6 +21,9 @@ internal class ClubAffairsReminder : IDisposable
     private const int CheckIntervalMinutes = 60; // 每小时检查一次
     private DateTimeOffset _lastWeeklySummaryDate = DateTimeOffset.MinValue;
     private DateTimeOffset _lastDailyReminderDate = DateTimeOffset.MinValue;
+    private readonly string _statePath;
+
+    private record SentState(DateTimeOffset WeeklySummary, DateTimeOffset DailyReminder);
 
     public ClubAffairsReminder(
         IPluginService service,
@@ -30,6 +34,8 @@ internal class ClubAffairsReminder : IDisposable
         Service = service;
         Config = config;
         _getCalendar = getCalendar;
+        _statePath = Path.Combine(service.GetPluginDataPath(), "club_affairs_reminder.json");
+        LoadSentState();
         _dailyCheckTimer = new Timer(TimeSpan.FromMinutes(CheckIntervalMinutes));
         _dailyCheckTimer.Elapsed += (_, _) => CheckAndSendReminders();
         _dailyCheckTimer.AutoReset = true;
@@ -54,6 +60,7 @@ internal class ClubAffairsReminder : IDisposable
             {
                 SendWeeklySummary(now);
                 _lastWeeklySummaryDate = now.Date;
+                SaveSentState();
             }
 
             // 检查是否应该发送每日提醒
@@ -61,11 +68,45 @@ internal class ClubAffairsReminder : IDisposable
             {
                 SendDailyReminder(now);
                 _lastDailyReminderDate = now.Date;
+                SaveSentState();
             }
         }
         catch (Exception ex)
         {
             Service.LogError("社团事务提醒任务出现异常", ex);
+        }
+    }
+
+    private void LoadSentState()
+    {
+        try
+        {
+            if (!File.Exists(_statePath))
+                return;
+            var state = JsonSerializer.Deserialize<SentState>(File.ReadAllText(_statePath));
+            if (state is null)
+                return;
+            _lastWeeklySummaryDate = state.WeeklySummary;
+            _lastDailyReminderDate = state.DailyReminder;
+        }
+        catch (Exception ex)
+        {
+            Service.LogError("[社团事务] 读取提醒记录失败", ex);
+        }
+    }
+
+    private void SaveSentState()
+    {
+        try
+        {
+            File.WriteAllText(
+                _statePath,
+                JsonSerializer.Serialize(new SentState(_lastWeeklySummaryDate, _lastDailyReminderDate))
+            );
+        }
+        catch (Exception ex)
+        {
+            Service.LogError("[社团事务] 保存提醒记录失败", ex);
         }
     }
 
@@ -122,7 +163,7 @@ internal class ClubAffairsReminder : IDisposable
             if (group.Mode == PluginConfig.ReminderFilterConfig.FilterMode.Default ||
                 ShouldSendToGroup(upcomingEvents, group))
             {
-                Service.SendGroupMessageAsync(null, group.GroupId, message);
+                _ = Service.TrySendGroupMessageAsync(group.GroupId, message);
                 Service.Log($"[社团事务] 已向群组 {group.GroupId} 发送每周汇总");
             }
         }
@@ -159,7 +200,7 @@ internal class ClubAffairsReminder : IDisposable
             if (groupEvents.Count > 0)
             {
                 var groupMessage = BuildDailyReminderMessage(tomorrow, groupEvents);
-                Service.SendGroupMessageAsync(null, group.GroupId, groupMessage);
+                _ = Service.TrySendGroupMessageAsync(group.GroupId, groupMessage);
                 Service.Log($"[社团事务] 已向群组 {group.GroupId} 发送每日提醒");
             }
         }
