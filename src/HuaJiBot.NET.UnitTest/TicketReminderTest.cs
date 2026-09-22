@@ -34,6 +34,63 @@ internal class TicketReminderTest
          "logs":[{{string.Join(",", logTimes.Select(t => $$"""{"action":"x","gmtCreate":"{{t}}"}"""))}}]}
         """;
 
+    private static readonly DateTimeOffset Noon = new(2026, 9, 22, 12, 0, 0, TimeSpan.FromHours(8));
+
+    private static Ticket T(long id, string status, double daysIdle, string? member = null) =>
+        new(id, status, $"m{id}", $"p{id}", member, Noon.AddDays(-10), Noon.AddDays(-daysIdle));
+
+    [TestCase("open", 1.01, true)]
+    [TestCase("open", 1, false)]
+    [TestCase("accepted", 2.9, false)]
+    [TestCase("accepted", 3.1, true)]
+    [TestCase("committed", 2.1, true)]
+    [TestCase("committed", 1.9, false)]
+    public void Stalled_UsesPerStatusThresholdOnLastActivity(string status, double daysIdle, bool stalled)
+    {
+        var result = TicketDigest.Stalled([T(1, status, daysIdle)], Noon, new PluginConfig());
+
+        Assert.That(result, Has.Count.EqualTo(stalled ? 1 : 0));
+    }
+
+    [Test]
+    public void Format_GroupsByStageAndLinksThePortal()
+    {
+        var text = TicketDigest.Format(
+            "【维修工单提醒】3 张工单卡住了",
+            [
+                new(785, "committed", "小新14", "清灰", null, Noon, Noon.AddDays(-3.5)),
+                new(801, "open", "拯救者", "换硅脂", null, Noon, Noon.AddDays(-2.2)),
+                new(790, "accepted", "天选4", "清灰", "Skillful Li", Noon, Noon.AddDays(-5)),
+            ],
+            Noon
+        );
+
+        Assert.That(
+            text,
+            Is.EqualTo(
+                """
+                【维修工单提醒】3 张工单卡住了
+                待接单：
+                  #801 拯救者 · 换硅脂 · 已 2 天
+                已接单未提交：
+                  #790 天选4 · 清灰 · Skillful Li · 已 5 天
+                待审核：
+                  #785 小新14 · 清灰 · 已 3 天
+                去处理：https://repair.nbtca.space
+                """.ReplaceLineEndings("\n")
+            )
+        );
+    }
+
+    [Test]
+    public void Format_ShowsUnderOneDayAndSkipsMissingFields()
+    {
+        var text = TicketDigest.Format("t", [new(9, "open", null, "蓝屏", null, Noon, Noon.AddHours(-3))], Noon);
+
+        Assert.That(text, Does.Contain("  #9 蓝屏 · 不到 1 天\n"));
+        Assert.That(text, Does.Not.Contain("已接单未提交").And.Not.Contain("待审核"));
+    }
+
     [Test]
     public async Task Client_StopsAtFirstTicketOlderThanSince_AndUsesLatestLog()
     {

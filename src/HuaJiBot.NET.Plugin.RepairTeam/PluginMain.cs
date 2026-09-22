@@ -13,6 +13,9 @@ public class PluginConfig : ConfigBase
     public string NsqChannel = "";
     public string? PushRawGroup = "";
     public string[] PushInfoGroup = [];
+    public double OpenDays = 1;
+    public double AcceptedDays = 3;
+    public double CommittedDays = 2;
 }
 
 public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
