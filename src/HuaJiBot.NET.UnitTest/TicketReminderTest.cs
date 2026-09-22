@@ -94,7 +94,8 @@ internal class TicketReminderTest
     private static PluginConfig ReminderConfig() =>
         new()
         {
-            PushInfoGroup = ["repair", "debug"],
+            PushInfoGroup = ["events-only"],
+            RemindGroups = ["repair", "debug"],
             RemindSince = Since,
         };
 
@@ -132,7 +133,7 @@ internal class TicketReminderTest
         }
 
         await new TicketReminder(adapter, ReminderConfig(), Fetch, TempState()).CheckAsync(Noon.AddHours(-1));
-        await new TicketReminder(adapter, new PluginConfig { PushInfoGroup = ["repair"] }, Fetch, TempState()).CheckAsync(Noon);
+        await new TicketReminder(adapter, new PluginConfig { RemindGroups = ["repair"] }, Fetch, TempState()).CheckAsync(Noon);
 
         Assert.That(adapter.Sends, Is.Empty);
         Assert.That(fetched, Is.Zero);

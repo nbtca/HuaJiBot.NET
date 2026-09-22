@@ -16,6 +16,7 @@ public class PluginConfig : ConfigBase
     public string? PushRawGroup = "";
     public string[] PushInfoGroup = [];
     public string SaturdayApi = "https://api.nbtca.space";
+    public string[] RemindGroups = [];
     public DateTimeOffset? RemindSince;
     public int RemindHour = 12;
     public double OpenDays = 1;
@@ -136,7 +137,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     // ReSharper disable once UnusedMember.Local
     private async Task TicketsCommandAsync(GroupMessageEventArgs e)
     {
-        if (!Config.PushInfoGroup.Contains(e.GroupId) || _saturday is null)
+        if (!Config.RemindGroups.Contains(e.GroupId) || _saturday is null)
             return;
         if (Config.RemindSince is not { } since)
         {
