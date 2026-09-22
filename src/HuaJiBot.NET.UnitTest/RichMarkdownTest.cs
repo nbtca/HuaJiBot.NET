@@ -65,7 +65,7 @@ internal class RichMarkdownTest
                 </details>
 
                 <tg-button type="url" url="https://github.com/nbtca/HuaJiBot.NET/issues/21">Open issue #21</tg-button>
-                """
+                """.ReplaceLineEndings("\n")
             )
         );
 
