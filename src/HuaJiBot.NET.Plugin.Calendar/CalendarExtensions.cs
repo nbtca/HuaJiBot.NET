@@ -7,7 +7,7 @@ using Ical.Net.DataTypes;
 
 namespace HuaJiBot.NET.Plugin.Calendar;
 
-internal static class CalendarExtensions
+internal static partial class CalendarExtensions
 {
     /// <summary>
     /// Wraps an ical.net <see cref="Ical.Net.DataTypes.Period"/> and converts its times to
@@ -94,16 +94,7 @@ internal static class CalendarExtensions
     public static string BuildTextOutput(
         this IEnumerable<(Period period, CalendarEvent e)> @this,
         DateTimeOffset now
-    )
-    {
-        StringBuilder sb = new();
-        foreach (var item in @this) //遍历每一个事件
-        {
-            sb.AppendLine(item.BuildTextOutput(now, true));
-        }
-
-        return sb.ToString();
-    }
+    ) => string.Join("\n\n", @this.Select(item => item.BuildTextOutput(now, true)));
 
     public static string BuildTextOutput(
         this (Period period, CalendarEvent e) @this,
@@ -176,19 +167,18 @@ internal static class CalendarExtensions
             sb.AppendLine($"{space}概要：{ev.Summary}");
         if (!string.IsNullOrWhiteSpace(ev.Location))
             sb.AppendLine($"{space}地点：{ev.Location}");
-        if (!string.IsNullOrWhiteSpace(ev.Description))
+        if (brief)
+        {
+            if (UrlRegex().Match(ev.Description ?? "") is { Success: true } url)
+                sb.AppendLine($"{space}链接：{url.Value}");
+        }
+        else if (!string.IsNullOrWhiteSpace(ev.Description))
         {
             var desc = ev.Description.Trim();
             desc = desc.Replace("\r", null)
                 .Replace("<br>", "\n")
                 .Replace("\n\n", "\n")
                 .Replace("\n", "\n" + space);
-            if (brief)
-            {
-                // trim ev.Description after 50 characters
-                if (desc.Length > 50)
-                    desc = desc[..50] + " ...";
-            }
             foreach (Match match in new Regex("<a href=\"(.*?)\">(.*?)</a>").Matches(desc))
             {
                 var m1 = match.Groups[1].Value;
@@ -197,6 +187,9 @@ internal static class CalendarExtensions
             }
             sb.AppendLine($"{space}描述：{desc}");
         }
-        return sb.ToString();
+        return sb.ToString().TrimEnd();
     }
+
+    [GeneratedRegex(@"https?://[^\s<>""]+")]
+    private static partial Regex UrlRegex();
 }
