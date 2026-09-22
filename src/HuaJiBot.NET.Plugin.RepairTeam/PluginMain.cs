@@ -1,4 +1,6 @@
 ﻿using System.Text;
+using HuaJiBot.NET.Commands;
+using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Interfaces;
 using Newtonsoft.Json;
 using HuaJiBot.NET.Utils;
@@ -13,6 +15,9 @@ public class PluginConfig : ConfigBase
     public string NsqChannel = "";
     public string? PushRawGroup = "";
     public string[] PushInfoGroup = [];
+    public string SaturdayApi = "https://api.nbtca.space";
+    public DateTimeOffset? RemindSince;
+    public int RemindHour = 12;
     public double OpenDays = 1;
     public double AcceptedDays = 3;
     public double CommittedDays = 2;
@@ -20,10 +25,21 @@ public class PluginConfig : ConfigBase
 
 public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 {
+    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };
     private NsqConnector? _nsq;
+    private SaturdayClient? _saturday;
+    private TicketReminder? _reminder;
 
     protected override void Initialize()
     {
+        _saturday = new SaturdayClient(Http, Config.SaturdayApi, (msg, ex) => Service.LogError(msg, ex));
+        _reminder = new TicketReminder(
+            Service,
+            Config,
+            _saturday.GetActiveTicketsAsync,
+            Path.Combine(Service.GetPluginDataPath(), "ticket_reminder.json")
+        );
+        _reminder.Start();
         if (string.IsNullOrWhiteSpace(Config.NsqUrl) || string.IsNullOrWhiteSpace(Config.NsqTopic))
         {
             Service.Warn("[RepairTeam] 未配置 NsqUrl 或 NsqTopic，不接收维修事件");
@@ -116,7 +132,36 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    protected override void Unload() { }
+    [Command("工单", "查看进行中的维修工单")]
+    // ReSharper disable once UnusedMember.Local
+    private async Task TicketsCommandAsync(GroupMessageEventArgs e)
+    {
+        if (!Config.PushInfoGroup.Contains(e.GroupId) || _saturday is null)
+            return;
+        if (Config.RemindSince is not { } since)
+        {
+            await e.Reply("未配置 RemindSince，工单查询未启用");
+            return;
+        }
+        List<Ticket> tickets;
+        try
+        {
+            tickets = await _saturday.GetActiveTicketsAsync(since);
+        }
+        catch (Exception ex)
+        {
+            Service.LogError("[RepairTeam] 读取维修工单失败", ex);
+            await e.Reply("维修系统暂时无法访问");
+            return;
+        }
+        await e.Reply(
+            tickets.Count == 0
+                ? "没有进行中的工单"
+                : TicketDigest.Format($"【维修工单】进行中 {tickets.Count} 张", tickets, NetworkTime.Now)
+        );
+    }
+
+    protected override void Unload() => _reminder?.Dispose();
 
     public PluginConfig Config { get; } = new();
 }

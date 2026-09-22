@@ -91,6 +91,81 @@ internal class TicketReminderTest
         Assert.That(text, Does.Not.Contain("已接单未提交").And.Not.Contain("待审核"));
     }
 
+    private static PluginConfig ReminderConfig() =>
+        new()
+        {
+            PushInfoGroup = ["repair", "debug"],
+            RemindSince = Since,
+        };
+
+    private static string SentText(RecordingAdapter adapter, string group) =>
+        string.Concat(
+            adapter.Sends.Where(x => x.Target == group).SelectMany(x => x.Messages).OfType<Bot.TextMessage>().Select(x => x.Text)
+        );
+
+    private static string TempState() => Path.Combine(Path.GetTempPath(), $"ticket_reminder_{Guid.NewGuid():N}.json");
+
+    [Test]
+    public async Task Reminder_SendsOncePerDay_EvenAfterRestart()
+    {
+        var adapter = new RecordingAdapter();
+        var state = TempState();
+        var config = ReminderConfig();
+        Task<List<Ticket>> Fetch(DateTimeOffset _) => Task.FromResult(new List<Ticket> { T(1, "open", 2) });
+
+        await new TicketReminder(adapter, config, Fetch, state).CheckAsync(Noon);
+        await new TicketReminder(adapter, config, Fetch, state).CheckAsync(Noon.AddMinutes(30));
+
+        Assert.That(adapter.Sends.Select(x => x.Target), Is.EqualTo(new[] { "repair", "debug" }));
+        Assert.That(SentText(adapter, "repair"), Does.StartWith("【维修工单提醒】1 张工单卡住了").And.Contain("#1 "));
+    }
+
+    [Test]
+    public async Task Reminder_OutsideHourOrWithoutSince_DoesNothing()
+    {
+        var adapter = new RecordingAdapter();
+        var fetched = 0;
+        Task<List<Ticket>> Fetch(DateTimeOffset _)
+        {
+            fetched++;
+            return Task.FromResult(new List<Ticket> { T(1, "open", 2) });
+        }
+
+        await new TicketReminder(adapter, ReminderConfig(), Fetch, TempState()).CheckAsync(Noon.AddHours(-1));
+        await new TicketReminder(adapter, new PluginConfig { PushInfoGroup = ["repair"] }, Fetch, TempState()).CheckAsync(Noon);
+
+        Assert.That(adapter.Sends, Is.Empty);
+        Assert.That(fetched, Is.Zero);
+    }
+
+    [Test]
+    public async Task Reminder_NothingStalled_SendsNothingButCountsTheDay()
+    {
+        var adapter = new RecordingAdapter();
+        var reminder = new TicketReminder(adapter, ReminderConfig(), _ => Task.FromResult(new List<Ticket> { T(1, "open", 0.2) }), TempState());
+
+        Assert.That(await reminder.SendDigestAsync(Noon), Is.True);
+        Assert.That(adapter.Sends, Is.Empty);
+    }
+
+    [Test]
+    public async Task Reminder_FetchFailure_IsRetriedNextCheck()
+    {
+        var adapter = new RecordingAdapter();
+        var calls = 0;
+        Task<List<Ticket>> Fetch(DateTimeOffset _) =>
+            ++calls == 1
+                ? throw new HttpRequestException("down")
+                : Task.FromResult(new List<Ticket> { T(1, "committed", 5) });
+        var reminder = new TicketReminder(adapter, ReminderConfig(), Fetch, TempState());
+
+        await reminder.CheckAsync(Noon);
+        Assert.That(adapter.Sends, Is.Empty);
+
+        await reminder.CheckAsync(Noon.AddMinutes(10));
+        Assert.That(SentText(adapter, "repair"), Does.Contain("待审核"));
+    }
+
     [Test]
     public async Task Client_StopsAtFirstTicketOlderThanSince_AndUsesLatestLog()
     {
