@@ -18,10 +18,10 @@ public class CommandSourceGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // Find all classes that inherit from PluginBase and capture the SemanticModel
+        // Every partial declaration is collected: only one of them names the base class.
         var pluginClasses = context
             .SyntaxProvider.CreateSyntaxProvider(
-                predicate: static (s, _) => s is ClassDeclarationSyntax { BaseList: not null },
+                predicate: static (s, _) => s is ClassDeclarationSyntax,
                 transform: static (ctx, _) => GetPluginClassWithModel(ctx)
             )
             .Where(static m => m.classDecl is not null)!;
@@ -36,7 +36,8 @@ public class CommandSourceGenerator : IIncrementalGenerator
     // Return a tuple with the class syntax and its SemanticModel
     private static (
         ClassDeclarationSyntax? classDecl,
-        SemanticModel? semanticModel
+        SemanticModel? semanticModel,
+        INamedTypeSymbol? classSymbol
     ) GetPluginClassWithModel(GeneratorSyntaxContext context)
     {
         var classDecl = (ClassDeclarationSyntax)context.Node;
@@ -46,7 +47,7 @@ public class CommandSourceGenerator : IIncrementalGenerator
         var classSymbol = semanticModel.GetDeclaredSymbol(classDecl);
 
         if (classSymbol == null)
-            return (null, null);
+            return (null, null, null);
 
         // Check inheritance chain
         var baseType = classSymbol.BaseType;
@@ -54,50 +55,62 @@ public class CommandSourceGenerator : IIncrementalGenerator
         {
             if (baseType.ToDisplayString() == PluginBaseFullName)
             {
-                return (classDecl, semanticModel);
+                return (classDecl, semanticModel, classSymbol);
             }
             baseType = baseType.BaseType;
         }
 
-        return (null, null);
+        return (null, null, null);
     }
 
     private static void Execute(
-        IEnumerable<(ClassDeclarationSyntax classDecl, SemanticModel semanticModel)> pluginClasses,
+        IEnumerable<(
+            ClassDeclarationSyntax classDecl,
+            SemanticModel semanticModel,
+            INamedTypeSymbol classSymbol
+        )> pluginClasses,
         SourceProductionContext context
     )
     {
-        if (!pluginClasses.Any())
-            return;
-
         var stringBuilder = new StringBuilder();
 
-        foreach (var (pluginClass, semanticModel) in pluginClasses)
+        foreach (
+            var declarations in pluginClasses.GroupBy(
+                x => x.classSymbol,
+                SymbolEqualityComparer.Default
+            )
+        )
         {
-            GenerateCommandsForPlugin(pluginClass, stringBuilder, context, semanticModel);
+            var commandMethods = declarations
+                .SelectMany(d =>
+                    d.classDecl.Members.OfType<MethodDeclarationSyntax>()
+                        .Where(m =>
+                            m.AttributeLists.Any(al =>
+                                al.Attributes.Any(a => IsCommandAttribute(a, d.semanticModel))
+                            )
+                        )
+                        .Select(m => (m, d.semanticModel))
+                )
+                .ToArray();
+            GenerateCommandsForPlugin(
+                declarations.First().classDecl,
+                commandMethods,
+                stringBuilder,
+                context
+            );
         }
     }
 
     private static void GenerateCommandsForPlugin(
         ClassDeclarationSyntax pluginClass,
+        (MethodDeclarationSyntax method, SemanticModel semanticModel)[] commandMethods,
         StringBuilder sb,
-        SourceProductionContext context,
-        SemanticModel semanticModel
+        SourceProductionContext context
     )
     {
         sb.Clear();
         var className = pluginClass.Identifier.ValueText;
         var namespaceName = GetNamespace(pluginClass);
-
-        // Find all methods with CommandAttribute
-        var commandMethods = pluginClass
-            .Members.OfType<MethodDeclarationSyntax>()
-            .Where(m =>
-                m.AttributeLists.Any(al =>
-                    al.Attributes.Any(a => IsCommandAttribute(a, semanticModel))
-                )
-            )
-            .ToArray();
 
         if (!commandMethods.Any())
             return;
@@ -127,7 +140,7 @@ public class CommandSourceGenerator : IIncrementalGenerator
         sb.AppendLine("    public override IEnumerable<CommandInfo> GetAllCommands()");
         sb.AppendLine("    {");
 
-        foreach (var method in commandMethods)
+        foreach (var (method, semanticModel) in commandMethods)
         {
             GenerateCommandInfo(method, sb, semanticModel);
         }
