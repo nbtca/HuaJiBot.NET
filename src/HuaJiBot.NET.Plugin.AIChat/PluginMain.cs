@@ -160,36 +160,45 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             if (!Service.AllRobots.Contains(atId))
                 return; //仅处理At机器人
-            if (reader.Input(out var restText, true))
+            if (!reader.Input(out var restText, true) || string.IsNullOrWhiteSpace(restText))
             {
                 try
                 {
-                    //收到at机器人的消息则处理
-                    Info($"收到At消息@{atId}:{restText}");
-                    //把消息存到数据中以便多轮会话查阅
-                    _history.StoreMessage( // 收到消息记录
-                        new GroupMessage
-                        {
-                            Content = restText,
-                            GroupId = e.GroupId,
-                            MessageId = e.MessageId,
-                            SenderId = e.SenderId,
-                            SenderName = e.SenderMemberCard,
-                            IsBot = false,
-                            ReplyToMessageId = null,
-                        }
-                    );
-                    //调用LLM回复
-                    await InvokeLlmMessage(
-                        Config.SystemPrompt,
-                        [new ChatMessage(ChatRole.User, restText)],
-                        e
-                    );
+                    await e.Reply("我在，请在 @ 后写下问题。");
                 }
                 catch (Exception exception)
                 {
-                    Error("调用AI失败", exception);
+                    Error("回复空白 At 消息失败", exception);
                 }
+                return;
+            }
+            try
+            {
+                //收到at机器人的消息则处理
+                Info($"收到At消息@{atId}:{restText}");
+                //把消息存到数据中以便多轮会话查阅
+                _history.StoreMessage( // 收到消息记录
+                    new GroupMessage
+                    {
+                        Content = restText,
+                        GroupId = e.GroupId,
+                        MessageId = e.MessageId,
+                        SenderId = e.SenderId,
+                        SenderName = e.SenderMemberCard,
+                        IsBot = false,
+                        ReplyToMessageId = null,
+                    }
+                );
+                //调用LLM回复
+                await InvokeLlmMessage(
+                    Config.SystemPrompt,
+                    [new ChatMessage(ChatRole.User, restText)],
+                    e
+                );
+            }
+            catch (Exception exception)
+            {
+                Error("调用AI失败", exception);
             }
         }
         reader = e.CommandReader;
