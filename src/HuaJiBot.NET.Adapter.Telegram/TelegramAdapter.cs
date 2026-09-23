@@ -5,6 +5,8 @@ using HuaJiBot.NET.Logger;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
@@ -145,29 +147,16 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
 
             if (imagePathToSend != null)
             {
-                // Send image with text as caption
-                if (!string.IsNullOrWhiteSpace(combinedText))
-                {
-                    sentMessage = await _botClient.SendPhoto(
-                        chatId,
-                        InputFile.FromStream(System.IO.File.OpenRead(imagePathToSend)),
-                        caption: combinedText,
-                        parseMode: ParseMode.Html,
-                        replyParameters: replyParameters,
-                        messageThreadId: topicId,
-                        cancellationToken: _cancellationTokenSource.Token
-                    );
-                }
-                else
-                {
-                    sentMessage = await _botClient.SendPhoto(
-                        chatId,
-                        InputFile.FromStream(System.IO.File.OpenRead(imagePathToSend)),
-                        replyParameters: replyParameters,
-                        messageThreadId: topicId,
-                        cancellationToken: _cancellationTokenSource.Token
-                    );
-                }
+                await using var photo = await OpenPhotoAsync(imagePathToSend);
+                sentMessage = await _botClient.SendPhoto(
+                    chatId,
+                    InputFile.FromStream(photo),
+                    caption: string.IsNullOrWhiteSpace(combinedText) ? null : combinedText,
+                    parseMode: ParseMode.Html,
+                    replyParameters: replyParameters,
+                    messageThreadId: topicId,
+                    cancellationToken: _cancellationTokenSource.Token
+                );
             }
             else if (!string.IsNullOrWhiteSpace(combinedText))
             {
@@ -194,6 +183,17 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
         }
 
         return messageIds.ToArray();
+    }
+
+    // Telegram re-encodes photos as JPEG, which turns the card's transparent corners white.
+    internal static async Task<Stream> OpenPhotoAsync(string path)
+    {
+        using var image = await Image.LoadAsync(path);
+        image.Mutate(x => x.BackgroundColor(SixLabors.ImageSharp.Color.Black));
+        var stream = new MemoryStream();
+        await image.SaveAsPngAsync(stream);
+        stream.Position = 0;
+        return stream;
     }
 
     public override async Task<string[]> SendRichMessageAsync(
