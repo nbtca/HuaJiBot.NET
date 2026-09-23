@@ -3,6 +3,7 @@ using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Logger;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
@@ -14,6 +15,10 @@ namespace HuaJiBot.NET.Adapter.Telegram;
 public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : BotServiceBase
 {
     private static readonly HttpClient SharedClient = new();
+    private static readonly JsonSerializerOptions RichMessageJson = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
     private readonly HttpClient _richMessageClient = httpClient ?? SharedClient;
     private readonly TelegramBotClient _botClient = new(botToken, httpClient);
     private CancellationTokenSource _cancellationTokenSource = new();
@@ -213,6 +218,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
                         : null,
                     message_thread_id = groupTopic.TopicId,
                 },
+                RichMessageJson,
                 _cancellationTokenSource.Token
             );
             var result = await response.Content.ReadFromJsonAsync<RichMessageResponse>(
