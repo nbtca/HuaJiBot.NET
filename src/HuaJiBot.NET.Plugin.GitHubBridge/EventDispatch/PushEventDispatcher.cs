@@ -27,28 +27,24 @@ internal static class PushEventDispatcher
         }
         var repositoryFullName = body.Repository.FullName;
         plugin.Info($"PushEvent {repositoryFullName} {body.Ref}");
-        {
-            if (!ShouldBroadcast(body))
-                return;
-
-            TempFile.AutoDeleteFile? tempImage = null;
-            try
-            {
-                await Broadcast.SendAsync(
-                    plugin.Service,
-                    plugin.GetBroadcastTargets(body.Repository),
-                    async () =>
-                        [
-                            new ImageMessage(tempImage = await BuildPushCardAsync(body)),
-                            new LinkMessage("View changes", await plugin.OrRawAsync(body.Compare)),
-                        ]
-                );
-            }
-            finally
-            {
-                tempImage?.Dispose();
-            }
-        }
+        if (!ShouldBroadcast(body))
+            return;
+        using Cards cards = new();
+        var card = cards.Card(() => BuildPushCardAsync(body));
+        await Broadcast.SendAsync(
+            plugin.Service,
+            plugin.GetBroadcastTargets(body.Repository),
+            GitHubPosts.Push(
+                body,
+                card,
+                Cards.Once<SendingMessageBase[]>(async () =>
+                    [
+                        new ImageMessage(await card()),
+                        new LinkMessage("View changes", await plugin.OrRawAsync(body.Compare)),
+                    ]
+                )
+            )
+        );
     }
 
     private static async Task<TempFile.AutoDeleteFile> BuildPushCardAsync(PushEventBody body)
