@@ -23,6 +23,25 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     private AIFunction[]? _tools;
 
+    public static string? CurrentWeatherCity(string text, string defaultCity)
+    {
+        var weatherIndex = text.IndexOf("天气", StringComparison.Ordinal);
+        if (weatherIndex < 0
+            || Regex.IsMatch(text, "明天|后天|未来|一周|下周|周末"))
+            return null;
+        var prefix = text[..weatherIndex];
+        var city = Regex.Replace(
+            prefix,
+            "请问|告诉我|查询|查一下|帮我查|帮我看|看看|今天|今日|现在|当前|的|\\s",
+            ""
+        );
+        if (city.Length == 0)
+            return defaultCity.Trim();
+        return Regex.IsMatch(city, @"^[\p{IsCJKUnifiedIdeographs}A-Za-z ]{2,40}$")
+            ? city.Trim()
+            : null;
+    }
+
     private AIFunction[] GetFunctionTools() =>
         _tools ??= AgentTools.CreateBotFunctions(Service.ExportFunctions);
 
@@ -228,6 +247,42 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                                 ReplyToMessageId = e.MessageId,
                             }
                         );
+                    }
+                    return;
+                }
+                var weatherCity = CurrentWeatherCity(restText, Config.DefaultWeatherCity);
+                if (weatherCity is not null)
+                {
+                    if (weatherCity.Length == 0)
+                    {
+                        await e.Reply("请告诉我城市，例如“宁波天气”。");
+                        return;
+                    }
+                    var weatherResult = await _mcpClientManager.CallTextToolAsync(
+                        "get_weather",
+                        new Dictionary<string, object?> { ["location"] = weatherCity }
+                    );
+                    if (weatherResult is null)
+                    {
+                        await e.Reply("天气查询工具尚未连接。");
+                        return;
+                    }
+                    Info($"直接调用 get_weather：{weatherCity}");
+                    var weatherReply = restText.Contains(weatherCity, StringComparison.Ordinal)
+                        ? weatherResult
+                        : $"未指定城市，按{weatherCity}查询。\n{weatherResult}";
+                    foreach (var msgId in await e.Reply(weatherReply))
+                    {
+                        _history.StoreMessage(new GroupMessage
+                        {
+                            Content = weatherReply,
+                            GroupId = e.GroupId,
+                            MessageId = msgId,
+                            SenderId = null,
+                            SenderName = "bot",
+                            IsBot = true,
+                            ReplyToMessageId = e.MessageId,
+                        });
                     }
                     return;
                 }

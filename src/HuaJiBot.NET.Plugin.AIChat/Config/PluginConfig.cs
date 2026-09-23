@@ -18,6 +18,12 @@ public class PluginConfig : ConfigBase
     public int MaxTurns = 20;
 
     /// <summary>
+    /// City used when a current-weather question does not name a location.
+    /// Leave empty to ask the user for a city.
+    /// </summary>
+    public string DefaultWeatherCity = "";
+
+    /// <summary>
     /// MCP (Model Context Protocol) server configurations.
     /// Each entry defines an MCP server that provides tools to the agent.
     /// </summary>
