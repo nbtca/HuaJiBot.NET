@@ -27,6 +27,40 @@ public sealed record AtMessage(string Target) : SendingMessageBase;
 
 public sealed record LinkMessage(string Text, string Url) : SendingMessageBase;
 
+/// <summary>A Telegram post. Other adapters send <see cref="Fallback"/> instead.</summary>
+public sealed record Post(string Markdown, Func<Task<SendingMessageBase[]>> Fallback)
+    : SendingMessageBase
+{
+    public Func<Task<string>>? Image { get; init; }
+    public string[] Tags { get; init; } = [];
+    public LinkMessage[] Links { get; init; } = [];
+    public bool Silent { get; init; }
+
+    public static string Escape(string text) =>
+        string.Concat(
+            from c in text
+            select char.IsAsciiLetterOrDigit(c) || !char.IsAscii(c) || char.IsWhiteSpace(c)
+                ? c.ToString()
+                : "\\" + c
+        );
+}
+
+public static class SendingMessageExtensions
+{
+    public static async Task<SendingMessageBase[]> ExpandPostsAsync(
+        this SendingMessageBase[] messages
+    )
+    {
+        List<SendingMessageBase> result = [];
+        foreach (var message in messages)
+            if (message is Post post)
+                result.AddRange(await post.Fallback());
+            else
+                result.Add(message);
+        return [.. result];
+    }
+}
+
 public sealed record ReplyMessage(string MessageId) : SendingMessageBase;
 
 public sealed record RichContent(string Markdown, string? ReplyToMessageId = null)

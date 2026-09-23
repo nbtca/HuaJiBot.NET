@@ -35,7 +35,7 @@ internal static class IssuesEventDispatcher
                 async () =>
                     [
                         new ImageMessage(tempImage = await BuildCommentCardAsync(body)),
-                        new LinkMessage("View comment", await plugin.OrRawAsync(body.Comment.HtmlUrl)),
+                        new LinkMessage("View comment", await plugin.OrRawAsync(body.Issue.HtmlUrl)),
                     ]
             );
         }

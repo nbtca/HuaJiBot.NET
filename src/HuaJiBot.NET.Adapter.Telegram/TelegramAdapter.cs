@@ -105,6 +105,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
             string? imagePathToSend = null;
             ReplyParameters? replyParameters = null;
             List<InlineKeyboardButton> buttons = [];
+            Post? post = null;
 
             foreach (var message in messages)
             {
@@ -113,10 +114,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
                     case TextMessage { Text: var text }:
                         if (textBuilder.Length > 0)
                             textBuilder.Append(' ');
-                        // Escape HTML special characters
-                        textBuilder.Append(
-                            text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
-                        );
+                        textBuilder.Append(TelegramHtml.Escape(text));
                         break;
 
                     case AtMessage { Target: var target }
@@ -135,6 +133,10 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
                         buttons.Add(InlineKeyboardButton.WithUrl(text, url));
                         break;
 
+                    case Post p:
+                        post = p;
+                        break;
+
                     case ImageMessage { ImagePath: var path }:
                         // If we have an image, we'll send it with the text as caption
                         imagePathToSend = path;
@@ -146,6 +148,9 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
                         );
                 }
             }
+
+            if (post is not null)
+                return [(await SendPostAsync(chatId, topicId, post, replyParameters)).MessageId.ToString()];
 
             // Send the combined message
             Message? sentMessage = null;
@@ -192,6 +197,59 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
         }
 
         return messageIds.ToArray();
+    }
+
+    private async Task<Message> SendPostAsync(
+        ChatId chatId,
+        int? topicId,
+        Post post,
+        ReplyParameters? replyParameters
+    )
+    {
+        var replyMarkup = post.Links.Length == 0
+            ? null
+            : new InlineKeyboardMarkup(
+                post.Links.Take(3).Select(x => InlineKeyboardButton.WithUrl(x.Text, x.Url))
+            );
+        try
+        {
+            return await SendAsync(ParseMode.Html, TelegramHtml.Compose);
+        }
+        catch (ApiRequestException ex) when (ex.Message.Contains("can't parse entities"))
+        {
+            LogError("Telegram rejected the post HTML, resending as plain text", ex);
+            return await SendAsync(ParseMode.None, TelegramHtml.ComposePlain);
+        }
+
+        async Task<Message> SendAsync(ParseMode parseMode, Func<Post, int, string> compose)
+        {
+            if (post.Image is { } image)
+            {
+                await using var photo = await OpenPhotoAsync(await image());
+                return await _botClient.SendPhoto(
+                    chatId,
+                    InputFile.FromStream(photo),
+                    caption: compose(post, TelegramHtml.CaptionLimit),
+                    parseMode: parseMode,
+                    replyParameters: replyParameters,
+                    replyMarkup: replyMarkup,
+                    messageThreadId: topicId,
+                    disableNotification: post.Silent,
+                    cancellationToken: _cancellationTokenSource.Token
+                );
+            }
+            return await _botClient.SendMessage(
+                chatId,
+                compose(post, TelegramHtml.TextLimit),
+                parseMode: parseMode,
+                replyParameters: replyParameters,
+                replyMarkup: replyMarkup,
+                linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
+                messageThreadId: topicId,
+                disableNotification: post.Silent,
+                cancellationToken: _cancellationTokenSource.Token
+            );
+        }
     }
 
     // Telegram re-encodes photos as JPEG, which turns the card's transparent corners white.
@@ -265,7 +323,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
                     try
                     {
                         await _botClient.DeleteMessage(
-                            new(targetGroup),
+                            GroupTopic.Parse(targetGroup).GroupId,
                             messageId,
                             _cancellationTokenSource.Token
                         );
@@ -292,7 +350,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
                 try
                 {
                     await _botClient.SetChatTitle(
-                        new(targetGroup),
+                        GroupTopic.Parse(targetGroup).GroupId,
                         groupName,
                         _cancellationTokenSource.Token
                     );

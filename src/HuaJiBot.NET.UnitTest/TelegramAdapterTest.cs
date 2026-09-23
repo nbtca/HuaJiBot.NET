@@ -89,6 +89,7 @@ public class TelegramRichMessageFallbackTest
         public string? RichMessageBody { get; private set; }
         public List<string> Bodies { get; } = [];
         public bool RejectRichMessage { get; init; }
+        public bool RejectHtml { get; init; }
 
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -103,6 +104,11 @@ public class TelegramRichMessageFallbackTest
                 RichMessageBody = content;
             var (status, body) = method switch
             {
+                _ when RejectHtml && content.Contains("\"parse_mode\":\"Html\"") => (
+                    HttpStatusCode.BadRequest,
+                    """{"ok":false,"error_code":400,"description":"Bad Request: can't parse entities"}"""
+                ),
+                "deleteMessage" => (HttpStatusCode.OK, """{"ok":true,"result":true}"""),
                 "sendRichMessage" when RejectRichMessage => (
                     HttpStatusCode.BadRequest,
                     """{"ok":false,"error_code":400,"description":"Bad Request: can't parse"}"""
