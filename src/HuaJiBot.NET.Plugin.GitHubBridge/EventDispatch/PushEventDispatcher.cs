@@ -37,11 +37,10 @@ internal static class PushEventDispatcher
                 await Broadcast.SendAsync(
                     plugin.Service,
                     plugin.GetBroadcastTargets(body.Repository),
-                    RichMarkdown.Push(body),
                     async () =>
                         [
                             new ImageMessage(tempImage = await BuildPushCardAsync(body)),
-                            new TextMessage(await plugin.OrRawAsync(body.Compare)),
+                            new LinkMessage("View changes", await plugin.OrRawAsync(body.Compare)),
                         ]
                 );
             }

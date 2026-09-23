@@ -83,10 +83,11 @@ public class TelegramAdapterTest
 
 public class TelegramRichMessageFallbackTest
 {
-    private sealed class FakeBotApi : HttpMessageHandler
+    internal sealed class FakeBotApi : HttpMessageHandler
     {
         public List<string> Methods { get; } = [];
         public string? RichMessageBody { get; private set; }
+        public List<string> Bodies { get; } = [];
         public bool RejectRichMessage { get; init; }
 
         protected override async Task<HttpResponseMessage> SendAsync(
@@ -96,8 +97,10 @@ public class TelegramRichMessageFallbackTest
         {
             var method = request.RequestUri!.Segments[^1];
             Methods.Add(method);
+            var content = await request.Content!.ReadAsStringAsync(cancellationToken);
+            Bodies.Add(content);
             if (method == "sendRichMessage")
-                RichMessageBody = await request.Content!.ReadAsStringAsync(cancellationToken);
+                RichMessageBody = content;
             var (status, body) = method switch
             {
                 "sendRichMessage" when RejectRichMessage => (
@@ -159,6 +162,35 @@ public class TelegramRichMessageFallbackTest
         {
             Assert.That(api.Methods, Is.EqualTo(new[] { "sendRichMessage" }));
             Assert.That(api.RichMessageBody, Does.Not.Contain("null"));
+        });
+    }
+}
+
+public class TelegramLinkMessageTest
+{
+    [Test]
+    public async Task SendGroupMessageAsync_WithLinks_RendersUrlButtons()
+    {
+        TelegramRichMessageFallbackTest.FakeBotApi api = new();
+        var adapter = new TelegramAdapter("123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11", new(api))
+        {
+            Logger = new ConsoleLogger(),
+        };
+
+        await adapter.SendGroupMessageAsync(
+            null,
+            "-100",
+            new TextMessage("pushed"),
+            new LinkMessage("View changes", "https://s.example/abc")
+        );
+
+        var body = api.Bodies.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(body, Does.Contain("\"inline_keyboard\""));
+            Assert.That(body, Does.Contain("\"url\":\"https://s.example/abc\""));
+            Assert.That(body, Does.Contain("\"text\":\"View changes\""));
+            Assert.That(body, Does.Contain("\"text\":\"pushed\""));
         });
     }
 }

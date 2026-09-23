@@ -32,11 +32,10 @@ internal static class IssuesEventDispatcher
             await Broadcast.SendAsync(
                 plugin.Service,
                 plugin.GetBroadcastTargets(body.Repository),
-                RichMarkdown.IssueComment(body),
                 async () =>
                     [
                         new ImageMessage(tempImage = await BuildCommentCardAsync(body)),
-                        new TextMessage(await plugin.OrRawAsync(body.Issue.HtmlUrl)),
+                        new LinkMessage("View comment", await plugin.OrRawAsync(body.Comment.HtmlUrl)),
                     ]
             );
         }
@@ -58,11 +57,13 @@ internal static class IssuesEventDispatcher
             await Broadcast.SendAsync(
                 plugin.Service,
                 plugin.GetBroadcastTargets(body.Repository),
-                RichMarkdown.Issue(body),
                 async () =>
                     [
                         new ImageMessage(tempImage = await BuildIssueCardAsync(body)),
-                        new TextMessage(await plugin.OrRawAsync(body.Issue.HtmlUrl)),
+                        new LinkMessage(
+                            $"Open #{body.Issue.Number}",
+                            await plugin.OrRawAsync(body.Issue.HtmlUrl)
+                        ),
                     ]
             );
         }
