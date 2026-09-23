@@ -69,9 +69,13 @@ internal class TicketReminder : IDisposable
         var stalled = TicketDigest.Stalled(tickets, now, _config);
         if (stalled.Count == 0)
             return true;
-        var text = TicketDigest.Format($"【维修工单提醒】{stalled.Count} 张工单卡住了", stalled, now);
+        var post = TicketDigest.ToPost(
+            stalled,
+            now,
+            TicketDigest.Format($"【维修工单提醒】{stalled.Count} 张工单卡住了", stalled, now)
+        );
         foreach (var group in _config.RemindGroups)
-            await _service.TrySendGroupMessageAsync(group, text);
+            await _service.TrySendGroupMessageAsync(group, post);
         return true;
     }
 

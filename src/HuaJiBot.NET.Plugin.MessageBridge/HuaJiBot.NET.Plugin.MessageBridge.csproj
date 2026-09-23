@@ -11,4 +11,8 @@
     <ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />
     <ProjectReference Include="..\HuaJiBot.NET.SourceGenerator\HuaJiBot.NET.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="HuaJiBot.NET.UnitTest" />
+  </ItemGroup>
 </Project>

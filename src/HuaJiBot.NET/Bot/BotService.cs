@@ -31,6 +31,9 @@ public sealed record LinkMessage(string Text, string Url) : SendingMessageBase;
 public sealed record Post(string Markdown, Func<Task<SendingMessageBase[]>> Fallback)
     : SendingMessageBase
 {
+    public Post(string markdown, params SendingMessageBase[] fallback)
+        : this(markdown, () => Task.FromResult(fallback)) { }
+
     public Func<Task<string>>? Image { get; init; }
     public string[] Tags { get; init; } = [];
     public LinkMessage[] Links { get; init; } = [];

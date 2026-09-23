@@ -4,16 +4,22 @@ namespace HuaJiBot.NET.UnitTest;
 
 internal sealed class RecordingAdapter : TestAdapter
 {
+    /// <summary>What a non-Telegram adapter sends: posts replaced by their fallback.</summary>
     public readonly List<(string Target, SendingMessageBase[] Messages)> Sends = [];
+    public readonly List<Post> Posts = [];
 
-    public override Task<string[]> SendGroupMessageAsync(
+    public override async Task<string[]> SendGroupMessageAsync(
         string? robotId,
         string targetGroup,
         params SendingMessageBase[] messages
     )
     {
-        Sends.Add((targetGroup, messages));
-        return Task.FromResult<string[]>(["42"]);
+        lock (Posts)
+            Posts.AddRange(messages.OfType<Post>());
+        var sent = await messages.ExpandPostsAsync();
+        lock (Sends)
+            Sends.Add((targetGroup, sent));
+        return ["42"];
     }
 }
 

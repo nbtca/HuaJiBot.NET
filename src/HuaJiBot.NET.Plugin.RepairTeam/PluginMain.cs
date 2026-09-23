@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Interfaces;
@@ -110,6 +111,48 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         return s.ToString().TrimEnd();
     }
 
+    private static string? StateTag(string? action) =>
+        action switch
+        {
+            "create" => "新报修",
+            "accept" => "已接单",
+            "cancel" => "已取消",
+            "drop" => "已放弃",
+            "commit" or "alterCommit" => "待审核",
+            "reject" => "已退回",
+            "close" => "已结单",
+            "update" => "已更新",
+            _ => null,
+        };
+
+    internal static Post EventPost(LogEventEntity e)
+    {
+        var lines = new List<string> { $"🛠 **#{e.EventId} {Post.Escape(ActionText(e.Action))}**" };
+        var device = string.Join(
+            " · ",
+            new[] { e.Model, e.Problem }.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => Post.Escape(x!))
+        );
+        if (device.Length > 0)
+            lines.Add(device);
+        if (!string.IsNullOrWhiteSpace(e.Description))
+            lines.Add(
+                "\n"
+                    + string.Join(
+                        "\n",
+                        from line in e.Description.ReplaceLineEndings("\n").Trim().Split('\n')
+                        select "> " + Post.Escape(line)
+                    )
+            );
+        var time = e.GmtCreate.ToOffset(NetworkTime.LocalTimeZoneOffset).ToString("MM-dd HH:mm");
+        var member = string.IsNullOrWhiteSpace(e.MemberAlias) ? e.MemberId : e.MemberAlias;
+        lines.Add("\n" + (string.IsNullOrWhiteSpace(member) ? time : $"{Post.Escape(member)} · {time}"));
+        return new(string.Join("\n", lines), FormatEvent(e))
+        {
+            Tags = StateTag(e.Action) is { } tag ? ["维修", tag] : ["维修"],
+            Links = [new("去处理", TicketDigest.PortalUrl)],
+        };
+    }
+
     private void OnMessageReceived(object? sender, string msg)
     {
         Service.Log(msg);
@@ -127,9 +170,9 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 Service.LogError("[RepairTeam] 无法解析维修事件", ex);
                 return;
             }
-            var str = FormatEvent(e);
+            var post = EventPost(e);
             foreach (var group in Config.PushInfoGroup)
-                _ = Service.TrySendGroupMessageAsync(group, str);
+                _ = Service.TrySendGroupMessageAsync(group, post);
         }
     }
 
