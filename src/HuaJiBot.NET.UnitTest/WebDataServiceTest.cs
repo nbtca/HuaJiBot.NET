@@ -117,6 +117,54 @@ internal class WebDataServiceTest
         Assert.That(result, Does.Contain("https://github.com/nbtca/HuaJiBot.NET"));
     }
 
+    [Test]
+    public async Task GitHubRepositoryQueryUsesOfficialApiBeforeSearxng()
+    {
+        var requests = new List<Uri>();
+        using var client = new HttpClient(new FakeHandler(request =>
+        {
+            requests.Add(request.RequestUri!);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""
+                    {"items":[{"full_name":"nbtca/HuaJiBot.NET","html_url":"https://github.com/nbtca/HuaJiBot.NET","description":"Bot"}]}
+                    """),
+            };
+        }));
+
+        var result = await new WebDataService(client, "http://127.0.0.1:8088")
+            .SearchAsync("HuaJiBot.NET GitHub 仓库");
+
+        Assert.That(requests, Has.Count.EqualTo(1));
+        Assert.That(requests[0].Host, Is.EqualTo("api.github.com"));
+        Assert.That(requests[0].Query, Does.Contain("HuaJiBot.NET"));
+        Assert.That(result, Does.Contain("https://github.com/nbtca/HuaJiBot.NET"));
+    }
+
+    [Test]
+    public async Task GitHubApiFailureFallsBackToSearxng()
+    {
+        var requests = new List<Uri>();
+        using var client = new HttpClient(new FakeHandler(request =>
+        {
+            requests.Add(request.RequestUri!);
+            return request.RequestUri!.Host == "api.github.com"
+                ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                : new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""
+                        {"results":[{"title":"仓库","url":"https://github.com/nbtca/HuaJiBot.NET","content":"项目"}]}
+                        """),
+                };
+        }));
+
+        var result = await new WebDataService(client, "http://127.0.0.1:8088")
+            .SearchAsync("HuaJiBot.NET GitHub 仓库");
+
+        Assert.That(requests.Select(uri => uri.Host), Is.EqualTo(new[] { "api.github.com", "127.0.0.1" }));
+        Assert.That(result, Does.Contain("https://github.com/nbtca/HuaJiBot.NET"));
+    }
+
     private sealed class FakeHandler(Func<HttpRequestMessage, HttpResponseMessage> reply)
         : HttpMessageHandler
     {

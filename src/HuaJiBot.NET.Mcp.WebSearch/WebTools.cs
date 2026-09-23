@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 
 namespace HuaJiBot.NET.Mcp.WebSearch;
@@ -35,6 +36,18 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
     public async Task<string> SearchAsync(string query)
     {
         query = Validate(query, "搜索词", 160);
+        var repositoryName = GitHubRepositoryName(query);
+        if (repositoryName is not null)
+        {
+            try
+            {
+                var repositoryResults = await SearchGitHubRepositoriesAsync(repositoryName);
+                if (repositoryResults.Length > 0)
+                    return repositoryResults;
+            }
+            catch (HttpRequestException) { }
+            catch (TaskCanceledException) { }
+        }
         for (var attempt = 0; attempt < 2; attempt++)
         {
             var path = "search?format=json&q=" + Uri.EscapeDataString(query);
@@ -48,6 +61,49 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
                 return text;
         }
         return "搜索引擎暂时未返回结果，请稍后重试。";
+    }
+
+    private async Task<string> SearchGitHubRepositoriesAsync(string name)
+    {
+        var url = "https://api.github.com/search/repositories?q="
+            + Uri.EscapeDataString(name)
+            + "&per_page=5";
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.UserAgent.ParseAdd("HuaJiBot.NET-WebSearch/1.0");
+        request.Headers.Accept.ParseAdd("application/vnd.github+json");
+        using var response = await client.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
+        if (!json.RootElement.TryGetProperty("items", out var items)
+            || items.ValueKind != JsonValueKind.Array)
+            return "";
+        var lines = new List<string>();
+        foreach (var item in items.EnumerateArray())
+        {
+            var urlValue = ReadString(item, "html_url");
+            if (!Uri.TryCreate(urlValue, UriKind.Absolute, out var parsed)
+                || parsed.Scheme != "https"
+                || parsed.Host != "github.com")
+                continue;
+            lines.Add($"{lines.Count + 1}. {ReadString(item, "full_name")}\n{urlValue}\n{Clip(ReadString(item, "description"), 240)}");
+        }
+        return lines.Count == 0 ? "" : "来源：GitHub 官方仓库搜索 API\n" + string.Join("\n\n", lines);
+    }
+
+    private static string? GitHubRepositoryName(string query)
+    {
+        if (!query.Contains("github", StringComparison.OrdinalIgnoreCase)
+            || !(query.Contains("仓库")
+                || query.Contains("项目")
+                || query.Contains("repo", StringComparison.OrdinalIgnoreCase)))
+            return null;
+        return Regex.Matches(query, @"[A-Za-z0-9][A-Za-z0-9._-]*")
+            .Select(match => match.Value)
+            .Where(word => !word.Equals("github", StringComparison.OrdinalIgnoreCase)
+                && !word.Equals("repository", StringComparison.OrdinalIgnoreCase)
+                && !word.Equals("repo", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(word => word.Length)
+            .FirstOrDefault();
     }
 
     public async Task<string> WeatherAsync(string location)
