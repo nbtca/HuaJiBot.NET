@@ -40,7 +40,9 @@ The MCP process inherits the bot container's network and environment. Weather
 queries use the public Open-Meteo APIs and need no key. Explicit GitHub
 repository searches and standalone project names such as `HuaJiBot.NET` use
 GitHub's public repository search API first; if that request fails or finds no
-matching repository, they fall back to SearXNG.
+matching repository, they search GitHub pages through SearXNG and return only
+URLs whose repository name matches exactly. If no exact match is found, the
+bot says so instead of listing unrelated GitHub tutorials.
 Other web searches use SearXNG. Search results include original URLs. If all
 applicable sources fail, the tool reports no results rather than inventing an
 answer.

@@ -190,6 +190,58 @@ internal class WebDataServiceTest
         Assert.That(result, Does.Contain("https://github.com/nbtca/HuaJiBot.NET"));
     }
 
+    [Test]
+    public async Task GitHubFallbackIgnoresUnrelatedResultsAndUsesCanonicalRepositoryUrl()
+    {
+        var requests = new List<Uri>();
+        using var client = new HttpClient(new FakeHandler(request =>
+        {
+            requests.Add(request.RequestUri!);
+            return request.RequestUri!.Host == "api.github.com"
+                ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                : new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""
+                        {"results":[
+                          {"title":"无关 GitHub 教程","url":"https://docs.github.com/zh/repositories"},
+                          {"title":"无关仓库","url":"https://github.com/other/example"},
+                          {"title":"HuaJiBot.NET README","url":"https://github.com/nbtca/HuaJiBot.NET/blob/main/README.md"}
+                        ]}
+                        """),
+                };
+        }));
+
+        var result = await new WebDataService(client, "http://127.0.0.1:8088")
+            .SearchAsync("HuaJiBot.NET GitHub 仓库，给我链接");
+
+        Assert.That(requests, Has.Count.EqualTo(2));
+        Assert.That(requests[1].Query, Does.Contain("site%3Agithub.com"));
+        Assert.That(result, Does.Contain("https://github.com/nbtca/HuaJiBot.NET"));
+        Assert.That(result, Does.Not.Contain("blob/main"));
+        Assert.That(result, Does.Not.Contain("https://github.com/other/example"));
+        Assert.That(result, Does.Not.Contain("docs.github.com"));
+    }
+
+    [Test]
+    public async Task GitHubFallbackDoesNotPresentUnrelatedPagesAsMatches()
+    {
+        using var client = new HttpClient(new FakeHandler(request =>
+            request.RequestUri!.Host == "api.github.com"
+                ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                : new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""
+                        {"results":[{"title":"GitHub","url":"https://github.com/other/example"}]}
+                        """),
+                }));
+
+        var result = await new WebDataService(client, "http://127.0.0.1:8088")
+            .SearchAsync("HuaJiBot.NET GitHub 仓库");
+
+        Assert.That(result, Does.Contain("未检索到"));
+        Assert.That(result, Does.Not.Contain("https://github.com/other/example"));
+    }
+
     private sealed class FakeHandler(Func<HttpRequestMessage, HttpResponseMessage> reply)
         : HttpMessageHandler
     {

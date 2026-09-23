@@ -45,8 +45,15 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
                 if (repositoryResults.Length > 0)
                     return repositoryResults;
             }
-            catch (HttpRequestException) { }
-            catch (TaskCanceledException) { }
+            catch (HttpRequestException ex)
+            {
+                Console.Error.WriteLine($"GitHub 仓库 API 不可用：{ex.Message}");
+            }
+            catch (TaskCanceledException ex)
+            {
+                Console.Error.WriteLine($"GitHub 仓库 API 超时：{ex.Message}");
+            }
+            return await SearchGitHubViaSearxAsync(repositoryName);
         }
         for (var attempt = 0; attempt < 2; attempt++)
         {
@@ -63,6 +70,46 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
                 return $"检索时间：{DateTimeOffset.Now:yyyy-MM-dd HH:mm zzz}\n{text}";
         }
         return "搜索引擎暂时未返回结果，请稍后重试。";
+    }
+
+    private async Task<string> SearchGitHubViaSearxAsync(string name)
+    {
+        var query = $"{name} site:github.com";
+        foreach (var engines in new[] { "google cse,google,360search", "google cse,360search" })
+        {
+            var path = "search?format=json&q=" + Uri.EscapeDataString(query)
+                + "&engines=" + Uri.EscapeDataString(engines);
+            using var response = await client.GetAsync(new Uri(_searchBase, path));
+            response.EnsureSuccessStatusCode();
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
+            var results = FormatGitHubRepositoryResults(json.RootElement, name);
+            if (results.Length > 0)
+                return $"检索时间：{DateTimeOffset.Now:yyyy-MM-dd HH:mm zzz}\n来源：GitHub 网页搜索\n{results}";
+        }
+        return $"未检索到与“{name}”精确匹配的 GitHub 仓库，请核对仓库名称。";
+    }
+
+    public static string FormatGitHubRepositoryResults(JsonElement root, string name)
+    {
+        if (!root.TryGetProperty("results", out var results)
+            || results.ValueKind != JsonValueKind.Array)
+            return "";
+        var repositories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in results.EnumerateArray())
+        {
+            if (!Uri.TryCreate(ReadString(item, "url"), UriKind.Absolute, out var url)
+                || url.Scheme != "https"
+                || url.Host != "github.com")
+                continue;
+            var parts = url.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2
+                || !parts[1].Equals(name, StringComparison.OrdinalIgnoreCase))
+                continue;
+            repositories.Add($"https://github.com/{parts[0]}/{parts[1]}");
+            if (repositories.Count == 5)
+                break;
+        }
+        return string.Join("\n", repositories.Select((url, index) => $"{index + 1}. {url}"));
     }
 
     private async Task<string> SearchGitHubRepositoriesAsync(string name)
