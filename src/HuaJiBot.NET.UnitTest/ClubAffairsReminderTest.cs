@@ -43,6 +43,21 @@ internal class ClubAffairsReminderTest
         );
 
     [Test]
+    public void WeeklySummary_PostsTaggedListOnTelegram()
+    {
+        var (adapter, reminder) = Setup();
+
+        reminder.SendWeeklySummary(Now);
+
+        var post = adapter.Posts.First(x => x.Markdown.Contains("招新宣讲") && !x.Markdown.Contains("例会筹备"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(post.Markdown, Is.EqualTo("📢 **社团事务一周预告**（09月21日～09月28日）\n\n- 09月22日 **招新宣讲**"));
+            Assert.That(post.Tags, Is.EqualTo(new[] { "日程", "周预告" }));
+        });
+    }
+
+    [Test]
     public void WeeklySummary_SendsEachGroupOnlyItsOwnEvents()
     {
         var (adapter, reminder) = Setup();

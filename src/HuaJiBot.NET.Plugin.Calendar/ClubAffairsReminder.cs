@@ -157,7 +157,13 @@ internal class ClubAffairsReminder : IDisposable
                 continue;
             _ = Service.TrySendGroupMessageAsync(
                 group.GroupId,
-                BuildWeeklySummaryMessage(now, weekEnd, groupEvents)
+                new Post(
+                    $"📢 **社团事务一周预告**（{now:MM月dd日}～{weekEnd:MM月dd日}）\n\n{Items(groupEvents, true)}",
+                    BuildWeeklySummaryMessage(now, weekEnd, groupEvents)
+                )
+                {
+                    Tags = ["日程", "周预告"],
+                }
             );
             Service.Log($"[社团事务] 已向群组 {group.GroupId} 发送每周汇总");
         }
@@ -187,12 +193,32 @@ internal class ClubAffairsReminder : IDisposable
                 continue;
             _ = Service.TrySendGroupMessageAsync(
                 group.GroupId,
-                BuildDailyReminderMessage(tomorrow, groupEvents)
+                new Post(
+                    $"⏰ **明天截止**（{tomorrow:MM月dd日}）\n\n{Items(groupEvents, false)}",
+                    BuildDailyReminderMessage(tomorrow, groupEvents)
+                )
+                {
+                    Tags = ["日程", "临期"],
+                }
             );
             Service.Log($"[社团事务] 已向群组 {group.GroupId} 发送每日提醒");
         }
         return true;
     }
+
+    private string Items(
+        List<(CalendarExtensions.Period period, CalendarEvent e)> events,
+        bool withDate
+    ) =>
+        string.Join(
+            "\n",
+            from x in events
+            let responsible = ExtractResponsible(x.e)
+            select "- "
+                + (withDate ? $"{x.period.StartTime:MM月dd日} " : "")
+                + $"**{Post.Escape(x.e.Summary ?? "未命名事务")}**"
+                + (string.IsNullOrEmpty(responsible) ? "" : $"（负责人：{Post.Escape(responsible)}）")
+        );
 
     private string BuildWeeklySummaryMessage(
         DateTimeOffset weekStart,

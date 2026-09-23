@@ -213,21 +213,21 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             _ = SendGroupMessageAsync(
                                 clientInfo,
                                 ClientEventType.Chat,
-                                $"[{senderName}] <{name}> {msg}"
+                                MinecraftPosts.Chat(name, msg, $"[{senderName}] <{name}> {msg}")
                             );
                             break;
                         case PlayerJoinPacket { Data.PlayerName: var name }:
                             _onlinePlayers[name] = await SendGroupMessageAsync(
                                 clientInfo,
                                 ClientEventType.JoinLeft,
-                                $"[{senderName}] {name} 加入了服务器"
+                                MinecraftPosts.Join(name, $"[{senderName}] {name} 加入了服务器")
                             );
                             break;
                         case PlayerQuitPacket { Data.PlayerName: var name }:
                             _ = SendGroupMessageAsync(
                                 clientInfo,
                                 ClientEventType.JoinLeft,
-                                $"[{senderName}] {name} 离开了服务器"
+                                MinecraftPosts.Quit(name, $"[{senderName}] {name} 离开了服务器")
                             );
                             if (_onlinePlayers.TryRemove(name, out var allMsg))
                             {
@@ -242,7 +242,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             _ = SendGroupMessageAsync(
                                 clientInfo,
                                 ClientEventType.PlayerDeath,
-                                $"[{senderName}] {msg}"
+                                MinecraftPosts.Death(msg, $"[{senderName}] {msg}")
                             );
                             break;
                         case PlayerAchievementPacket
@@ -258,7 +258,12 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                             _ = SendGroupMessageAsync(
                                 clientInfo,
                                 ClientEventType.PlayerAchievement,
-                                $"[{senderName}] {name} 完成了进度 {achievementName} ({string.Join(",", criteria)}){Environment.NewLine}{description}"
+                                MinecraftPosts.Advancement(
+                                    name,
+                                    achievementName,
+                                    description,
+                                    $"[{senderName}] {name} 完成了进度 {achievementName} ({string.Join(",", criteria)}){Environment.NewLine}{description}"
+                                )
                             );
                             break;
                         case GetPlayerListRequestPacket: //do not reply
@@ -279,7 +284,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private async Task<(string groupId, string[] msgId)[]> SendGroupMessageAsync(
         PluginConfig.ClientInfo clientInfo,
         ClientEventType eventType,
-        string message
+        Post message
     )
     {
         List<(string, string[])> msgIds = [];

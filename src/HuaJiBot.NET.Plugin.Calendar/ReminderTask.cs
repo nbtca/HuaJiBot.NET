@@ -43,10 +43,10 @@ internal class ReminderTask : IDisposable
 
     private DateTimeOffset _scheduledTimeEnd = Utils.NetworkTime.Now; //截止到该时间点的日程已经在Task队列中列入计划了
 
-    private void SendToMatchedGroups(CalendarEvent e, string text)
+    private void SendToMatchedGroups(CalendarEvent e, Post post)
     {
         foreach (var group in Config.ReminderGroups.Where(g => g.Matches(e)))
-            _ = Service.TrySendGroupMessageAsync(group.GroupId, text);
+            _ = Service.TrySendGroupMessageAsync(group.GroupId, post);
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)] //防止多线程同时更新时间节点
@@ -74,12 +74,18 @@ internal class ReminderTask : IDisposable
                 ScheduleReminder(
                     period.StartTime.AddMinutes(-RemindBeforeStartMinutes) - now,
                     e,
-                    $"""
-                    日程提醒（{period.StartTime:MM-dd HH:mm}）：
-                    {e.Summary} {e.Location}
-                    {e.Description}
-                    将于 {RemindBeforeStartMinutes} 分钟后开始
-                    """
+                    StartPost(
+                        period.StartTime,
+                        e.End is null ? null : period.EndTime,
+                        e,
+                        RemindBeforeStartMinutes,
+                        $"""
+                        日程提醒（{period.StartTime:MM-dd HH:mm}）：
+                        {e.Summary} {e.Location}
+                        {e.Description}
+                        将于 {RemindBeforeStartMinutes} 分钟后开始
+                        """
+                    )
                 );
             }
 
@@ -92,11 +98,15 @@ internal class ReminderTask : IDisposable
                 ScheduleReminder(
                     period.EndTime.AddMinutes(-RemindBeforeEndMinutes) - now,
                     e,
-                    $"""
-                    日程提醒（{period.EndTime:MM-dd HH:mm}）：
-                    {e.Summary} {e.Location}
-                    预计于 {RemindBeforeEndMinutes} 分钟后结束
-                    """
+                    EndPost(
+                        e,
+                        RemindBeforeEndMinutes,
+                        $"""
+                        日程提醒（{period.EndTime:MM-dd HH:mm}）：
+                        {e.Summary} {e.Location}
+                        预计于 {RemindBeforeEndMinutes} 分钟后结束
+                        """
+                    )
                 );
             }
         }
@@ -106,7 +116,37 @@ internal class ReminderTask : IDisposable
         }
     }
 
-    private void ScheduleReminder(TimeSpan waiting, CalendarEvent e, string text)
+    internal static Post StartPost(
+        DateTimeOffset start,
+        DateTimeOffset? end,
+        CalendarEvent e,
+        int minutes,
+        string fallback
+    )
+    {
+        var when = end is { } x ? $"🕘 {start:MM-dd HH:mm}–{x:HH:mm}" : $"🕘 {start:MM-dd HH:mm}";
+        if (!string.IsNullOrWhiteSpace(e.Location))
+            when += $" · 📍 {Post.Escape(e.Location)}";
+        var markdown = $"⏰ **{Post.Escape(e.Summary ?? "")}** {minutes} 分钟后开始\n{when}";
+        if (!string.IsNullOrWhiteSpace(e.Description))
+            markdown +=
+                "\n\n"
+                + string.Join(
+                    "\n",
+                    from line in e.Description.ReplaceLineEndings("\n").Trim().Split('\n')
+                    select "> " + Post.Escape(line)
+                );
+        return new(markdown, fallback) { Tags = ["日程"] };
+    }
+
+    internal static Post EndPost(CalendarEvent e, int minutes, string fallback) =>
+        new($"🔚 **{Post.Escape(e.Summary ?? "")}** 预计 {minutes} 分钟后结束", fallback)
+        {
+            Tags = ["日程"],
+            Silent = true,
+        };
+
+    private void ScheduleReminder(TimeSpan waiting, CalendarEvent e, Post post)
     {
         if (waiting < TimeSpan.Zero)
             return;
@@ -114,7 +154,7 @@ internal class ReminderTask : IDisposable
             .ContinueWith(_ =>
             {
                 Service.Log($"[日程] 发送提醒：{e.Summary}");
-                SendToMatchedGroups(e, text);
+                SendToMatchedGroups(e, post);
             });
         Service.Log($"[日程] 计划发送提醒：{e.Summary} ({waiting.TotalMinutes:F1}分钟后发送)");
     }
