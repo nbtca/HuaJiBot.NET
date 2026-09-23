@@ -97,12 +97,16 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 return false;
             }
 
-            var prompt = SummaryPrompt.Build(messages, Config.MaxPromptChars, date);
-            var summary = await InvokeLlmAsync(prompt.Text, ct);
+            var summary = await SummaryPipeline.RunAsync(
+                messages,
+                date,
+                Config.MaxPromptChars,
+                Config.SystemPrompt,
+                InvokeLlmAsync,
+                ct
+            );
 
             var text = $"📊 **每日聊天总结** ({date:yyyy-MM-dd})\n\n{summary}";
-            if (prompt.KeptFrom is { } keptFrom)
-                text += $"\n\n⚠️ 当日消息较多，总结仅基于 {SummaryPrompt.Time(keptFrom)} 之后的记录。";
             var content = new RichContent(text);
             await Service.SendRichMessageAsync(
                 null,
@@ -120,11 +124,15 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    private async Task<string> InvokeLlmAsync(string userMessage, CancellationToken ct)
+    private async Task<string> InvokeLlmAsync(
+        string systemPrompt,
+        string userMessage,
+        CancellationToken ct
+    )
     {
         var connector = Connector;
         var session = await connector.CreateSessionAsync(ct);
-        var agent = connector.CreateAIAgent(Config.SystemPrompt);
+        var agent = connector.CreateAIAgent(systemPrompt);
         var response = await agent.RunAsync(
             [new ChatMessage(ChatRole.User, userMessage)],
             session,
