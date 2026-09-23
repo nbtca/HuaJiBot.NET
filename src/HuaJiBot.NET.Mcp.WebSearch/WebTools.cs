@@ -7,7 +7,7 @@ namespace HuaJiBot.NET.Mcp.WebSearch;
 [McpServerToolType]
 public sealed class WebTools
 {
-    private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(20) };
+    private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(35) };
     private static readonly WebDataService Data = new(
         Client,
         Environment.GetEnvironmentVariable("SEARXNG_URL") ?? "http://127.0.0.1:8088"
@@ -35,12 +35,19 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
     public async Task<string> SearchAsync(string query)
     {
         query = Validate(query, "搜索词", 160);
-        var uri = new Uri(_searchBase, "search?format=json&q=" + Uri.EscapeDataString(query));
-        using var response = await client.GetAsync(uri);
-        response.EnsureSuccessStatusCode();
-        using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
-        var text = FormatSearchResults(json.RootElement);
-        return text.Length == 0 ? "搜索服务没有返回结果，请换个关键词或稍后重试。" : text;
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            var path = "search?format=json&q=" + Uri.EscapeDataString(query);
+            if (attempt == 1)
+                path += "&engines=bing%2Cgoogle%20cse";
+            using var response = await client.GetAsync(new Uri(_searchBase, path));
+            response.EnsureSuccessStatusCode();
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
+            var text = FormatSearchResults(json.RootElement);
+            if (text.Length > 0)
+                return text;
+        }
+        return "搜索引擎暂时未返回结果，请稍后重试。";
     }
 
     public async Task<string> WeatherAsync(string location)

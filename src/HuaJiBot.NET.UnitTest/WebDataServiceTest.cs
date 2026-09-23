@@ -94,6 +94,29 @@ internal class WebDataServiceTest
         Assert.That(result, Does.Contain("https://example.org/weather"));
     }
 
+    [Test]
+    public async Task SearchRetriesWithAlternateEnginesWhenFirstSearchIsEmpty()
+    {
+        var requests = new List<Uri>();
+        using var client = new HttpClient(new FakeHandler(request =>
+        {
+            requests.Add(request.RequestUri!);
+            var json = requests.Count == 1
+                ? "{\"results\":[]}"
+                : "{\"results\":[{\"title\":\"仓库\",\"url\":\"https://github.com/nbtca/HuaJiBot.NET\",\"content\":\"项目\"}]}";
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json),
+            };
+        }));
+
+        var result = await new WebDataService(client, "http://127.0.0.1:8088").SearchAsync("HuaJiBot.NET");
+
+        Assert.That(requests, Has.Count.EqualTo(2));
+        Assert.That(requests[1].Query, Does.Contain("engines="));
+        Assert.That(result, Does.Contain("https://github.com/nbtca/HuaJiBot.NET"));
+    }
+
     private sealed class FakeHandler(Func<HttpRequestMessage, HttpResponseMessage> reply)
         : HttpMessageHandler
     {
