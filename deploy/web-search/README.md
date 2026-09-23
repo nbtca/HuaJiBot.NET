@@ -38,8 +38,9 @@ AIChat plugin with this `McpServers` entry:
 
 The MCP process inherits the bot container's network and environment. Weather
 queries use the public Open-Meteo APIs and need no key. Explicit GitHub
-repository searches use GitHub's public repository search API first; if that
-request fails or finds no matching repository, they fall back to SearXNG.
+repository searches and standalone project names such as `HuaJiBot.NET` use
+GitHub's public repository search API first; if that request fails or finds no
+matching repository, they fall back to SearXNG.
 Other web searches use SearXNG. Search results include original URLs. If all
 applicable sources fail, the tool reports no results rather than inventing an
 answer.

@@ -92,18 +92,26 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
 
     private static string? GitHubRepositoryName(string query)
     {
-        if (!query.Contains("github", StringComparison.OrdinalIgnoreCase)
-            || !(query.Contains("仓库")
-                || query.Contains("项目")
-                || query.Contains("repo", StringComparison.OrdinalIgnoreCase)))
-            return null;
-        return Regex.Matches(query, @"[A-Za-z0-9][A-Za-z0-9._-]*")
+        var candidates = Regex.Matches(query, @"[A-Za-z0-9][A-Za-z0-9._-]*")
             .Select(match => match.Value)
             .Where(word => !word.Equals("github", StringComparison.OrdinalIgnoreCase)
+                && !word.Equals("github.com", StringComparison.OrdinalIgnoreCase)
                 && !word.Equals("repository", StringComparison.OrdinalIgnoreCase)
                 && !word.Equals("repo", StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(word => word.Length)
-            .FirstOrDefault();
+            .ToArray();
+        var name = candidates.FirstOrDefault();
+        if (name is null)
+            return null;
+        var explicitRepository = query.Contains("github", StringComparison.OrdinalIgnoreCase)
+            && (query.Contains("仓库")
+                || query.Contains("项目")
+                || query.Contains("repo", StringComparison.OrdinalIgnoreCase)
+                || query.Contains("github.com", StringComparison.OrdinalIgnoreCase));
+        var projectName = name.Contains('.')
+            && (query.Trim().Equals(name, StringComparison.OrdinalIgnoreCase)
+                || query.Contains("github", StringComparison.OrdinalIgnoreCase));
+        return explicitRepository || projectName ? name : null;
     }
 
     public async Task<string> WeatherAsync(string location)

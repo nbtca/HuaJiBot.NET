@@ -110,15 +110,17 @@ internal class WebDataServiceTest
             };
         }));
 
-        var result = await new WebDataService(client, "http://127.0.0.1:8088").SearchAsync("HuaJiBot.NET");
+        var result = await new WebDataService(client, "http://127.0.0.1:8088").SearchAsync("开源 Bot 教程");
 
         Assert.That(requests, Has.Count.EqualTo(2));
         Assert.That(requests[1].Query, Does.Contain("engines="));
         Assert.That(result, Does.Contain("https://github.com/nbtca/HuaJiBot.NET"));
     }
 
-    [Test]
-    public async Task GitHubRepositoryQueryUsesOfficialApiBeforeSearxng()
+    [TestCase("HuaJiBot.NET GitHub 仓库")]
+    [TestCase("HuaJiBot.NET GitHub")]
+    [TestCase("HuaJiBot.NET")]
+    public async Task GitHubRepositoryQueryUsesOfficialApiBeforeSearxng(string query)
     {
         var requests = new List<Uri>();
         using var client = new HttpClient(new FakeHandler(request =>
@@ -133,7 +135,7 @@ internal class WebDataServiceTest
         }));
 
         var result = await new WebDataService(client, "http://127.0.0.1:8088")
-            .SearchAsync("HuaJiBot.NET GitHub 仓库");
+            .SearchAsync(query);
 
         Assert.That(requests, Has.Count.EqualTo(1));
         Assert.That(requests[0].Host, Is.EqualTo("api.github.com"));
