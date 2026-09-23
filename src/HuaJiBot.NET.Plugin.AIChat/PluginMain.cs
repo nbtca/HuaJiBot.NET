@@ -130,6 +130,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         if (string.IsNullOrWhiteSpace(text))
         {
             Warn("AI 返回了空回复");
+            await e.Reply("暂时无法回答，请稍后再试。");
             return;
         }
         var messageIds = await e.ReplyMarkdown(text);
@@ -199,6 +200,14 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             catch (Exception exception)
             {
                 Error("调用AI失败", exception);
+                try
+                {
+                    await e.Reply("暂时无法回答，请稍后再试。");
+                }
+                catch (Exception replyException)
+                {
+                    Error("回复AI失败提示时出错", replyException);
+                }
             }
         }
         reader = e.CommandReader;
