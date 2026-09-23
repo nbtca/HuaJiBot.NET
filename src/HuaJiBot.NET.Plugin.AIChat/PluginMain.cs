@@ -190,6 +190,26 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         ReplyToMessageId = null,
                     }
                 );
+                if (AsciiArtTools.TryRenderCommand(restText, out var asciiArt))
+                {
+                    // Send raw text. Markdown conversion changes FIGlet spacing and line breaks.
+                    foreach (var msgId in await e.Reply(asciiArt))
+                    {
+                        _history.StoreMessage(
+                            new GroupMessage
+                            {
+                                Content = asciiArt,
+                                GroupId = e.GroupId,
+                                MessageId = msgId,
+                                SenderId = null,
+                                SenderName = "bot",
+                                IsBot = true,
+                                ReplyToMessageId = e.MessageId,
+                            }
+                        );
+                    }
+                    return;
+                }
                 //调用LLM回复
                 await InvokeLlmMessage(
                     Config.SystemPrompt,

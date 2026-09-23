@@ -18,6 +18,8 @@ public static class AgentTools
         tools.Add(AIFunctionFactory.Create(dateTimeUtils.GetCurrentTime));
         tools.Add(AIFunctionFactory.Create(dateTimeUtils.GetDayOfWeek));
         tools.Add(AIFunctionFactory.Create(dateTimeUtils.CalculateTimeDifference));
+        var asciiArtTools = new AsciiArtTools();
+        tools.Add(AIFunctionFactory.Create(asciiArtTools.RenderAnsiShadow));
 
         foreach (var (pluginName, functions) in extraFunctions)
         {
