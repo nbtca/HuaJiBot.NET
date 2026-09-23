@@ -10,7 +10,7 @@ public sealed class WebTools
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(20) };
     private static readonly WebDataService Data = new(
         Client,
-        Environment.GetEnvironmentVariable("SEARXNG_URL") ?? "http://searxng:8080"
+        Environment.GetEnvironmentVariable("SEARXNG_URL") ?? "http://127.0.0.1:8088"
     );
 
     [McpServerTool(Name = "web_search")]

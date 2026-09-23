@@ -4,21 +4,26 @@ The bot image contains a stdio MCP server at
 `/app/mcp/web-search/HuaJiBot.NET.Mcp.WebSearch`. It exposes `web_search`
 (SearXNG results) and `get_weather` (Open-Meteo geocoding and forecast).
 
-Run SearXNG on the same Compose network as the bot. Mount `settings.yml` at
-`/etc/searxng/settings.yml`, set a random `SEARXNG_SECRET`, and keep port 8080
-internal to Compose. An example service is:
+The current deployment runs the bot with `network_mode: host`. Run SearXNG in
+host networking too, bound only to loopback port 8088. The server's default
+bridge networking could not reach upstream search engines during deployment.
+Mount `settings.yml` at `/etc/searxng/settings.yml` and set a random
+`SEARXNG_SECRET`. An example service is:
 
 ```yaml
   searxng:
     image: ghcr.io/searxng/searxng:2026.9.11-61d660276
     restart: unless-stopped
+    network_mode: host
     environment:
       SEARXNG_SECRET: ${SEARXNG_SECRET}
+      GRANIAN_HOST: 127.0.0.1
+      GRANIAN_PORT: "8088"
     volumes:
       - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
 ```
 
-Set `SEARXNG_URL=http://searxng:8080` on the bot service and configure its
+Set `SEARXNG_URL=http://127.0.0.1:8088` on the bot service and configure its
 AIChat plugin with this `McpServers` entry:
 
 ```json
