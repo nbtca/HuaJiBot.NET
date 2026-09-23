@@ -4,6 +4,8 @@ using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Adapter.Telegram;
 using HuaJiBot.NET.Interfaces;
 using HuaJiBot.NET.Logger;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace HuaJiBot.NET.UnitTest;
 
@@ -157,6 +159,30 @@ public class TelegramRichMessageFallbackTest
         {
             Assert.That(api.Methods, Is.EqualTo(new[] { "sendRichMessage" }));
             Assert.That(api.RichMessageBody, Does.Not.Contain("null"));
+        });
+    }
+}
+
+public class TelegramPhotoTest
+{
+    [Test]
+    public async Task OpenPhotoAsync_FillsTransparentPixelsWithBlack()
+    {
+        var path = Path.GetTempFileName();
+        using (var source = new Image<Rgba32>(2, 1))
+        {
+            source[1, 0] = Color.Red;
+            await source.SaveAsPngAsync(path);
+        }
+
+        await using var photo = await TelegramAdapter.OpenPhotoAsync(path);
+        using var result = await Image.LoadAsync<Rgba32>(photo);
+        File.Delete(path);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result[0, 0], Is.EqualTo(new Rgba32(0, 0, 0, 255)));
+            Assert.That(result[1, 0], Is.EqualTo(Color.Red.ToPixel<Rgba32>()));
         });
     }
 }
