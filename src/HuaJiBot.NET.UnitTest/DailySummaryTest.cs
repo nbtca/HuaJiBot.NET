@@ -7,28 +7,20 @@ namespace HuaJiBot.NET.UnitTest;
 
 internal class DailySummaryTest
 {
-    private static readonly DateTimeOffset RunNow = new(
-        2026,
-        9,
-        23,
-        0,
-        5,
-        0,
-        TimeSpan.FromHours(8)
-    );
+    private static readonly DateTimeOffset Midnight = new(2026, 9, 23, 0, 5, 0, TimeSpan.FromHours(8));
     private string _dir = null!;
 
     [SetUp]
-    public void SetUp() => _dir = Path.Combine(Path.GetTempPath(), "huaji-dailysummary-" + Guid.NewGuid());
-
-    [TearDown]
-    public void TearDown()
+    public void SetUp()
     {
-        if (Directory.Exists(_dir))
-            Directory.Delete(_dir, true);
+        _dir = Path.Combine(Path.GetTempPath(), "huaji-dailysummary-" + Guid.NewGuid());
+        Directory.CreateDirectory(_dir);
     }
 
-    private static GroupMessage Msg(int i, int hour = 10) =>
+    [TearDown]
+    public void TearDown() => Directory.Delete(_dir, true);
+
+    private static GroupMessage Msg(int i) =>
         new()
         {
             MessageId = $"m{i}",
@@ -38,298 +30,160 @@ internal class DailySummaryTest
             Content = new string((char)('a' + i % 26), 20) + i,
             IsBot = false,
             ReplyToMessageId = null,
-            Timestamp = new DateTime(2026, 9, 21, hour, 0, 0).AddMinutes(i),
+            Timestamp = new DateTime(2026, 9, 22, 10, 0, 0).AddMinutes(i),
         };
 
-    // ---------- SummaryPrompt ----------
-
     [Test]
-    public void Prompt_SmallDay_IsNotTruncated_AndCarriesDateHeader()
+    public void Prompt_SmallDay_KeepsEverything()
     {
-        var messages = Enumerable.Range(0, 5).Select(i => Msg(i)).ToList();
+        var messages = Enumerable.Range(0, 5).Select(Msg).ToList();
 
-        var result = SummaryPrompt.Build(messages, 20000, new DateTime(2026, 9, 21));
+        var result = SummaryPrompt.Build(messages, 20000, new DateTime(2026, 9, 22));
 
-        Assert.That(result.Truncated, Is.False);
-        Assert.That(result.Text, Does.Contain("2026-09-21 的群聊记录"));
+        Assert.That(result.KeptFrom, Is.Null);
+        Assert.That(result.Text, Does.Contain("2026-09-22 的群聊记录"));
         Assert.That(result.Text, Does.Not.Contain("截断"));
-        Assert.That(result.Text, Does.Contain(messages[^1].Content));
+        Assert.That(result.Text, Does.Contain(messages[0].Content));
     }
 
     [Test]
-    public void Prompt_BigDay_KeepsNewestAndTellsLlmAboutTruncation()
+    public void Prompt_BigDay_KeepsNewestAndSaysSo()
     {
-        var messages = Enumerable.Range(0, 200).Select(i => Msg(i)).ToList();
-        var budget = messages
-            .Skip(150)
-            .Sum(m => m.Content!.Length + 30);
+        var messages = Enumerable.Range(0, 200).Select(Msg).ToList();
+        var budget = messages.Skip(150).Sum(m => m.Content!.Length + 30);
 
-        var result = SummaryPrompt.Build(messages, budget, new DateTime(2026, 9, 21));
+        var result = SummaryPrompt.Build(messages, budget, new DateTime(2026, 9, 22));
 
-        Assert.That(result.Truncated, Is.True);
+        Assert.That(result.KeptFrom, Is.Not.Null);
         Assert.That(result.Text, Does.Contain("记录已截断"));
         Assert.That(result.Text, Does.Contain(messages[199].Content));
         Assert.That(result.Text, Does.Not.Contain(messages[0].Content));
     }
 
     [Test]
-    public void Prompt_EmptyList_DoesNotCrash()
+    public void Prompt_SingleHugeMessage_IsStillSent()
     {
-        var result = SummaryPrompt.Build([], 100, new DateTime(2026, 9, 21));
+        var result = SummaryPrompt.Build([Msg(0)], 1, new DateTime(2026, 9, 22));
 
-        Assert.That(result.Truncated, Is.False);
-        Assert.That(result.Text, Does.Contain("2026-09-21 的群聊记录"));
+        Assert.That(result.KeptFrom, Is.Null);
+        Assert.That(result.Text, Does.Contain(Msg(0).Content));
     }
 
-    // ---------- SummaryState ----------
+    private string StatePath => Path.Combine(_dir, "sent.json");
 
-    [Test]
-    public void State_FailureCountsUp_SentStopsRetry()
-    {
-        var path = Path.Combine(_dir, "state.json");
-        var state = new SummaryState(path);
-        state.RollOver(DateOnly.FromDateTime(RunNow.Date));
-
-        Assert.That(state.IsDue("g1", 2), Is.True);
-        state.MarkFailure("g1");
-        Assert.That(state.IsDue("g1", 2), Is.True);
-        state.MarkFailure("g1");
-        Assert.That(state.IsDue("g1", 2), Is.False, "达到重试上限后当天放弃");
-
-        state.MarkSent("g2");
-        Assert.That(state.IsDue("g2", 5), Is.False);
-    }
-
-    [Test]
-    public void State_SurvivesRestart()
-    {
-        var path = Path.Combine(_dir, "state.json");
-        var first = new SummaryState(path);
-        first.RollOver(DateOnly.FromDateTime(RunNow.Date));
-        first.MarkSent("g1");
-        first.MarkFailure("g2");
-        first.Save();
-
-        var reopened = new SummaryState(path);
-        reopened.RollOver(DateOnly.FromDateTime(RunNow.Date));
-
-        Assert.That(reopened.IsDue("g1", 3), Is.False);
-        Assert.That(reopened.Get("g2").Attempts, Is.EqualTo(1));
-    }
-
-    [Test]
-    public void State_NewDay_ClearsAllRecords()
-    {
-        var path = Path.Combine(_dir, "state.json");
-        var state = new SummaryState(path);
-        state.RollOver(DateOnly.FromDateTime(RunNow.Date));
-        state.MarkSent("g1");
-        state.Save();
-
-        state.RollOver(DateOnly.FromDateTime(RunNow.Date.AddDays(1)));
-
-        Assert.That(state.IsDue("g1", 3), Is.True, "翻日即清空，前一天成功不影响今天");
-
-        var reloaded = new SummaryState(path);
-        reloaded.RollOver(DateOnly.FromDateTime(RunNow.Date.AddDays(1)));
-        Assert.That(reloaded.IsDue("g1", 3), Is.True, "清空已持久化");
-    }
-
-    [Test]
-    public void State_CorruptFile_FallsBackToEmpty()
-    {
-        Directory.CreateDirectory(_dir);
-        var path = Path.Combine(_dir, "state.json");
-        File.WriteAllText(path, "{ not json");
-
-        var state = new SummaryState(path);
-
-        Assert.That(state.IsDue("g1", 1), Is.True);
-    }
-
-    // ---------- DailySummaryTask ----------
-
-    private sealed record Run(string Group, DateTime TargetDate);
-
-    private static DailySummaryTask NewTask(
-        PluginConfig config,
-        SummaryState state,
-        Func<string, DateTime, CancellationToken, Task<bool>> generate
+    private DailySummaryTask NewTask(
+        Func<string, DateTime, CancellationToken, Task> summarize,
+        params string[] groups
     ) =>
-        new(new RecordingAdapter(), config, state, generate);
+        new(
+            new RecordingAdapter(),
+            new PluginConfig { GroupIds = [.. groups], MaxRetryCount = 2, LlmTimeoutSeconds = 5 },
+            StatePath,
+            summarize
+        );
 
-    private static PluginConfig TestConfig(params string[] groups) =>
-        new()
+    [Test]
+    public async Task Schedule_SummarizesYesterdayOncePerDay()
+    {
+        var runs = new List<(string, DateTime)>();
+        Task Record(string g, DateTime d, CancellationToken _)
         {
-            GroupIds = groups.ToList(),
-            SummaryHour = 0,
-            SummaryMinute = 0,
-            SummaryDaysAgo = 2,
-            MaxRetryCount = 2,
-            LlmTimeoutSeconds = 5,
-            MaxConcurrentGroups = 2,
-        };
+            runs.Add((g, d));
+            return Task.CompletedTask;
+        }
 
-    [Test]
-    public async Task Schedule_RunsDueDaySummariesAndMarksSent()
-    {
-        var state = new SummaryState(Path.Combine(_dir, "state.json"));
-        var runs = new List<Run>();
-        var task = NewTask(
-            TestConfig("g1", "g2"),
-            state,
-            (g, d, _) =>
-            {
-                lock (runs)
-                    runs.Add(new Run(g, d));
-                return Task.FromResult(true);
-            }
-        );
+        await NewTask(Record, "g1", "g2").RunIfDueAsync(Midnight);
+        await NewTask(Record, "g1", "g2").RunIfDueAsync(Midnight.AddMinutes(1));
 
-        await task.RunIfDueAsync(RunNow);
-
-        Assert.That(runs.Select(r => r.Group), Is.EquivalentTo(new[] { "g1", "g2" }));
-        Assert.That(runs.All(r => r.TargetDate == new DateTime(2026, 9, 21)), Is.True, "零点总结前天");
-        Assert.That(state.IsDue("g1", 5), Is.False);
-
-        runs.Clear();
-        await task.RunIfDueAsync(RunNow.AddMinutes(1));
-        Assert.That(runs, Is.Empty, "已成功不再重发");
+        Assert.That(runs, Is.EqualTo(new[] { ("g1", new DateTime(2026, 9, 22)), ("g2", new DateTime(2026, 9, 22)) }));
     }
 
     [Test]
-    public async Task Schedule_OutsideWindow_DoesNothing()
+    public async Task Schedule_OutsideTheHour_DoesNothing()
     {
-        var state = new SummaryState(Path.Combine(_dir, "state.json"));
-        var called = 0;
-        var task = NewTask(
-            TestConfig("g1"),
-            state,
-            (_, _, _) =>
-            {
-                called++;
-                return Task.FromResult(true);
-            }
-        );
+        var called = false;
+        await NewTask((_, _, _) => Task.FromResult(called = true), "g1").RunIfDueAsync(Midnight.AddHours(1));
 
-        await task.RunIfDueAsync(new DateTimeOffset(2026, 9, 23, 1, 5, 0, TimeSpan.FromHours(8)));
-
-        Assert.That(called, Is.Zero);
+        Assert.That(called, Is.False);
     }
 
     [Test]
-    public async Task Schedule_RetriesUntilMaxAttemptsThenGivesUpForToday()
+    public async Task Schedule_RetriesUpToTheLimit_WithoutBlockingOtherGroups()
     {
-        var state = new SummaryState(Path.Combine(_dir, "state.json"));
+        var calls = new List<string>();
         var task = NewTask(
-            TestConfig("g1"),
-            state,
-            (_, _, _) => Task.FromException<bool>(new HttpRequestException("llm down"))
+            (g, _, _) =>
+            {
+                calls.Add(g);
+                return g == "bad" ? Task.FromException(new HttpRequestException("llm down")) : Task.CompletedTask;
+            },
+            "bad",
+            "good"
         );
 
         for (var i = 0; i < 5; i++)
-            await task.RunIfDueAsync(RunNow.AddMinutes(i));
+            await task.RunIfDueAsync(Midnight.AddMinutes(i));
 
-        Assert.That(state.Get("g1").Attempts, Is.EqualTo(2), "只重试到上限");
-        Assert.That(state.Get("g1").Sent, Is.False);
+        Assert.That(calls, Is.EqualTo(new[] { "bad", "good", "bad" }));
     }
 
     [Test]
-    public async Task Schedule_SkipsGroupAlreadyInFlight()
+    public async Task Schedule_SkipsWhileThePreviousRunIsStillGoing()
     {
-        var state = new SummaryState(Path.Combine(_dir, "state.json"));
         var gate = new TaskCompletionSource();
         var started = 0;
         var task = NewTask(
-            TestConfig("g1"),
-            state,
             async (_, _, _) =>
             {
-                Interlocked.Increment(ref started);
+                started++;
                 await gate.Task;
-                return true;
-            }
+            },
+            "g1"
         );
 
-        var first = task.RunIfDueAsync(RunNow);
-        await task.RunIfDueAsync(RunNow.AddMinutes(1));
+        var first = task.RunIfDueAsync(Midnight);
+        await task.RunIfDueAsync(Midnight.AddMinutes(1));
         gate.SetResult();
         await first;
 
-        Assert.That(Volatile.Read(ref started), Is.EqualTo(1), "上一轮未跑完不叠加执行");
+        Assert.That(started, Is.EqualTo(1));
     }
 
     [Test]
-    public async Task Schedule_GroupFailureDoesNotBlockOthers()
+    public async Task Schedule_NextDayStartsFresh()
     {
-        var state = new SummaryState(Path.Combine(_dir, "state.json"));
-        var okGroups = new List<string>();
-        var task = NewTask(
-            TestConfig("bad", "good"),
-            state,
-            (g, _, _) =>
-                g == "bad"
-                    ? Task.FromException<bool>(new Exception("boom"))
-                    : Task.Run(() =>
-                    {
-                        lock (okGroups)
-                            okGroups.Add(g);
-                        return true;
-                    })
-        );
-
-        await task.RunIfDueAsync(RunNow);
-
-        Assert.That(okGroups, Is.EqualTo(new[] { "good" }));
-        Assert.That(state.Get("bad").Attempts, Is.EqualTo(1));
-        Assert.That(state.Get("good").Sent, Is.True);
-    }
-
-    [Test]
-    public async Task Schedule_NewDayResumesWithFreshState()
-    {
-        var state = new SummaryState(Path.Combine(_dir, "state.json"));
         var runs = new List<DateTime>();
         var task = NewTask(
-            TestConfig("g1"),
-            state,
             (_, d, _) =>
             {
                 runs.Add(d);
-                return Task.FromResult(true);
-            }
+                return Task.CompletedTask;
+            },
+            "g1"
         );
-        await task.RunIfDueAsync(RunNow);
-        state.Save();
 
-        var nextDay = new DateTimeOffset(2026, 9, 24, 0, 5, 0, TimeSpan.FromHours(8));
-        await task.RunIfDueAsync(nextDay);
+        await task.RunIfDueAsync(Midnight);
+        await task.RunIfDueAsync(Midnight.AddDays(1));
 
-        Assert.That(runs, Is.EqualTo(new[] { new DateTime(2026, 9, 21), new DateTime(2026, 9, 22) }));
+        Assert.That(runs, Is.EqualTo(new[] { new DateTime(2026, 9, 22), new DateTime(2026, 9, 23) }));
     }
 
     [Test]
-    public void Config_Defaults_MatchPilotAgreement()
+    public async Task Schedule_CorruptStateFile_IsIgnored()
     {
-        var config = new PluginConfig();
+        File.WriteAllText(StatePath, "{ not json");
+        var called = false;
 
-        Assert.That(config.SummaryDaysAgo, Is.EqualTo(2), "默认零点总结前天");
-        Assert.That(config.MaxRetryCount, Is.EqualTo(3));
-        Assert.That(config.LlmTimeoutSeconds, Is.EqualTo(180));
-        Assert.That(config.SystemPrompt, Does.Contain("截断"));
+        await NewTask((_, _, _) => Task.FromResult(called = true), "g1").RunIfDueAsync(Midnight);
+
+        Assert.That(called, Is.True);
     }
 
     [Test]
-    public void Commands_AreRegisteredBySourceGenerator()
+    public void Commands_AreRegistered()
     {
-        var plugin = new PluginMain();
+        var commands = ((PluginBase)new PluginMain()).GetAllCommands();
 
-        var commands = ((PluginBase)plugin).GetAllCommands().ToArray();
-
-        Assert.That(
-            commands.Select(c => c.Name),
-            Is.EqualTo(new[] { "总结" }),
-            "GetAllCommands 必须由源生成器重写并注册手动总结命令"
-        );
+        Assert.That(commands.Select(c => c.Name), Is.EqualTo(new[] { "总结" }));
     }
 }

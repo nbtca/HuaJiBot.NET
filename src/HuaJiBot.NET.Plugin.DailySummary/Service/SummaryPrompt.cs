@@ -6,60 +6,34 @@ namespace HuaJiBot.NET.Plugin.DailySummary.Service;
 
 internal static class SummaryPrompt
 {
-    public sealed record Result(string Text, bool Truncated, DateTime? KeptFrom);
+    /// <param name="KeptFrom">Time of the oldest kept message when older ones were cut, else null.</param>
+    public sealed record Result(string Text, DateTime? KeptFrom);
 
-    /// <summary>
-    /// 按时间顺序拼装发给模型的用户消息。超出 maxChars 时保留最新的消息，
-    /// 并在提示中明确告知模型记录已被截断。
-    /// </summary>
-    public static Result Build(
-        IReadOnlyList<GroupMessage> orderedMessages,
-        int maxChars,
-        DateTime targetDate
-    )
+    public static Result Build(IReadOnlyList<GroupMessage> messages, int maxChars, DateTime date)
     {
-        var offset = NetworkTime.LocalTimeZoneOffset;
-        var lines = orderedMessages
-            .Select(m => (m.Timestamp, Text: FormatLine(m, offset)))
-            .ToArray();
-
-        var kept = new List<(DateTime Timestamp, string Text)>();
-        var used = 0;
-        var truncated = false;
-        for (var i = lines.Length - 1; i >= 0; i--)
+        var start = messages.Count;
+        for (var used = 0; start > 0; start--)
         {
-            var cost = lines[i].Text.Length + 1;
-            if (kept.Count > 0 && used + cost > maxChars)
-            {
-                truncated = true;
+            used += Format(messages[start - 1]).Length + 1;
+            if (used > maxChars && start < messages.Count)
                 break;
-            }
-            kept.Add(lines[i]);
-            used += cost;
         }
-        kept.Reverse();
 
         var sb = new StringBuilder();
-        if (truncated && kept.Count > 0)
-        {
-            var keptFrom = new DateTimeOffset(kept[0].Timestamp)
-                .ToOffset(offset)
-                .ToString("HH:mm");
+        DateTime? keptFrom = start > 0 ? messages[start].Timestamp : null;
+        if (keptFrom is { } from)
             sb.AppendLine(
-                $"注意：当日消息过多，记录已截断，以下仅包含 {keptFrom} 之后的 {kept.Count} 条消息，更早的内容未包含在内。\n"
+                $"注意：当日消息过多，记录已截断，以下仅包含 {Time(from)} 之后的 {messages.Count - start} 条消息。\n"
             );
-        }
-        sb.AppendLine($"以下是 {targetDate:yyyy-MM-dd} 的群聊记录，请进行总结：\n");
-        foreach (var (_, text) in kept)
-            sb.AppendLine(text);
-
-        return new Result(sb.ToString(), truncated, truncated ? kept[0].Timestamp : null);
+        sb.AppendLine($"以下是 {date:yyyy-MM-dd} 的群聊记录，请进行总结：\n");
+        for (var i = start; i < messages.Count; i++)
+            sb.AppendLine(Format(messages[i]));
+        return new Result(sb.ToString(), keptFrom);
     }
 
-    private static string FormatLine(GroupMessage m, TimeSpan offset)
-    {
-        var time = new DateTimeOffset(m.Timestamp).ToOffset(offset).ToString("HH:mm");
-        var sender = m.IsBot ? "机器人" : m.SenderName;
-        return $"[{time}] {sender}: {m.Content}";
-    }
+    public static string Time(DateTime timestamp) =>
+        new DateTimeOffset(timestamp).ToOffset(NetworkTime.LocalTimeZoneOffset).ToString("HH:mm");
+
+    private static string Format(GroupMessage m) =>
+        $"[{Time(m.Timestamp)}] {(m.IsBot ? "机器人" : m.SenderName)}: {m.Content}";
 }

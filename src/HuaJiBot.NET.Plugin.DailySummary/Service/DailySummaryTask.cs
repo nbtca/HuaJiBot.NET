@@ -1,3 +1,4 @@
+using System.Text.Json;
 using HuaJiBot.NET.Interfaces;
 using HuaJiBot.NET.Plugin.DailySummary.Config;
 using Timer = System.Timers.Timer;
@@ -8,109 +9,100 @@ internal class DailySummaryTask : IDisposable
 {
     private readonly IPluginService _service;
     private readonly PluginConfig _config;
-    private readonly SummaryState _state;
-    private readonly Func<string, DateTime, CancellationToken, Task<bool>> _generate;
+    private readonly string _statePath;
+    private readonly Func<string, DateTime, CancellationToken, Task> _summarize;
     private readonly CancellationTokenSource _cts = new();
-    private readonly Timer _timer;
+    private readonly Timer _timer = new(TimeSpan.FromMinutes(1));
+    private readonly Dictionary<string, DateOnly> _sent = [];
+    private readonly Dictionary<string, int> _failures = [];
+    private DateOnly _failuresDay;
     private int _running;
 
-    /// <param name="generate">执行单个群的总结并发送；
-    /// 返回 false 表示消息不足被跳过，抛异常表示失败。</param>
     public DailySummaryTask(
         IPluginService service,
         PluginConfig config,
-        SummaryState state,
-        Func<string, DateTime, CancellationToken, Task<bool>> generate
+        string statePath,
+        Func<string, DateTime, CancellationToken, Task> summarize
     )
     {
         _service = service;
         _config = config;
-        _state = state;
-        _generate = generate;
-
-        // 每分钟检查一次是否到达执行窗口（SummaryHour 整小时内可重试）
-        _timer = new Timer(TimeSpan.FromMinutes(1));
+        _statePath = statePath;
+        _summarize = summarize;
+        try
+        {
+            if (File.Exists(statePath))
+                _sent = JsonSerializer.Deserialize<Dictionary<string, DateOnly>>(
+                    File.ReadAllText(statePath)
+                )!;
+        }
+        catch (Exception ex)
+        {
+            _service.LogError("[每日总结] 读取发送记录失败", ex);
+        }
         _timer.Elapsed += (_, _) => _ = RunIfDueAsync(Utils.NetworkTime.Now);
-        _timer.AutoReset = true;
     }
 
     public void Start()
     {
         _timer.Start();
-        _service.Log(
-            $"[每日总结] 定时任务已启动，每天 {_config.SummaryHour:D2}:{_config.SummaryMinute:D2}（北京时间）总结 {Utils.NetworkTime.Now.Date.AddDays(-_config.SummaryDaysAgo):yyyy-MM-dd} 的消息，失败在该小时内最多重试 {_config.MaxRetryCount} 次"
-        );
+        _service.Log($"[每日总结] 定时任务已启动，将在每天 {_config.SummaryHour:D2}:{_config.SummaryMinute:D2} 执行");
     }
 
     public async Task RunIfDueAsync(DateTimeOffset now)
     {
+        if (now.Hour != _config.SummaryHour || now.Minute < _config.SummaryMinute)
+            return;
+        if (Interlocked.Exchange(ref _running, 1) == 1)
+            return;
         try
         {
-            // 新的一天开始时丢弃旧记录（含已成功的），状态文件只保留当天条目。
-            _state.RollOver(DateOnly.FromDateTime(now.Date));
-
-            if (now.Hour != _config.SummaryHour || now.Minute < _config.SummaryMinute)
-                return;
-
-            // 上一轮还没跑完（例如都在超时等待中）时不叠加执行。
-            if (Interlocked.CompareExchange(ref _running, 1, 0) != 0)
-                return;
-            try
+            var today = DateOnly.FromDateTime(now.Date);
+            if (_failuresDay != today)
             {
-                await RunDueGroupsAsync(now.Date, _cts.Token);
+                _failures.Clear();
+                _failuresDay = today;
             }
-            finally
+            foreach (var groupId in _config.GroupIds)
             {
-                Interlocked.Exchange(ref _running, 0);
+                if (
+                    _sent.GetValueOrDefault(groupId) == today
+                    || _failures.GetValueOrDefault(groupId) >= _config.MaxRetryCount
+                )
+                    continue;
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+                cts.CancelAfter(TimeSpan.FromSeconds(_config.LlmTimeoutSeconds));
+                try
+                {
+                    await _summarize(groupId, now.Date.AddDays(-1), cts.Token);
+                    _sent[groupId] = today;
+                    Save();
+                }
+                catch (Exception ex)
+                {
+                    var attempts = _failures[groupId] = _failures.GetValueOrDefault(groupId) + 1;
+                    _service.LogError($"[每日总结] 群组 {groupId} 总结失败（第 {attempts} 次）", ex);
+                }
             }
         }
-        catch (Exception ex)
+        finally
         {
-            _service.LogError("[每日总结] 定时任务异常", ex);
+            _running = 0;
         }
     }
 
-    private async Task RunDueGroupsAsync(DateTime runDate, CancellationToken ct)
+    private void Save()
     {
-        var targetDate = runDate.AddDays(-Math.Max(0, _config.SummaryDaysAgo));
-        var due = _config.GroupIds.Where(g => _state.IsDue(g, _config.MaxRetryCount)).ToArray();
-        if (due.Length == 0)
-            return;
-
-        var semaphore = new SemaphoreSlim(Math.Max(1, _config.MaxConcurrentGroups));
-        await Task.WhenAll(
-            due.Select(async groupId =>
-            {
-                await semaphore.WaitAsync(ct);
-                try
-                {
-                    using var groupCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    groupCts.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, _config.LlmTimeoutSeconds)));
-                    try
-                    {
-                        var sent = await _generate(groupId, targetDate, groupCts.Token);
-                        // 消息不足同样记为完成：当天不再重试刷屏日志。
-                        _state.MarkSent(groupId);
-                        _service.Log(
-                            $"[每日总结] 群组 {groupId} {(sent ? "总结完成" : "消息不足，跳过")}"
-                        );
-                    }
-                    catch (Exception ex)
-                    {
-                        _state.MarkFailure(groupId);
-                        _service.LogError(
-                            $"[每日总结] 群组 {groupId} 失败（第 {_state.Get(groupId).Attempts} 次尝试）",
-                            ex
-                        );
-                    }
-                    _state.Save();
-                }
-                finally
-                {
-                    semaphore.Release();
-                }
-            })
-        );
+        try
+        {
+            var tmp = _statePath + ".tmp";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(_sent));
+            File.Move(tmp, _statePath, true);
+        }
+        catch (Exception ex)
+        {
+            _service.LogError("[每日总结] 保存发送记录失败", ex);
+        }
     }
 
     public void Dispose()
