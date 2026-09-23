@@ -94,7 +94,7 @@ internal class TelegramPostTest
             .SendGroupMessageAsync(
                 null,
                 "-100",
-                new Post("pushed", TelegramHtmlTest.Nothing) { ImagePath = path, Tags = ["push"] }
+                new Post("pushed", TelegramHtmlTest.Nothing) { Image = () => Task.FromResult(path), Tags = ["push"] }
             );
         File.Delete(path);
 
@@ -141,6 +141,13 @@ internal class TelegramPostTest
 
 internal class PostFallbackTest
 {
+    [Test]
+    public void Escape_KeepsMarkdownLiteral() =>
+        Assert.That(
+            TelegramHtml.Render(Post.Escape("my_name *x* [a](b) 中文 1.")),
+            Is.EqualTo("my_name *x* [a](b) 中文 1.")
+        );
+
     [Test]
     public async Task ExpandPostsAsync_ReplacesPostWithFallback()
     {

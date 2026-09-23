@@ -223,9 +223,9 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
 
         async Task<Message> SendAsync(ParseMode parseMode, Func<Post, int, string> compose)
         {
-            if (post.ImagePath is { } path)
+            if (post.Image is { } image)
             {
-                await using var photo = await OpenPhotoAsync(path);
+                await using var photo = await OpenPhotoAsync(await image());
                 return await _botClient.SendPhoto(
                     chatId,
                     InputFile.FromStream(photo),

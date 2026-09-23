@@ -31,10 +31,18 @@ public sealed record LinkMessage(string Text, string Url) : SendingMessageBase;
 public sealed record Post(string Markdown, Func<Task<SendingMessageBase[]>> Fallback)
     : SendingMessageBase
 {
-    public string? ImagePath { get; init; }
+    public Func<Task<string>>? Image { get; init; }
     public string[] Tags { get; init; } = [];
     public LinkMessage[] Links { get; init; } = [];
     public bool Silent { get; init; }
+
+    public static string Escape(string text) =>
+        string.Concat(
+            from c in text
+            select char.IsAsciiLetterOrDigit(c) || !char.IsAscii(c) || char.IsWhiteSpace(c)
+                ? c.ToString()
+                : "\\" + c
+        );
 }
 
 public static class SendingMessageExtensions
