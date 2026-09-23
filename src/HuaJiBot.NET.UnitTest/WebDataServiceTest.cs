@@ -1,11 +1,32 @@
 using System.Net;
 using System.Text.Json;
 using HuaJiBot.NET.Mcp.WebSearch;
+using ModelContextProtocol.Client;
 
 namespace HuaJiBot.NET.UnitTest;
 
 internal class WebDataServiceTest
 {
+    [Test]
+    public async Task McpServerExposesSearchAndWeatherTools()
+    {
+        var serverPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "HuaJiBot.NET.Mcp.WebSearch.dll"
+        );
+        Assert.That(File.Exists(serverPath), Is.True);
+        var transport = new StdioClientTransport(new()
+        {
+            Command = "dotnet",
+            Arguments = [serverPath],
+            Name = "web-search-test",
+        });
+        await using var mcp = await McpClientFactory.CreateAsync(transport);
+
+        var names = (await mcp.ListToolsAsync()).Select(tool => tool.Name).ToArray();
+        Assert.That(names, Is.EquivalentTo(new[] { "web_search", "get_weather" }));
+    }
+
     [Test]
     public void SearchResultsIncludeSourcesAndExcludeUnsafeUrls()
     {
