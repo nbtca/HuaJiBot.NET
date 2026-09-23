@@ -44,3 +44,7 @@ matching repository, they fall back to SearXNG.
 Other web searches use SearXNG. Search results include original URLs. If all
 applicable sources fail, the tool reports no results rather than inventing an
 answer.
+
+In an enabled group, messages starting with `@Bot 联网搜索` call the MCP
+`web_search` tool directly and send its results without an LLM step. Other
+questions can still use the MCP tools through AIChat's agent.

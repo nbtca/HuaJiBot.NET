@@ -215,6 +215,39 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     }
                     return;
                 }
+                if (restText.StartsWith("联网搜索", StringComparison.Ordinal))
+                {
+                    var query = restText[4..].TrimStart(' ', '\t', '：', ':').Trim();
+                    if (query.Length == 0)
+                    {
+                        await e.Reply("请在“联网搜索”后写出关键词。");
+                        return;
+                    }
+                    var searchResult = await _mcpClientManager.CallTextToolAsync(
+                        "web_search",
+                        new Dictionary<string, object?> { ["query"] = query }
+                    );
+                    if (searchResult is null)
+                    {
+                        await e.Reply("联网搜索工具尚未连接。");
+                        return;
+                    }
+                    Info($"直接调用 web_search：{query}");
+                    foreach (var msgId in await e.Reply(searchResult))
+                    {
+                        _history.StoreMessage(new GroupMessage
+                        {
+                            Content = searchResult,
+                            GroupId = e.GroupId,
+                            MessageId = msgId,
+                            SenderId = null,
+                            SenderName = "bot",
+                            IsBot = true,
+                            ReplyToMessageId = e.MessageId,
+                        });
+                    }
+                    return;
+                }
                 //调用LLM回复
                 await InvokeLlmMessage(
                     Config.SystemPrompt,
