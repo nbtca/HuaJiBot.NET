@@ -84,17 +84,21 @@ public class TelegramRichMessageFallbackTest
     private sealed class FakeBotApi : HttpMessageHandler
     {
         public List<string> Methods { get; } = [];
+        public string? RichMessageBody { get; private set; }
+        public bool RejectRichMessage { get; init; }
 
-        protected override Task<HttpResponseMessage> SendAsync(
+        protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken
         )
         {
             var method = request.RequestUri!.Segments[^1];
             Methods.Add(method);
+            if (method == "sendRichMessage")
+                RichMessageBody = await request.Content!.ReadAsStringAsync(cancellationToken);
             var (status, body) = method switch
             {
-                "sendRichMessage" => (
+                "sendRichMessage" when RejectRichMessage => (
                     HttpStatusCode.BadRequest,
                     """{"ok":false,"error_code":400,"description":"Bad Request: can't parse"}"""
                 ),
@@ -103,19 +107,17 @@ public class TelegramRichMessageFallbackTest
                     """{"ok":true,"result":{"message_id":99,"date":0,"chat":{"id":-100,"type":"supergroup"}}}"""
                 ),
             };
-            return Task.FromResult(
-                new HttpResponseMessage(status)
-                {
-                    Content = new StringContent(body, Encoding.UTF8, "application/json"),
-                }
-            );
+            return new HttpResponseMessage(status)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            };
         }
     }
 
     [Test]
     public async Task SendRichMessageAsync_WhenBotApiRejects_SendsFallback()
     {
-        FakeBotApi api = new();
+        FakeBotApi api = new() { RejectRichMessage = true };
         var adapter = new TelegramAdapter("123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11", new(api))
         {
             Logger = new ConsoleLogger(),
@@ -132,6 +134,29 @@ public class TelegramRichMessageFallbackTest
         {
             Assert.That(api.Methods, Is.EqualTo(new[] { "sendRichMessage", "sendMessage" }));
             Assert.That(ids, Is.EqualTo(new[] { "99" }));
+        });
+    }
+
+    [Test]
+    public async Task SendRichMessageAsync_WithoutReplyOrTopic_OmitsNullFields()
+    {
+        FakeBotApi api = new();
+        var adapter = new TelegramAdapter("123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11", new(api))
+        {
+            Logger = new ConsoleLogger(),
+        };
+
+        await adapter.SendRichMessageAsync(
+            null,
+            "-100",
+            new RichContent("# Heading"),
+            () => Task.FromResult<SendingMessageBase[]>([])
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(api.Methods, Is.EqualTo(new[] { "sendRichMessage" }));
+            Assert.That(api.RichMessageBody, Does.Not.Contain("null"));
         });
     }
 }
