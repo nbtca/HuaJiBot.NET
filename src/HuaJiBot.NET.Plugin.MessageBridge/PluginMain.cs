@@ -330,7 +330,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         return value.ToString();
     }
 
-    [Command("事件", "开关事件")]
+    [Command("事件", "开关事件", Alias = "events")]
     // ReSharper disable once UnusedMember.Global
     public void EventControlCommand(
         [CommandArgumentEnum<ClientEventType>("类型")] ClientEventType? typeOptional,

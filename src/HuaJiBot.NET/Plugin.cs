@@ -71,7 +71,8 @@ public abstract partial class PluginBase
         string Name,
         string Description,
         Action<object?[]?> Method,
-        CommandArgumentInfo[] Arguments
+        CommandArgumentInfo[] Arguments,
+        string? Alias = null
     );
 
     public record CommandArgumentInfo(
@@ -119,7 +120,8 @@ public abstract partial class PluginBase
                             );
                         }
                     },
-                    arguments
+                    arguments,
+                    overload.Alias
                 );
             }
         }

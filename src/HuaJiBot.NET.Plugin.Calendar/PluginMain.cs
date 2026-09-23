@@ -144,7 +144,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         return true;
     }
 
-    [Command("最近日程", "查看最近一次日程详细信息")]
+    [Command("最近日程", "查看最近一次日程详细信息", Alias = "next")]
     // ReSharper disable once UnusedMember.Global
     public async Task CalendarCommandAsync(GroupMessageEventArgs e)
     {
@@ -167,7 +167,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         await e.Reply(output);
     }
 
-    [Command("日程", "查看近期日程")]
+    [Command("日程", "查看近期日程", Alias = "schedule")]
     // ReSharper disable once UnusedMember.Global
     public async Task CalendarCommandAsync(
         [CommandArgumentString("时间")] string? content,

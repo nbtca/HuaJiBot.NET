@@ -8,7 +8,7 @@ namespace HuaJiBot.NET.Adapter.Telegram;
 /// <summary>
 /// 指令读取
 /// </summary>
-internal class TelegramCommandReader(BotService service, Message msg) : CommonCommandReader
+internal class TelegramCommandReader(TelegramAdapter service, Message msg) : CommonCommandReader
 {
     public override IEnumerable<ReaderEntity> Msg
     {
@@ -37,10 +37,16 @@ internal class TelegramCommandReader(BotService service, Message msg) : CommonCo
                 // Get the text content (from Text or Caption)
                 var text = msg.Text ?? msg.Caption ?? string.Empty;
 
+                // "/日程" has no bot_command entity because Telegram commands are ASCII only.
+                var lastIndex =
+                    text.StartsWith('/')
+                    && msg.Entities?.FirstOrDefault() is not { Type: MessageEntityType.BotCommand, Offset: 0 }
+                        ? 1
+                        : 0;
+
                 // Parse entities if present
                 if (msg.Entities is { Length: > 0 } entities)
                 {
-                    var lastIndex = 0;
 
                     foreach (var entity in entities)
                     {
@@ -59,9 +65,21 @@ internal class TelegramCommandReader(BotService service, Message msg) : CommonCo
                         {
                             case MessageEntityType.Mention: // @username
                                 var mentionText = text.Substring(entity.Offset, entity.Length);
-                                // For @username mentions, we don't have the user ID directly
-                                // We'll yield it as text or try to extract from the message
-                                yield return mentionText;
+                                if (IsThisBot(mentionText[1..]))
+                                    yield return new ReaderAt(service.BotUser!.Id.ToString(), mentionText);
+                                else
+                                    yield return mentionText;
+                                break;
+
+                            case MessageEntityType.BotCommand: // /command or /command@bot
+                                var command = text.Substring(entity.Offset + 1, entity.Length - 1);
+                                if (command.IndexOf('@') is var at and >= 0)
+                                {
+                                    if (!IsThisBot(command[(at + 1)..]))
+                                        yield break;
+                                    command = command[..at];
+                                }
+                                yield return service.ResolveCommandAlias(command) ?? command;
                                 break;
 
                             case MessageEntityType.TextMention: // mention with user object
@@ -97,10 +115,10 @@ internal class TelegramCommandReader(BotService service, Message msg) : CommonCo
                         }
                     }
                 }
-                else if (!string.IsNullOrWhiteSpace(text))
+                else if (!string.IsNullOrWhiteSpace(text[lastIndex..]))
                 {
                     // No entities, just yield the whole text
-                    yield return text;
+                    yield return text[lastIndex..];
                 }
 
                 // Handle other message types that aren't text-based
@@ -119,4 +137,7 @@ internal class TelegramCommandReader(BotService service, Message msg) : CommonCo
             }
         }
     }
+
+    private bool IsThisBot(string username) =>
+        string.Equals(username, service.BotUser?.Username, StringComparison.OrdinalIgnoreCase);
 }

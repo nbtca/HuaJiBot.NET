@@ -28,7 +28,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
 
     public override required ILogger Logger { get; init; }
 
-    private User? _botUser;
+    internal User? BotUser { get; set; }
 
     protected override void ReconnectCore()
     {
@@ -41,20 +41,20 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
     {
         try
         {
-            _botUser = await _botClient.GetMe(_cancellationTokenSource.Token);
+            BotUser = await _botClient.GetMe(_cancellationTokenSource.Token);
             await _botClient.DeleteWebhook(); // you may comment this line if you find it unnecessary
             await _botClient.DropPendingUpdates(); // you may comment this line if you find it unnecessary
 
             Log(
-                $"Telegram bot started: @{_botUser.Username} ({_botUser.FirstName}) {_botUser.CanReadAllGroupMessages}"
+                $"Telegram bot started: @{BotUser.Username} ({BotUser.FirstName}) {BotUser.CanReadAllGroupMessages}"
             );
             Events.CallOnBotLogin(
                 new()
                 {
                     Service = this,
-                    Accounts = [_botUser.Id.ToString()],
+                    Accounts = [BotUser.Id.ToString()],
                     ClientName = "Telegram Bot",
-                    ClientVersion = _botUser.Username,
+                    ClientVersion = BotUser.Username,
                 }
             );
             // Subscribe to events
@@ -82,7 +82,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
         }
     }
 
-    public override string[] AllRobots => _botUser != null ? [_botUser.Id.ToString()] : [];
+    public override string[] AllRobots => BotUser != null ? [BotUser.Id.ToString()] : [];
 
     internal static ReplyParameters? ToReplyParameters(string? messageId) =>
         int.TryParse(messageId, out var id) ? new ReplyParameters { MessageId = id } : null;
@@ -250,6 +250,24 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
                 cancellationToken: _cancellationTokenSource.Token
             );
         }
+    }
+
+    protected override void OnCommandsRegistered(
+        IEnumerable<(string Alias, string Description)> commands
+    )
+    {
+        var menu = commands.Select(x => new BotCommand(x.Alias, x.Description)).ToArray();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _botClient.SetMyCommands(menu, cancellationToken: _cancellationTokenSource.Token);
+            }
+            catch (Exception ex)
+            {
+                LogError("Failed to set the bot command menu", ex);
+            }
+        });
     }
 
     // Telegram re-encodes photos as JPEG, which turns the card's transparent corners white.
@@ -450,7 +468,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
                 )
                 {
                     Service = this,
-                    RobotId = _botUser?.Id.ToString(),
+                    RobotId = BotUser?.Id.ToString(),
                     GroupId = null, // Private chats don't have group ID
                     SenderId = userId,
                     MessageId = message.MessageId.ToString(),
@@ -491,7 +509,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
                 )
                 {
                     Service = this,
-                    RobotId = _botUser?.Id.ToString(),
+                    RobotId = BotUser?.Id.ToString(),
                     GroupId = groupTopic,
                     SenderId = userId,
                     SenderMemberCard = userName,
