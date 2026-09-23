@@ -15,18 +15,11 @@ public sealed class WebTools
     );
 
     [McpServerTool(Name = "web_search")]
-    [Description("搜索实时网页信息，返回标题、摘要、原始网址和搜索来源。需要最新事实、新闻、链接时先调用。")]
+    [Description("搜索网页并返回标题、摘要、网址、来源和检索时间。知识不足、不确定或需要核实当前事实时调用；不要凭印象编造结果。")]
     public static Task<string> SearchWebAsync(
         [Description("搜索关键词，不超过 160 字。")]
             string query
     ) => Data.SearchAsync(query);
-
-    [McpServerTool(Name = "get_weather")]
-    [Description("查询城市的当前天气和今天预报，返回地点、数据时间、气温、降水及数据来源。回答实时天气问题时先调用。")]
-    public static Task<string> GetWeatherAsync(
-        [Description("城市或地点名称，例如宁波、上海、Beijing。")]
-            string location
-    ) => Data.WeatherAsync(location);
 }
 
 public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
@@ -36,25 +29,6 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
     public async Task<string> SearchAsync(string query)
     {
         query = Validate(query, "搜索词", 160);
-        var repositoryName = GitHubRepositoryName(query);
-        if (repositoryName is not null)
-        {
-            try
-            {
-                var repositoryResults = await SearchGitHubRepositoriesAsync(repositoryName);
-                if (repositoryResults.Length > 0)
-                    return repositoryResults;
-            }
-            catch (HttpRequestException ex)
-            {
-                Console.Error.WriteLine($"GitHub 仓库 API 不可用：{ex.Message}");
-            }
-            catch (TaskCanceledException ex)
-            {
-                Console.Error.WriteLine($"GitHub 仓库 API 超时：{ex.Message}");
-            }
-            return await SearchGitHubViaSearxAsync(repositoryName);
-        }
         for (var attempt = 0; attempt < 2; attempt++)
         {
             var engines = attempt == 0
@@ -62,128 +36,21 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
                 : "google cse,360search";
             var path = "search?format=json&q=" + Uri.EscapeDataString(query)
                 + "&engines=" + Uri.EscapeDataString(engines);
-            using var response = await client.GetAsync(new Uri(_searchBase, path));
-            response.EnsureSuccessStatusCode();
-            using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
-            var text = FormatSearchResults(json.RootElement, query);
-            if (text.Length > 0)
-                return $"检索时间：{DateTimeOffset.Now:yyyy-MM-dd HH:mm zzz}\n{text}";
+            try
+            {
+                using var response = await client.GetAsync(new Uri(_searchBase, path));
+                response.EnsureSuccessStatusCode();
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
+                var text = FormatSearchResults(json.RootElement, query);
+                if (text.Length > 0)
+                    return $"检索时间：{DateTimeOffset.Now:yyyy-MM-dd HH:mm zzz}\n{text}";
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+            {
+                Console.Error.WriteLine($"网页搜索第 {attempt + 1} 次请求失败：{ex.Message}");
+            }
         }
         return "搜索引擎暂时未返回结果，请稍后重试。";
-    }
-
-    private async Task<string> SearchGitHubViaSearxAsync(string name)
-    {
-        var query = $"{name} site:github.com";
-        foreach (var engines in new[] { "google cse,google,360search", "google cse,360search" })
-        {
-            var path = "search?format=json&q=" + Uri.EscapeDataString(query)
-                + "&engines=" + Uri.EscapeDataString(engines);
-            using var response = await client.GetAsync(new Uri(_searchBase, path));
-            response.EnsureSuccessStatusCode();
-            using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
-            var results = FormatGitHubRepositoryResults(json.RootElement, name);
-            if (results.Length > 0)
-                return $"检索时间：{DateTimeOffset.Now:yyyy-MM-dd HH:mm zzz}\n来源：GitHub 网页搜索\n{results}";
-        }
-        return $"未检索到与“{name}”精确匹配的 GitHub 仓库，请核对仓库名称。";
-    }
-
-    public static string FormatGitHubRepositoryResults(JsonElement root, string name)
-    {
-        if (!root.TryGetProperty("results", out var results)
-            || results.ValueKind != JsonValueKind.Array)
-            return "";
-        var repositories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var item in results.EnumerateArray())
-        {
-            if (!Uri.TryCreate(ReadString(item, "url"), UriKind.Absolute, out var url)
-                || url.Scheme != "https"
-                || url.Host != "github.com")
-                continue;
-            var parts = url.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length < 2
-                || !parts[1].Equals(name, StringComparison.OrdinalIgnoreCase))
-                continue;
-            repositories.Add($"https://github.com/{parts[0]}/{parts[1]}");
-            if (repositories.Count == 5)
-                break;
-        }
-        return string.Join("\n", repositories.Select((url, index) => $"{index + 1}. {url}"));
-    }
-
-    private async Task<string> SearchGitHubRepositoriesAsync(string name)
-    {
-        var url = "https://api.github.com/search/repositories?q="
-            + Uri.EscapeDataString(name)
-            + "&per_page=5";
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.UserAgent.ParseAdd("HuaJiBot.NET-WebSearch/1.0");
-        request.Headers.Accept.ParseAdd("application/vnd.github+json");
-        using var response = await client.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
-        if (!json.RootElement.TryGetProperty("items", out var items)
-            || items.ValueKind != JsonValueKind.Array)
-            return "";
-        var lines = new List<string>();
-        foreach (var item in items.EnumerateArray())
-        {
-            var urlValue = ReadString(item, "html_url");
-            if (!Uri.TryCreate(urlValue, UriKind.Absolute, out var parsed)
-                || parsed.Scheme != "https"
-                || parsed.Host != "github.com")
-                continue;
-            lines.Add($"{lines.Count + 1}. {ReadString(item, "full_name")}\n{urlValue}\n{Clip(ReadString(item, "description"), 240)}");
-        }
-        return lines.Count == 0 ? "" : "来源：GitHub 官方仓库搜索 API\n" + string.Join("\n\n", lines);
-    }
-
-    private static string? GitHubRepositoryName(string query)
-    {
-        var candidates = Regex.Matches(query, @"[A-Za-z0-9][A-Za-z0-9._-]*")
-            .Select(match => match.Value)
-            .Where(word => !word.Equals("github", StringComparison.OrdinalIgnoreCase)
-                && !word.Equals("github.com", StringComparison.OrdinalIgnoreCase)
-                && !word.Equals("repository", StringComparison.OrdinalIgnoreCase)
-                && !word.Equals("repo", StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(word => word.Length)
-            .ToArray();
-        var name = candidates.FirstOrDefault();
-        if (name is null)
-            return null;
-        var explicitRepository = query.Contains("github", StringComparison.OrdinalIgnoreCase)
-            && (query.Contains("仓库")
-                || query.Contains("项目")
-                || query.Contains("repo", StringComparison.OrdinalIgnoreCase)
-                || query.Contains("github.com", StringComparison.OrdinalIgnoreCase));
-        var projectName = name.Contains('.')
-            && (query.Trim().Equals(name, StringComparison.OrdinalIgnoreCase)
-                || query.Contains("github", StringComparison.OrdinalIgnoreCase));
-        return explicitRepository || projectName ? name : null;
-    }
-
-    public async Task<string> WeatherAsync(string location)
-    {
-        location = Validate(location, "地点", 80);
-        var geocodeUrl = "https://geocoding-api.open-meteo.com/v1/search?name="
-            + Uri.EscapeDataString(location)
-            + "&count=1&language=zh&format=json";
-        using var geocode = await client.GetAsync(geocodeUrl);
-        geocode.EnsureSuccessStatusCode();
-        using var placeJson = JsonDocument.Parse(await geocode.Content.ReadAsStreamAsync());
-        if (!placeJson.RootElement.TryGetProperty("results", out var places)
-            || places.GetArrayLength() == 0)
-            return $"未找到地点“{location}”，请提供更准确的城市名。";
-
-        var place = places[0];
-        var latitude = place.GetProperty("latitude").GetDouble();
-        var longitude = place.GetProperty("longitude").GetDouble();
-        var forecastUrl = $"https://api.open-meteo.com/v1/forecast?latitude={latitude.ToString(System.Globalization.CultureInfo.InvariantCulture)}&longitude={longitude.ToString(System.Globalization.CultureInfo.InvariantCulture)}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=auto";
-        using var forecast = await client.GetAsync(forecastUrl);
-        forecast.EnsureSuccessStatusCode();
-        using var weatherJson = JsonDocument.Parse(await forecast.Content.ReadAsStreamAsync());
-        return FormatWeather(place, weatherJson.RootElement, forecastUrl);
     }
 
     private static string Validate(string value, string name, int maxLength)
@@ -234,36 +101,6 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
         }
         return string.Join("\n\n", lines);
     }
-
-    public static string FormatWeather(JsonElement place, JsonElement forecast, string sourceUrl)
-    {
-        var current = forecast.GetProperty("current");
-        var daily = forecast.GetProperty("daily");
-        var name = ReadString(place, "name");
-        var region = ReadString(place, "admin1");
-        var time = ReadString(current, "time");
-        var code = current.GetProperty("weather_code").GetInt32();
-        return $"{name}（{region}）天气预报，数据时间 {time}（当地时间）\n"
-            + $"当前{DescribeWeather(code)}（天气代码 {code}），气温 {current.GetProperty("temperature_2m")}°C，体感 {current.GetProperty("apparent_temperature")}°C，湿度 {current.GetProperty("relative_humidity_2m")}%，降水 {current.GetProperty("precipitation")} mm，风速 {current.GetProperty("wind_speed_10m")} km/h。\n"
-            + $"今日 {daily.GetProperty("temperature_2m_min")[0]}～{daily.GetProperty("temperature_2m_max")[0]}°C，最高降水概率 {daily.GetProperty("precipitation_probability_max")[0]}%。\n"
-            + $"来源：Open-Meteo {sourceUrl}";
-    }
-
-    private static string DescribeWeather(int code) => code switch
-    {
-        0 => "晴",
-        1 => "大致晴朗",
-        2 => "局部多云",
-        3 => "阴",
-        45 or 48 => "有雾",
-        >= 51 and <= 57 => "毛毛雨",
-        >= 61 and <= 67 => "雨",
-        >= 71 and <= 77 => "雪",
-        >= 80 and <= 82 => "阵雨",
-        >= 85 and <= 86 => "阵雪",
-        >= 95 and <= 99 => "雷雨",
-        _ => "天气情况未知",
-    };
 
     private static string ReadString(JsonElement item, string property) =>
         item.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
