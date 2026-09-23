@@ -27,10 +27,10 @@ public class PluginConfig : ConfigBase
     /// <summary>
     /// 单次总结的超时秒数
     /// </summary>
-    public int LlmTimeoutSeconds = 180;
+    public int LlmTimeoutSeconds = 600;
 
     /// <summary>
-    /// 发给模型的聊天记录最大字符数，超出时只保留最新的部分
+    /// 每个分段发给模型的聊天记录最大字符数，超出时分段总结并合并
     /// </summary>
     public int MaxPromptChars = 20000;
 
@@ -38,7 +38,7 @@ public class PluginConfig : ConfigBase
     /// AI 系统提示词
     /// </summary>
     public string SystemPrompt =
-        "你是一个聊天记录总结助手。请对以下群聊消息进行简洁的总结，突出重要的讨论话题、决策和有趣的内容。使用中文回复。若消息中声明了截断，请只基于给出的内容总结，不要臆测缺失部分。";
+        "你是群聊简报编辑。按时间顺序理解记录，合并重复话题，区分事实、猜测与玩笑。只写有聊天依据的内容，不编造决定或待办。";
 
     /// <summary>
     /// AI 模型配置

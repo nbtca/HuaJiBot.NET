@@ -38,35 +38,88 @@ internal class DailySummaryTest
     {
         var messages = Enumerable.Range(0, 5).Select(Msg).ToList();
 
-        var result = SummaryPrompt.Build(messages, 20000, new DateTime(2026, 9, 22));
+        var chunks = SummaryPrompt.BuildChunks(messages, 20000, new DateTime(2026, 9, 22));
 
-        Assert.That(result.KeptFrom, Is.Null);
-        Assert.That(result.Text, Does.Contain("2026-09-22 的群聊记录"));
-        Assert.That(result.Text, Does.Not.Contain("截断"));
-        Assert.That(result.Text, Does.Contain(messages[0].Content));
+        Assert.That(chunks, Has.Count.EqualTo(1));
+        Assert.That(chunks[0], Does.Contain("2026-09-22 的群聊记录"));
+        Assert.That(chunks[0], Does.Contain(messages[0].Content));
+        Assert.That(chunks[0], Does.Contain(messages[^1].Content));
     }
 
     [Test]
-    public void Prompt_BigDay_KeepsNewestAndSaysSo()
+    public void Prompt_BigDay_SplitsInOrderWithoutDroppingMessages()
     {
         var messages = Enumerable.Range(0, 200).Select(Msg).ToList();
-        var budget = messages.Skip(150).Sum(m => m.Content!.Length + 30);
+        var chunks = SummaryPrompt.BuildChunks(messages, 400, new DateTime(2026, 9, 22));
 
-        var result = SummaryPrompt.Build(messages, budget, new DateTime(2026, 9, 22));
-
-        Assert.That(result.KeptFrom, Is.Not.Null);
-        Assert.That(result.Text, Does.Contain("记录已截断"));
-        Assert.That(result.Text, Does.Contain(messages[199].Content));
-        Assert.That(result.Text, Does.Not.Contain(messages[0].Content));
+        Assert.That(chunks.Count, Is.GreaterThan(1));
+        Assert.That(chunks.All(c => c.Length <= 400), Is.True);
+        var combined = string.Join("\n", chunks);
+        var offsets = messages
+            .Select(m => combined.IndexOf($"[{SummaryPrompt.Time(m.Timestamp)}] {m.SenderName}: {m.Content}", StringComparison.Ordinal))
+            .ToList();
+        Assert.That(offsets.All(x => x >= 0), Is.True);
+        Assert.That(offsets, Is.Ordered.Ascending);
     }
 
     [Test]
-    public void Prompt_SingleHugeMessage_IsStillSent()
+    public void Prompt_SingleHugeMessage_IsSplitWithoutLosingContent()
     {
-        var result = SummaryPrompt.Build([Msg(0)], 1, new DateTime(2026, 9, 22));
+        var message = Msg(0);
+        message.Content = new string('x', 1000);
+        var chunks = SummaryPrompt.BuildChunks([message], 256, new DateTime(2026, 9, 22));
 
-        Assert.That(result.KeptFrom, Is.Null);
-        Assert.That(result.Text, Does.Contain(Msg(0).Content));
+        Assert.That(chunks.Count, Is.GreaterThan(1));
+        Assert.That(chunks.All(c => c.Length <= 256), Is.True);
+        Assert.That(chunks.Sum(c => c.Count(ch => ch == 'x')), Is.EqualTo(1000));
+    }
+
+    [Test]
+    public async Task Pipeline_SummarizesEveryChunkThenCombinesTheResults()
+    {
+        var messages = Enumerable.Range(0, 30).Select(Msg).ToList();
+        var requests = new List<string>();
+
+        var result = await SummaryPipeline.RunAsync(
+            messages,
+            new DateTime(2026, 9, 22),
+            400,
+            "system",
+            (_, prompt, _) =>
+            {
+                requests.Add(prompt);
+                return Task.FromResult(prompt.Contains("分段摘要") ? "最终简报" : $"段{requests.Count}");
+            },
+            CancellationToken.None
+        );
+
+        Assert.That(result, Is.EqualTo("最终简报"));
+        Assert.That(requests.Count, Is.GreaterThan(2));
+        Assert.That(requests[^1], Does.Contain("段1"));
+        Assert.That(requests[^1], Does.Contain($"段{requests.Count - 1}"));
+        Assert.That(requests[0], Does.Contain(messages[0].Content));
+        Assert.That(requests[^2], Does.Contain(messages[^1].Content));
+    }
+
+    [Test]
+    public async Task Pipeline_SmallDay_UsesOnlyOneModelCall()
+    {
+        var calls = 0;
+        var summary = await SummaryPipeline.RunAsync(
+            [Msg(0)],
+            new DateTime(2026, 9, 22),
+            20000,
+            "system",
+            (_, _, _) =>
+            {
+                calls++;
+                return Task.FromResult("简报");
+            },
+            CancellationToken.None
+        );
+
+        Assert.That(summary, Is.EqualTo("简报"));
+        Assert.That(calls, Is.EqualTo(1));
     }
 
     private string StatePath => Path.Combine(_dir, "sent.json");
