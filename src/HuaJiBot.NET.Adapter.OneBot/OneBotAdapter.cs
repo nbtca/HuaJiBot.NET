@@ -27,6 +27,7 @@ public class OneBotAdapter(string ws, string? token) : BotServiceBase
         params SendingMessageBase[] messages
     )
     {
+        messages = await messages.ExpandPostsAsync();
         var result = await Client.Api.SendGroupMessageAsync(
             targetGroup,
             messages

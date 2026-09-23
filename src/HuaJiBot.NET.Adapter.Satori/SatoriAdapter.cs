@@ -53,6 +53,7 @@ public class SatoriAdapter : BotServiceBase
         params SendingMessageBase[] messages
     )
     {
+        messages = await messages.ExpandPostsAsync();
         var robots = robotId is null ? AllRobots : [robotId];
         var msgIds = new List<string>();
         foreach (var robot in robots)
