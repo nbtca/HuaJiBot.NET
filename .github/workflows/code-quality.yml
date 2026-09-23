@@ -15,8 +15,8 @@ jobs:
         with:
           dotnet-version: '10.x'
 
-      - name: Run daily summary and ASCII art tests
-        run: dotnet test src/HuaJiBot.NET.UnitTest --filter 'FullyQualifiedName~DailySummaryTest|FullyQualifiedName~AsciiArtToolsTest'
+      - name: Run focused tests
+        run: dotnet test src/HuaJiBot.NET.UnitTest --filter 'FullyQualifiedName~DailySummaryTest|FullyQualifiedName~AsciiArtToolsTest|FullyQualifiedName~WebDataServiceTest'
 
   format-check:
     runs-on: ubuntu-latest

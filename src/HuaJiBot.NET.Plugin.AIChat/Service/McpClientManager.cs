@@ -84,7 +84,10 @@ public sealed class McpClientManager : IAsyncDisposable
             Command = config.Command,
             Arguments = args,
             Name = config.Name,
-            EnvironmentVariables = config.Env as Dictionary<string, string?>,
+            EnvironmentVariables = config.Env?.ToDictionary(
+                entry => entry.Key,
+                entry => (string?)entry.Value
+            ),
         });
     }
 
