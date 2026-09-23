@@ -47,6 +47,11 @@ Other web searches use SearXNG. Search results include original URLs. If all
 applicable sources fail, the tool reports no results rather than inventing an
 answer.
 
+Set `Plugins.AIChat.DefaultWeatherCity` in `config.json` for questions like
+`@Bot 今天天气如何` that omit a city. Leave it empty to ask for a city. Current
+weather questions call `get_weather` directly, so they do not wait for the
+language model. Questions about future days still use the model.
+
 The deployment uses Google, Google CSE, 360 Search, and Sogou for webpage
 searches. Bing is disabled because this host repeatedly received unrelated
 results for exact project and train numbers. Results show the retrieval time
