@@ -6,36 +6,27 @@ namespace HuaJiBot.NET.UnitTest;
 internal class BroadcastTest
 {
     [Test]
-    public async Task SendAsync_WithMultipleTargets_BuildsMessagesOnce()
+    public async Task SendAsync_SendsSameMessagesToEachTarget()
     {
         RecordingAdapter adapter = new();
-        var built = 0;
 
-        await Broadcast.SendAsync(
-            adapter,
-            ["g1", "g2"],
-            () =>
-            {
-                built++;
-                return Task.FromResult<SendingMessageBase[]>([new TextMessage("card")]);
-            }
-        );
+        await Broadcast.SendAsync(adapter, ["g1", "g2"], new TextMessage("card"));
 
         Assert.Multiple(() =>
         {
-            Assert.That(built, Is.EqualTo(1));
             Assert.That(adapter.Sends.Select(x => x.Target), Is.EqualTo(new[] { "g1", "g2" }));
             Assert.That(adapter.Sends.Select(x => x.Messages[0]), Is.All.EqualTo(new TextMessage("card")));
         });
     }
 
     [Test]
-    public async Task SendAsync_WithoutTargets_NeverBuildsMessages()
+    public async Task Cards_RenderEachCardOnce()
     {
-        await Broadcast.SendAsync(
-            new RecordingAdapter(),
-            [],
-            () => throw new InvalidOperationException("messages must not be built")
-        );
+        var renders = 0;
+        var card = Cards.Once(() => Task.FromResult(++renders));
+
+        await Task.WhenAll(card(), card(), card());
+
+        Assert.That(renders, Is.EqualTo(1));
     }
 }

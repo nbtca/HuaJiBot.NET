@@ -26,23 +26,22 @@ internal static class IssuesEventDispatcher
         plugin.Info($"IssueCommentEvent {repositoryFullName} {body.Action}");
         if (!ShouldBroadcast(body))
             return;
-        TempFile.AutoDeleteFile? tempImage = null;
-        try
-        {
-            await Broadcast.SendAsync(
-                plugin.Service,
-                plugin.GetBroadcastTargets(body.Repository),
-                async () =>
-                    [
-                        new ImageMessage(tempImage = await BuildCommentCardAsync(body)),
-                        new LinkMessage("View comment", await plugin.OrRawAsync(body.Issue.HtmlUrl)),
-                    ]
-            );
-        }
-        finally
-        {
-            tempImage?.Dispose();
-        }
+        using Cards cards = new();
+        var post = GitHubPosts.Comment(
+            body,
+            cards.Card(() => BuildCommentCardAsync(body, GitHubPosts.Excerpt(body.Comment.Body))),
+            Cards.Once<SendingMessageBase[]>(async () =>
+                [
+                    new ImageMessage(await cards.Card(() => BuildCommentCardAsync(body, body.Comment.Body))()),
+                    new LinkMessage("View comment", await plugin.OrRawAsync(body.Issue.HtmlUrl)),
+                ]
+            )
+        );
+        await Broadcast.SendAsync(
+            plugin.Service,
+            plugin.GetBroadcastTargets(body.Repository),
+            post
+        );
     }
 
     public static async Task DispatchIssuesEventAsync(this PluginMain plugin, IssuesEventBody body)
@@ -51,45 +50,50 @@ internal static class IssuesEventDispatcher
         plugin.Info($"IssuesEvent {repositoryFullName} {body.Action}");
         if (!ShouldBroadcast(body))
             return;
-        TempFile.AutoDeleteFile? tempImage = null;
-        try
-        {
-            await Broadcast.SendAsync(
-                plugin.Service,
-                plugin.GetBroadcastTargets(body.Repository),
-                async () =>
-                    [
-                        new ImageMessage(tempImage = await BuildIssueCardAsync(body)),
-                        new LinkMessage(
-                            $"Open #{body.Issue.Number}",
-                            await plugin.OrRawAsync(body.Issue.HtmlUrl)
-                        ),
-                    ]
-            );
-        }
-        finally
-        {
-            tempImage?.Dispose();
-        }
+        using Cards cards = new();
+        var post = GitHubPosts.Issue(
+            body,
+            cards.Card(() => BuildIssueCardAsync(body, GitHubPosts.Excerpt(body.Issue.Body))),
+            Cards.Once<SendingMessageBase[]>(async () =>
+                [
+                    new ImageMessage(await cards.Card(() => BuildIssueCardAsync(body, body.Issue.Body))()),
+                    new LinkMessage(
+                        $"Open #{body.Issue.Number}",
+                        await plugin.OrRawAsync(body.Issue.HtmlUrl)
+                    ),
+                ]
+            )
+        );
+        await Broadcast.SendAsync(
+            plugin.Service,
+            plugin.GetBroadcastTargets(body.Repository),
+            post
+        );
     }
 
-    private static Task<TempFile.AutoDeleteFile> BuildCommentCardAsync(IssueCommentEventBody body) =>
+    private static Task<TempFile.AutoDeleteFile> BuildCommentCardAsync(
+        IssueCommentEventBody body,
+        string? content
+    ) =>
         BuildCardAsync(
             body.Repository,
             body.Issue,
             body.Sender,
             body.Issue.State,
-            body.Comment.Body,
+            content,
             $"@{body.Sender.Login} {body.Action} comment."
         );
 
-    private static Task<TempFile.AutoDeleteFile> BuildIssueCardAsync(IssuesEventBody body) =>
+    private static Task<TempFile.AutoDeleteFile> BuildIssueCardAsync(
+        IssuesEventBody body,
+        string? content
+    ) =>
         BuildCardAsync(
             body.Repository,
             body.Issue,
             body.Sender,
             body.Action is "opened" or "reopened" ? "open" : body.Action,
-            body.Issue.Body,
+            content,
             $"@{body.Sender.Login} {body.Action} issue"
         );
 
