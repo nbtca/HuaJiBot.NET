@@ -9,3 +9,16 @@ server:
   limiter: false
   public_instance: false
   image_proxy: false
+
+outgoing:
+  request_timeout: 8.0
+  max_request_timeout: 15.0
+
+engines:
+  - name: brave
+    timeout: 10.0
+  - name: google cse
+    timeout: 10.0
+  - name: bing
+    disabled: false
+    timeout: 10.0
