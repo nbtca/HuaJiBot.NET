@@ -65,7 +65,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             if (content is FunctionCallContent funcCall)
             {
-                Info($"工具调用: {funcCall.Name}({JsonConvert.SerializeObject(funcCall.Arguments)})");
+                Info($"工具调用: {funcCall.Name}({System.Text.Json.JsonSerializer.Serialize(funcCall.Arguments)})");
             }
             else if (content is FunctionResultContent funcResult)
             {
