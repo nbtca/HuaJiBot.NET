@@ -13,6 +13,7 @@
     <BuildDependency Project="src/HuaJiBot.NET.Plugin.RepairTeam/HuaJiBot.NET.Plugin.RepairTeam.csproj" />
     <BuildDependency Project="src/HuaJiBot.NET/HuaJiBot.NET.csproj" />
   </Project>
+  <Project Path="src/HuaJiBot.NET.Mcp.WebSearch/HuaJiBot.NET.Mcp.WebSearch.csproj" />
   <Project Path="src/HuaJiBot.NET.Plugin.AIChat/HuaJiBot.NET.Plugin.AIChat.csproj" />
   <Project Path="src/HuaJiBot.NET.Plugin.Calendar/HuaJiBot.NET.Plugin.Calendar.csproj" />
   <Project Path="src/HuaJiBot.NET.Plugin.DailySummary/HuaJiBot.NET.Plugin.DailySummary.csproj" />
