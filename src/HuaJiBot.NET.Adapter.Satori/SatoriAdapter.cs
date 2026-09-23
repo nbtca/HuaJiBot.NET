@@ -75,6 +75,7 @@ public class SatoriAdapter : BotServiceBase
                                 Id = msgId,
                             },
                             TextMessage { Text: var text } => new TextElement { Text = text },
+                            LinkMessage { Url: var url } => new TextElement { Text = url },
                             _ => throw new ArgumentOutOfRangeException(nameof(x)),
                         }
                     )

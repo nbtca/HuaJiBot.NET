@@ -25,6 +25,8 @@ public sealed record ImageMessage(string ImagePath) : SendingMessageBase;
 
 public sealed record AtMessage(string Target) : SendingMessageBase;
 
+public sealed record LinkMessage(string Text, string Url) : SendingMessageBase;
+
 public sealed record ReplyMessage(string MessageId) : SendingMessageBase;
 
 public sealed record RichContent(string Markdown, string? ReplyToMessageId = null)

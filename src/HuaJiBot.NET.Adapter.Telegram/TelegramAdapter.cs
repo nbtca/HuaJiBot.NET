@@ -11,6 +11,7 @@ using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace HuaJiBot.NET.Adapter.Telegram;
 
@@ -103,6 +104,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
             var textBuilder = new System.Text.StringBuilder();
             string? imagePathToSend = null;
             ReplyParameters? replyParameters = null;
+            List<InlineKeyboardButton> buttons = [];
 
             foreach (var message in messages)
             {
@@ -129,6 +131,10 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
                         replyParameters = reply;
                         break;
 
+                    case LinkMessage { Text: var text, Url: var url }:
+                        buttons.Add(InlineKeyboardButton.WithUrl(text, url));
+                        break;
+
                     case ImageMessage { ImagePath: var path }:
                         // If we have an image, we'll send it with the text as caption
                         imagePathToSend = path;
@@ -144,6 +150,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
             // Send the combined message
             Message? sentMessage = null;
             var combinedText = textBuilder.ToString();
+            var replyMarkup = buttons.Count == 0 ? null : new InlineKeyboardMarkup(buttons);
 
             if (imagePathToSend != null)
             {
@@ -154,6 +161,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
                     caption: string.IsNullOrWhiteSpace(combinedText) ? null : combinedText,
                     parseMode: ParseMode.Html,
                     replyParameters: replyParameters,
+                    replyMarkup: replyMarkup,
                     messageThreadId: topicId,
                     cancellationToken: _cancellationTokenSource.Token
                 );
@@ -166,6 +174,7 @@ public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : B
                     combinedText,
                     parseMode: ParseMode.Html,
                     replyParameters: replyParameters,
+                    replyMarkup: replyMarkup,
                     messageThreadId: topicId,
                     cancellationToken: _cancellationTokenSource.Token
                 );

@@ -5,25 +5,8 @@ namespace HuaJiBot.NET.UnitTest;
 
 internal class BroadcastTest
 {
-    private static readonly RichContent Content = new("## repo");
-
     [Test]
-    public async Task SendAsync_WhenServiceHandlesRich_NeverEvaluatesFallback()
-    {
-        RichAdapter adapter = new();
-
-        await Broadcast.SendAsync(
-            adapter,
-            ["g1", "g2"],
-            Content,
-            () => throw new InvalidOperationException("fallback must not be built")
-        );
-
-        Assert.That(adapter.Targets, Is.EqualTo(new[] { "g1", "g2" }));
-    }
-
-    [Test]
-    public async Task SendAsync_WithMultipleTargets_EvaluatesFallbackOnce()
+    public async Task SendAsync_WithMultipleTargets_BuildsMessagesOnce()
     {
         RecordingAdapter adapter = new();
         var built = 0;
@@ -31,7 +14,6 @@ internal class BroadcastTest
         await Broadcast.SendAsync(
             adapter,
             ["g1", "g2"],
-            Content,
             () =>
             {
                 built++;
@@ -43,6 +25,17 @@ internal class BroadcastTest
         {
             Assert.That(built, Is.EqualTo(1));
             Assert.That(adapter.Sends.Select(x => x.Target), Is.EqualTo(new[] { "g1", "g2" }));
+            Assert.That(adapter.Sends.Select(x => x.Messages[0]), Is.All.EqualTo(new TextMessage("card")));
         });
+    }
+
+    [Test]
+    public async Task SendAsync_WithoutTargets_NeverBuildsMessages()
+    {
+        await Broadcast.SendAsync(
+            new RecordingAdapter(),
+            [],
+            () => throw new InvalidOperationException("messages must not be built")
+        );
     }
 }

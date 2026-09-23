@@ -34,6 +34,7 @@ public class OneBotAdapter(string ws, string? token) : BotServiceBase
                     x switch
                     {
                         TextMessage { Text: var text } => new TextMessageEntity(text),
+                        LinkMessage { Url: var url } => new TextMessageEntity(url),
                         ImageMessage { ImagePath: var path } => new ImageMessageEntity
                         {
                             File = CommonResolver.EncodingBase64Async(path),

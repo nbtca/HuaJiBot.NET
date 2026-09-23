@@ -9,16 +9,16 @@ internal static class Broadcast
     internal static async Task SendAsync(
         IPluginService service,
         IEnumerable<string> targets,
-        RichContent content,
-        Func<Task<SendingMessageBase[]>> fallback
+        Func<Task<SendingMessageBase[]>> build
     )
     {
-        Task<SendingMessageBase[]>? once = null;
+        SendingMessageBase[]? messages = null;
         foreach (var target in targets)
         {
             try
             {
-                await service.SendRichMessageAsync(null, target, content, () => once ??= fallback());
+                messages ??= await build();
+                await service.SendGroupMessageAsync(null, target, messages);
             }
             catch (Exception e)
             {
