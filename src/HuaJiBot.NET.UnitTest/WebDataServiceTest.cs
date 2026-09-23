@@ -8,7 +8,7 @@ namespace HuaJiBot.NET.UnitTest;
 internal class WebDataServiceTest
 {
     [Test]
-    public async Task McpServerExposesSearchAndWeatherTools()
+    public async Task McpServerExposesOnlyGenericSearchTool()
     {
         var serverPath = Path.Combine(
             AppContext.BaseDirectory,
@@ -24,7 +24,7 @@ internal class WebDataServiceTest
         await using var mcp = await McpClientFactory.CreateAsync(transport);
 
         var names = (await mcp.ListToolsAsync()).Select(tool => tool.Name).ToArray();
-        Assert.That(names, Is.EquivalentTo(new[] { "web_search", "get_weather" }));
+        Assert.That(names, Is.EquivalentTo(new[] { "web_search" }));
     }
 
     [Test]
@@ -65,34 +65,6 @@ internal class WebDataServiceTest
         Assert.That(result, Does.Contain("D2294 官方查询"));
         Assert.That(result, Does.Contain("（google cse）"));
         Assert.That(result, Does.Not.Contain("D2294 时刻表 C"));
-    }
-
-    [Test]
-    public async Task WeatherQueriesGeocodingThenForecastAndReportsDataTime()
-    {
-        var requests = new List<Uri>();
-        using var client = new HttpClient(new FakeHandler(request =>
-        {
-            requests.Add(request.RequestUri!);
-            var json = request.RequestUri!.Host.StartsWith("geocoding", StringComparison.Ordinal)
-                ? """
-                  {"results":[{"name":"宁波","admin1":"浙江","latitude":29.87819,"longitude":121.54945}]}
-                  """
-                : """
-                  {"current":{"time":"2026-09-23T14:00","temperature_2m":25.1,"apparent_temperature":27.0,"relative_humidity_2m":70,"precipitation":0.0,"weather_code":3,"wind_speed_10m":8.2},"daily":{"temperature_2m_max":[28.0],"temperature_2m_min":[21.0],"precipitation_probability_max":[30]}}
-                  """;
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json),
-            };
-        }));
-
-        var result = await new WebDataService(client, "http://searxng:8080").WeatherAsync("宁波");
-
-        Assert.That(requests, Has.Count.EqualTo(2));
-        Assert.That(result, Does.Contain("2026-09-23T14:00"));
-        Assert.That(result, Does.Contain("25.1°C"));
-        Assert.That(result, Does.Contain("https://api.open-meteo.com/v1/forecast"));
     }
 
     [Test]
@@ -140,106 +112,54 @@ internal class WebDataServiceTest
         Assert.That(result, Does.Contain("https://github.com/nbtca/HuaJiBot.NET"));
     }
 
-    [TestCase("HuaJiBot.NET GitHub 仓库")]
-    [TestCase("HuaJiBot.NET GitHub")]
-    [TestCase("HuaJiBot.NET")]
-    public async Task GitHubRepositoryQueryUsesOfficialApiBeforeSearxng(string query)
+    [Test]
+    public async Task SearchRetriesAfterAnEngineRequestFails()
     {
-        var requests = new List<Uri>();
+        var requestCount = 0;
+        using var client = new HttpClient(new FakeHandler(_ =>
+        {
+            requestCount++;
+            return requestCount == 1
+                ? new HttpResponseMessage(HttpStatusCode.BadGateway)
+                : new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""
+                        {"results":[{"title":"资料","url":"https://example.org/fact","content":"内容"}]}
+                        """),
+                };
+        }));
+
+        var result = await new WebDataService(client, "http://searxng:8080")
+            .SearchAsync("不熟悉的事实");
+
+        Assert.That(requestCount, Is.EqualTo(2));
+        Assert.That(result, Does.Contain("https://example.org/fact"));
+    }
+
+    [TestCase("查询车次 D2294")]
+    [TestCase("今天天气如何")]
+    [TestCase("HuaJiBot.NET GitHub 仓库")]
+    [TestCase("量子纠错的表面码原理")]
+    public async Task AnyTopicUsesTheSameWebSearchEndpoint(string query)
+    {
+        Uri? requested = null;
         using var client = new HttpClient(new FakeHandler(request =>
         {
-            requests.Add(request.RequestUri!);
+            requested = request.RequestUri;
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent("""
-                    {"items":[{"full_name":"nbtca/HuaJiBot.NET","html_url":"https://github.com/nbtca/HuaJiBot.NET","description":"Bot"}]}
+                    {"results":[{"title":"结果 D2294","url":"https://example.org/result","content":"查询结果"}]}
                     """),
             };
         }));
 
-        var result = await new WebDataService(client, "http://127.0.0.1:8088")
+        var result = await new WebDataService(client, "http://searxng:8080")
             .SearchAsync(query);
 
-        Assert.That(requests, Has.Count.EqualTo(1));
-        Assert.That(requests[0].Host, Is.EqualTo("api.github.com"));
-        Assert.That(requests[0].Query, Does.Contain("HuaJiBot.NET"));
-        Assert.That(result, Does.Contain("https://github.com/nbtca/HuaJiBot.NET"));
-    }
-
-    [Test]
-    public async Task GitHubApiFailureFallsBackToSearxng()
-    {
-        var requests = new List<Uri>();
-        using var client = new HttpClient(new FakeHandler(request =>
-        {
-            requests.Add(request.RequestUri!);
-            return request.RequestUri!.Host == "api.github.com"
-                ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
-                : new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent("""
-                        {"results":[{"title":"仓库","url":"https://github.com/nbtca/HuaJiBot.NET","content":"项目"}]}
-                        """),
-                };
-        }));
-
-        var result = await new WebDataService(client, "http://127.0.0.1:8088")
-            .SearchAsync("HuaJiBot.NET GitHub 仓库");
-
-        Assert.That(requests.Select(uri => uri.Host), Is.EqualTo(new[] { "api.github.com", "127.0.0.1" }));
-        Assert.That(result, Does.Contain("https://github.com/nbtca/HuaJiBot.NET"));
-    }
-
-    [Test]
-    public async Task GitHubFallbackIgnoresUnrelatedResultsAndUsesCanonicalRepositoryUrl()
-    {
-        var requests = new List<Uri>();
-        using var client = new HttpClient(new FakeHandler(request =>
-        {
-            requests.Add(request.RequestUri!);
-            return request.RequestUri!.Host == "api.github.com"
-                ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
-                : new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent("""
-                        {"results":[
-                          {"title":"无关 GitHub 教程","url":"https://docs.github.com/zh/repositories"},
-                          {"title":"无关仓库","url":"https://github.com/other/example"},
-                          {"title":"HuaJiBot.NET README","url":"https://github.com/nbtca/HuaJiBot.NET/blob/main/README.md"}
-                        ]}
-                        """),
-                };
-        }));
-
-        var result = await new WebDataService(client, "http://127.0.0.1:8088")
-            .SearchAsync("HuaJiBot.NET GitHub 仓库，给我链接");
-
-        Assert.That(requests, Has.Count.EqualTo(2));
-        Assert.That(requests[1].Query, Does.Contain("site%3Agithub.com"));
-        Assert.That(result, Does.Contain("https://github.com/nbtca/HuaJiBot.NET"));
-        Assert.That(result, Does.Not.Contain("blob/main"));
-        Assert.That(result, Does.Not.Contain("https://github.com/other/example"));
-        Assert.That(result, Does.Not.Contain("docs.github.com"));
-    }
-
-    [Test]
-    public async Task GitHubFallbackDoesNotPresentUnrelatedPagesAsMatches()
-    {
-        using var client = new HttpClient(new FakeHandler(request =>
-            request.RequestUri!.Host == "api.github.com"
-                ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
-                : new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent("""
-                        {"results":[{"title":"GitHub","url":"https://github.com/other/example"}]}
-                        """),
-                }));
-
-        var result = await new WebDataService(client, "http://127.0.0.1:8088")
-            .SearchAsync("HuaJiBot.NET GitHub 仓库");
-
-        Assert.That(result, Does.Contain("未检索到"));
-        Assert.That(result, Does.Not.Contain("https://github.com/other/example"));
+        Assert.That(requested!.Host, Is.EqualTo("searxng"));
+        Assert.That(Uri.UnescapeDataString(requested.Query), Does.Contain(query));
+        Assert.That(result, Does.Contain("https://example.org/result"));
     }
 
     private sealed class FakeHandler(Func<HttpRequestMessage, HttpResponseMessage> reply)

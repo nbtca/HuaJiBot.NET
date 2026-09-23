@@ -1,14 +1,13 @@
 # AIChat web search MCP
 
-The bot image contains a stdio MCP server at
-`/app/mcp/web-search/HuaJiBot.NET.Mcp.WebSearch`. It exposes `web_search`
-(SearXNG results) and `get_weather` (Open-Meteo geocoding and forecast).
+The bot image includes the stdio MCP server
+`/app/mcp/web-search/HuaJiBot.NET.Mcp.WebSearch`. It exposes one tool,
+`web_search`, which searches SearXNG and returns titles, snippets, original URLs,
+search engines, and retrieval time.
 
 The current deployment runs the bot with `network_mode: host`. Run SearXNG in
-host networking too, bound only to loopback port 8088. The server's default
-bridge networking could not reach upstream search engines during deployment.
-Mount `settings.yml` at `/etc/searxng/settings.yml` and set a random
-`SEARXNG_SECRET`. An example service is:
+host networking too, bound only to loopback port 8088. Mount `settings.yml` at
+`/etc/searxng/settings.yml` and set a random `SEARXNG_SECRET`:
 
 ```yaml
   searxng:
@@ -23,7 +22,7 @@ Mount `settings.yml` at `/etc/searxng/settings.yml` and set a random
       - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
 ```
 
-Set `SEARXNG_URL=http://127.0.0.1:8088` on the bot service and configure its
+Set `SEARXNG_URL=http://127.0.0.1:8088` on the bot service and configure the
 AIChat plugin with this `McpServers` entry:
 
 ```json
@@ -36,31 +35,23 @@ AIChat plugin with this `McpServers` entry:
 }
 ```
 
-The MCP process inherits the bot container's network and environment. Weather
-queries use the public Open-Meteo APIs and need no key. Explicit GitHub
-repository searches and standalone project names such as `HuaJiBot.NET` use
-GitHub's public repository search API first; if that request fails or finds no
-matching repository, they search GitHub pages through SearXNG and return only
-URLs whose repository name matches exactly. If no exact match is found, the
-bot says so instead of listing unrelated GitHub tutorials.
-Other web searches use SearXNG. Search results include original URLs. If all
-applicable sources fail, the tool reports no results rather than inventing an
-answer.
+The MCP process inherits the bot container's network and environment. With the
+tool connected, the AIChat agent decides whether it has enough reliable
+knowledge to answer. It calls `web_search` for uncertain, obscure, or
+potentially outdated information, including current facts and specific links.
+Questions it can answer from stable knowledge do not need a search. No question
+type bypasses the model to invoke search directly.
 
-Set `Plugins.AIChat.DefaultWeatherCity` in `config.json` for questions like
-`@Bot 今天天气如何` that omit a city. Leave it empty to ask for a city. Current
-weather questions call `get_weather` directly, so they do not wait for the
-language model. Questions about future days still use the model.
+`Plugins.AIChat.DefaultWeatherCity` can supply a default location when a user
+asks about local conditions without naming one. It is only context for the
+model, not a separate weather tool.
 
-The deployment uses Google, Google CSE, 360 Search, and Sogou for webpage
-searches. Bing is disabled because this host repeatedly received unrelated
-results for exact project and train numbers. Results show the retrieval time
-and engine, and numbered train or flight queries omit pages that do not match
-the identifier.
+The deployment currently uses Google, Google CSE, 360 Search, and Sogou through
+SearXNG. Bing is disabled in the supplied settings because this host returned
+unrelated results during earlier tests. Results show the retrieval time and
+engine. Identifier queries omit pages that do not contain the identifier.
 
-In an enabled group, messages starting with `@Bot 联网搜索` call the MCP
-`web_search` tool directly and send its results without an LLM step. Other
-questions can still use the MCP tools through AIChat's agent. `@Bot 查询车次 D2294`
-also calls search directly and marks the results as webpage leads; operational
-status, schedules, and tickets should be checked on 12306. Normal AI requests
-time out after 90 seconds, and a concurrent mention gets a busy reply.
+When the search has no reliable result or fails, the agent should say that it
+cannot verify the answer. Model tool choice and upstream search coverage are
+probabilistic; check tool call logs when investigating a missed search. AI
+requests time out after 90 seconds, and a concurrent mention gets a busy reply.
