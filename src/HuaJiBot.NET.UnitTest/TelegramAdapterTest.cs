@@ -1,3 +1,6 @@
+using System.Net;
+using System.Text;
+using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Adapter.Telegram;
 using HuaJiBot.NET.Interfaces;
 using HuaJiBot.NET.Logger;
@@ -74,4 +77,61 @@ public class TelegramAdapterTest
     [Test]
     public void ToReplyParameters_WithNumericId_MapsMessageId() =>
         Assert.That(TelegramAdapter.ToReplyParameters("7")?.MessageId, Is.EqualTo(7));
+}
+
+public class TelegramRichMessageFallbackTest
+{
+    private sealed class FakeBotApi : HttpMessageHandler
+    {
+        public List<string> Methods { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
+        {
+            var method = request.RequestUri!.Segments[^1];
+            Methods.Add(method);
+            var (status, body) = method switch
+            {
+                "sendRichMessage" => (
+                    HttpStatusCode.BadRequest,
+                    """{"ok":false,"error_code":400,"description":"Bad Request: can't parse"}"""
+                ),
+                _ => (
+                    HttpStatusCode.OK,
+                    """{"ok":true,"result":{"message_id":99,"date":0,"chat":{"id":-100,"type":"supergroup"}}}"""
+                ),
+            };
+            return Task.FromResult(
+                new HttpResponseMessage(status)
+                {
+                    Content = new StringContent(body, Encoding.UTF8, "application/json"),
+                }
+            );
+        }
+    }
+
+    [Test]
+    public async Task SendRichMessageAsync_WhenBotApiRejects_SendsFallback()
+    {
+        FakeBotApi api = new();
+        var adapter = new TelegramAdapter("123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11", new(api))
+        {
+            Logger = new ConsoleLogger(),
+        };
+
+        var ids = await adapter.SendRichMessageAsync(
+            null,
+            "-100",
+            new RichContent("# Heading"),
+            () => Task.FromResult<SendingMessageBase[]>([new TextMessage("plain")])
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(api.Methods, Is.EqualTo(new[] { "sendRichMessage", "sendMessage" }));
+            Assert.That(ids, Is.EqualTo(new[] { "99" }));
+        });
+    }
 }

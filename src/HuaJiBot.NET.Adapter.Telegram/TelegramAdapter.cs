@@ -11,10 +11,11 @@ using Telegram.Bot.Types.Enums;
 
 namespace HuaJiBot.NET.Adapter.Telegram;
 
-public class TelegramAdapter(string botToken) : BotServiceBase
+public class TelegramAdapter(string botToken, HttpClient? httpClient = null) : BotServiceBase
 {
-    private static readonly HttpClient RichMessageClient = new();
-    private readonly TelegramBotClient _botClient = new(botToken);
+    private static readonly HttpClient SharedClient = new();
+    private readonly HttpClient _richMessageClient = httpClient ?? SharedClient;
+    private readonly TelegramBotClient _botClient = new(botToken, httpClient);
     private CancellationTokenSource _cancellationTokenSource = new();
 
     public override required ILogger Logger { get; init; }
@@ -201,7 +202,7 @@ public class TelegramAdapter(string botToken) : BotServiceBase
         try
         {
             var replyParameters = ToReplyParameters(content.ReplyToMessageId);
-            using var response = await RichMessageClient.PostAsJsonAsync(
+            using var response = await _richMessageClient.PostAsJsonAsync(
                 $"https://api.telegram.org/bot{botToken}/sendRichMessage",
                 new
                 {
@@ -223,10 +224,10 @@ public class TelegramAdapter(string botToken) : BotServiceBase
             }
             return [message.MessageId.ToString()];
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!_cancellationTokenSource.IsCancellationRequested)
         {
-            LogError($"Failed to send rich message to chat {targetGroup}", ex);
-            throw;
+            LogError($"Failed to send rich message to chat {targetGroup}, sending fallback", ex);
+            return await base.SendRichMessageAsync(robotId, targetGroup, content, fallback);
         }
     }
 
