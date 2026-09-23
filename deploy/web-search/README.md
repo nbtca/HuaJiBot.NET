@@ -45,6 +45,15 @@ Other web searches use SearXNG. Search results include original URLs. If all
 applicable sources fail, the tool reports no results rather than inventing an
 answer.
 
+The deployment uses Google, Google CSE, 360 Search, and Sogou for webpage
+searches. Bing is disabled because this host repeatedly received unrelated
+results for exact project and train numbers. Results show the retrieval time
+and engine, and numbered train or flight queries omit pages that do not match
+the identifier.
+
 In an enabled group, messages starting with `@Bot 联网搜索` call the MCP
 `web_search` tool directly and send its results without an LLM step. Other
-questions can still use the MCP tools through AIChat's agent.
+questions can still use the MCP tools through AIChat's agent. `@Bot 查询车次 D2294`
+also calls search directly and marks the results as webpage leads; operational
+status, schedules, and tickets should be checked on 12306. Normal AI requests
+time out after 90 seconds, and a concurrent mention gets a busy reply.

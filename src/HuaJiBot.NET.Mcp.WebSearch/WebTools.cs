@@ -50,15 +50,17 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
         }
         for (var attempt = 0; attempt < 2; attempt++)
         {
-            var path = "search?format=json&q=" + Uri.EscapeDataString(query);
-            if (attempt == 1)
-                path += "&engines=bing%2Cgoogle%20cse";
+            var engines = attempt == 0
+                ? "google,google cse,360search,sogou"
+                : "google cse,360search";
+            var path = "search?format=json&q=" + Uri.EscapeDataString(query)
+                + "&engines=" + Uri.EscapeDataString(engines);
             using var response = await client.GetAsync(new Uri(_searchBase, path));
             response.EnsureSuccessStatusCode();
             using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
-            var text = FormatSearchResults(json.RootElement);
+            var text = FormatSearchResults(json.RootElement, query);
             if (text.Length > 0)
-                return text;
+                return $"检索时间：{DateTimeOffset.Now:yyyy-MM-dd HH:mm zzz}\n{text}";
         }
         return "搜索引擎暂时未返回结果，请稍后重试。";
     }
@@ -144,12 +146,19 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
         return value.Trim();
     }
 
-    public static string FormatSearchResults(JsonElement root)
+    public static string FormatSearchResults(JsonElement root, string? query = null)
     {
         if (!root.TryGetProperty("results", out var results)
             || results.ValueKind != JsonValueKind.Array)
             return "";
         var lines = new List<string>();
+        var hostCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var identifier = query is null
+            ? null
+            : Regex.Match(query, @"(?i)(?<![a-z0-9])[a-z]{1,4}\d{2,6}(?![a-z0-9])").Value;
+        var digits = identifier is { Length: > 0 }
+            ? new string(identifier.Where(char.IsDigit).ToArray())
+            : null;
         foreach (var item in results.EnumerateArray())
         {
             if (lines.Count == 5)
@@ -158,7 +167,23 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
             if (!Uri.TryCreate(url, UriKind.Absolute, out var parsed)
                 || parsed.Scheme is not ("http" or "https"))
                 continue;
-            lines.Add($"{lines.Count + 1}. {ReadString(item, "title")}\n{url}\n{Clip(ReadString(item, "content"), 240)}");
+            var title = ReadString(item, "title");
+            var content = ReadString(item, "content");
+            if (identifier is { Length: > 0 }
+                && !title.Contains(identifier, StringComparison.OrdinalIgnoreCase)
+                && !url.Contains(identifier, StringComparison.OrdinalIgnoreCase)
+                && !content.Contains(identifier, StringComparison.OrdinalIgnoreCase)
+                && (digits is null
+                    || !(title.Contains(digits, StringComparison.OrdinalIgnoreCase)
+                        || url.Contains(digits, StringComparison.OrdinalIgnoreCase))))
+                continue;
+            var host = parsed.Host;
+            if (hostCounts.GetValueOrDefault(host) >= 2)
+                continue;
+            hostCounts[host] = hostCounts.GetValueOrDefault(host) + 1;
+            var engine = ReadString(item, "engine");
+            var source = engine.Length == 0 ? "" : $"（{engine}）";
+            lines.Add($"{lines.Count + 1}. {title}{source}\n{url}\n{Clip(content, 240)}");
         }
         return string.Join("\n\n", lines);
     }

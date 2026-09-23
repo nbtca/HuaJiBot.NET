@@ -47,6 +47,27 @@ internal class WebDataServiceTest
     }
 
     [Test]
+    public void SearchResultsPreferMatchingTrainNumberAndDifferentHosts()
+    {
+        using var json = JsonDocument.Parse("""
+            {"results":[
+              {"title":"Google 登录","url":"https://accounts.google.com/login","content":"无关","engine":"bing"},
+              {"title":"D2294 时刻表 A","url":"https://example.com/a","content":"车次","engine":"360search"},
+              {"title":"D2294 时刻表 B","url":"https://example.com/b","content":"车次","engine":"360search"},
+              {"title":"D2294 时刻表 C","url":"https://example.com/c","content":"车次","engine":"360search"},
+              {"title":"D2294 官方查询","url":"https://12306.cn/train","content":"车次","engine":"google cse"}
+            ]}
+            """);
+
+        var result = WebDataService.FormatSearchResults(json.RootElement, "查询车次 D2294");
+
+        Assert.That(result, Does.Not.Contain("Google 登录"));
+        Assert.That(result, Does.Contain("D2294 官方查询"));
+        Assert.That(result, Does.Contain("（google cse）"));
+        Assert.That(result, Does.Not.Contain("D2294 时刻表 C"));
+    }
+
+    [Test]
     public async Task WeatherQueriesGeocodingThenForecastAndReportsDataTime()
     {
         var requests = new List<Uri>();
@@ -91,6 +112,8 @@ internal class WebDataServiceTest
 
         Assert.That(requested!.Host, Is.EqualTo("searxng"));
         Assert.That(requested.Query, Does.Contain("format=json"));
+        Assert.That(requested.Query, Does.Contain("google"));
+        Assert.That(requested.Query, Does.Not.Contain("bing"));
         Assert.That(result, Does.Contain("https://example.org/weather"));
     }
 

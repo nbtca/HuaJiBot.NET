@@ -15,10 +15,16 @@ outgoing:
   max_request_timeout: 15.0
 
 engines:
-  - name: brave
+  - name: google
+    disabled: false
     timeout: 10.0
   - name: google cse
     timeout: 10.0
-  - name: bing
+  - name: 360search
     disabled: false
     timeout: 10.0
+  - name: sogou
+    disabled: false
+    timeout: 10.0
+  - name: bing
+    disabled: true

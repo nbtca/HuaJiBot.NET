@@ -6,6 +6,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 
 namespace HuaJiBot.NET.Plugin.AIChat;
 
@@ -16,6 +17,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private sealed record GroupSession(AgentSession Session, DateTimeOffset LastUsed, int Turns);
 
     private static readonly TimeSpan SessionIdleTimeout = TimeSpan.FromHours(1);
+    private static readonly TimeSpan LlmTimeout = TimeSpan.FromSeconds(90);
     private readonly ConcurrentDictionary<string, GroupSession> _sessions = new();
     private AgentConnector Connector => AgentConnector.Create(Service, Config.Model);
 
@@ -41,7 +43,10 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     }
 
     // Callers hold the per-group lock, so a group's session is never used concurrently.
-    private async Task<AgentSession> GetSessionAsync(AgentConnector connector, string groupId)
+    private async Task<AgentSession> GetSessionAsync(
+        AgentConnector connector,
+        string groupId,
+        CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
         if (
@@ -53,7 +58,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             _sessions[groupId] = current with { LastUsed = now, Turns = current.Turns + 1 };
             return current.Session;
         }
-        var session = await connector.CreateSessionAsync();
+        var session = await connector.CreateSessionAsync(cancellationToken);
         _sessions[groupId] = new(session, now, 1);
         Info($"为群组 {groupId} 创建新的Agent会话");
         return session;
@@ -84,10 +89,20 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     {
         // One request per group at a time, so repeated mentions neither spam nor bill twice.
         if (!_busyGroups.TryAdd(e.GroupId, 0))
+        {
+            await e.Reply("上一条问题仍在处理，请稍后再试。");
             return;
+        }
+        using var timeout = new CancellationTokenSource(LlmTimeout);
         try
         {
-            await InvokeLlmMessageCore(systemPrompt, messages, e);
+            await InvokeLlmMessageCore(systemPrompt, messages, e, timeout.Token);
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+        {
+            _sessions.TryRemove(e.GroupId, out _);
+            Warn($"群组 {e.GroupId} 的 AI 请求超过 {LlmTimeout.TotalSeconds:0} 秒");
+            await e.Reply("模型响应超时，请稍后重试。");
         }
         finally
         {
@@ -98,7 +113,8 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private async Task InvokeLlmMessageCore(
         string systemPrompt,
         IList<ChatMessage> messages,
-        Events.GroupMessageEventArgs e
+        Events.GroupMessageEventArgs e,
+        CancellationToken cancellationToken
     )
     {
         Info(
@@ -115,7 +131,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     .Replace("\n", "\n\t")
         );
         var connector = Connector;
-        var session = await GetSessionAsync(connector, e.GroupId);
+        var session = await GetSessionAsync(connector, e.GroupId, cancellationToken);
         var agent = connector.CreateAIAgentWithOptions(
             _mcpClientManager.Tools.Count > 0
                 ? systemPrompt
@@ -125,7 +141,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 : systemPrompt,
             functionTools: GetFunctionTools(),
             mcpTools: _mcpClientManager.Tools.Count > 0 ? [.. _mcpClientManager.Tools] : null);
-        var response = await agent.RunAsync(messages, session);
+        var response = await agent.RunAsync(messages, session, cancellationToken: cancellationToken);
         // 记录工具调用
         foreach (var update in response.ToAgentResponseUpdates())
         {
@@ -215,9 +231,17 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     }
                     return;
                 }
-                if (restText.StartsWith("联网搜索", StringComparison.Ordinal))
+                var trainNumber = Regex.Match(
+                    restText,
+                    @"(?i)(?<![a-z0-9])[gdcztkly]\d{1,5}(?![a-z0-9])"
+                ).Value;
+                var trainSearch = restText.StartsWith("查询车次", StringComparison.Ordinal)
+                    && trainNumber.Length > 0;
+                if (restText.StartsWith("联网搜索", StringComparison.Ordinal) || trainSearch)
                 {
-                    var query = restText[4..].TrimStart(' ', '\t', '：', ':').Trim();
+                    var query = trainSearch
+                        ? $"{trainNumber} 列车 时刻表 途经站点"
+                        : restText[4..].TrimStart(' ', '\t', '：', ':').Trim();
                     if (query.Length == 0)
                     {
                         await e.Reply("请在“联网搜索”后写出关键词。");
@@ -233,11 +257,14 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         return;
                     }
                     Info($"直接调用 web_search：{query}");
-                    foreach (var msgId in await e.Reply(searchResult))
+                    var reply = trainSearch
+                        ? "以下是网页搜索结果；列车开行、时刻和余票请以铁路 12306 实时查询为准。\n" + searchResult
+                        : searchResult;
+                    foreach (var msgId in await e.Reply(reply))
                     {
                         _history.StoreMessage(new GroupMessage
                         {
-                            Content = searchResult,
+                            Content = reply,
                             GroupId = e.GroupId,
                             MessageId = msgId,
                             SenderId = null,
