@@ -143,7 +143,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             : response.Text;
     }
 
-    [Command("总结", "总结群聊记录，可选今天、昨天、前天，默认昨天")]
+    [Command("总结", "总结群聊记录，可选今天、昨天、前天，默认昨天", Alias = "summary")]
     // ReSharper disable once UnusedMember.Global
     public async Task SummaryCommand(
         GroupMessageEventArgs e,

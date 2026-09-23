@@ -176,7 +176,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    [Command("工单", "查看进行中的维修工单")]
+    [Command("工单", "查看进行中的维修工单", Alias = "tickets")]
     // ReSharper disable once UnusedMember.Local
     private async Task TicketsCommandAsync(GroupMessageEventArgs e)
     {

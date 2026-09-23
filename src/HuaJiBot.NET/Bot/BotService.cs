@@ -204,4 +204,11 @@ public abstract class BotService : IMessageService, IPluginService, IAdapterServ
         _commandService.ExportFunctions;
 
     public void SetupCommands(PluginBase plugin) => _commandService.SetupCommands(plugin);
+
+    public string? ResolveCommandAlias(string alias) => _commandService.ResolveAlias(alias);
+
+    protected internal virtual void OnCommandsRegistered(
+        IEnumerable<(string Alias, string Description)> commands
+    )
+    { }
 }

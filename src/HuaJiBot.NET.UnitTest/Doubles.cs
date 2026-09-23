@@ -21,6 +21,13 @@ internal sealed class RecordingAdapter : TestAdapter
             Sends.Add((targetGroup, sent));
         return ["42"];
     }
+
+    public override Task<string[]> FeedbackAt(
+        string? robotId,
+        string targetGroup,
+        string msgId,
+        string text
+    ) => SendGroupMessageAsync(robotId, targetGroup, new ReplyMessage(msgId), new TextMessage(text));
 }
 
 internal sealed class RichAdapter : TestAdapter

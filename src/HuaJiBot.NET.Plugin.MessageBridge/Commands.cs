@@ -17,7 +17,7 @@ partial class PluginMain
         )
     > _requestQueue = new();
 
-    [Command("查询", "查询MC服务器状态")]
+    [Command("查询", "查询MC服务器状态", Alias = "mc")]
     // ReSharper disable once UnusedMember.Local
     private async Task QueryAsync(GroupMessageEventArgs e)
     {

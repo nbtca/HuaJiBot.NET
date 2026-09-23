@@ -15,6 +15,15 @@ public class CommandService : ICommandService
         (string description, Action<object?[]?> method, PluginBase.CommandArgumentInfo[] info)
     > _commands = new();
 
+    private readonly Dictionary<string, string> _aliases = new();
+
+    public string? ResolveAlias(string alias) =>
+        _aliases.GetValueOrDefault(alias.ToLowerInvariant());
+
+    public IEnumerable<(string Alias, string Description)> AliasedCommands =>
+        from x in _aliases
+        select (x.Key, _commands[x.Value].description);
+
     private readonly Dictionary<string, IEnumerable<AgentFunctionInfo>> _exportFunctions = new();
 
     public IReadOnlyDictionary<string, IEnumerable<AgentFunctionInfo>> ExportFunctions =>
@@ -77,7 +86,23 @@ public class CommandService : ICommandService
                 sb.AppendLine();
                 sb.AppendLine($"    {description}");
             }
-            e.Reply(sb.ToString());
+            var lines =
+                from x in _commands
+                let alias = _aliases.FirstOrDefault(a => a.Value == x.Key).Key
+                let args = string.Concat(
+                    from arg in x.Value.info
+                    where arg.Attribute.ArgumentType != CommandArgumentType.Unknown
+                    select arg.IsOptional
+                        ? $" [{arg.Attribute.Description}]"
+                        : $" <{arg.Attribute.Description}>"
+                )
+                select $"• {(alias is null ? x.Key : "/" + alias)}{args} — {x.Value.description}";
+            var post = new Post(
+                "**可用命令**\n"
+                    + string.Join("\n", lines.Append("• /help — 查看全部命令").Select(Post.Escape)),
+                sb.ToString()
+            );
+            _ = e.Service.SendGroupMessageAsync(e.RobotId, e.GroupId, new ReplyMessage(e.MessageId), post);
             return true;
         }
         return false;
@@ -154,11 +179,14 @@ public class CommandService : ICommandService
 
     public void SetupCommands(PluginBase plugin)
     {
-        foreach (var (name, description, method, info) in plugin.GetAllCommands())
+        foreach (var (name, description, method, info, alias) in plugin.GetAllCommands())
         {
             _commands.Add(name, (description, method, info));
+            if (alias is not null)
+                _aliases.Add(alias, name);
             _bot.Log($"读取命令 {name} ，描述：{description}");
         }
+        _bot.OnCommandsRegistered(AliasedCommands.Append(("help", "查看全部命令")));
         if (_commands.Count != 0)
         {
             //监听群消息事件，匹配命令

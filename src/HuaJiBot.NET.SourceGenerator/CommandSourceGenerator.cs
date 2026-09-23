@@ -185,6 +185,12 @@ public class CommandSourceGenerator : IIncrementalGenerator
 
             var key = GetStringLiteralValue(keyArg.Expression);
             var description = GetStringLiteralValue(descArg.Expression);
+            var aliasArg = commandAttr.ArgumentList.Arguments.FirstOrDefault(a =>
+                a.NameEquals?.Name.Identifier.ValueText == "Alias"
+            );
+            var alias = aliasArg is null
+                ? "null"
+                : $"\"{GetStringLiteralValue(aliasArg.Expression)}\"";
 
             sb.AppendLine($"        yield return new CommandInfo(");
             sb.AppendLine($"            \"{key}\",");
@@ -261,7 +267,8 @@ public class CommandSourceGenerator : IIncrementalGenerator
                 GenerateArgumentInfo(param, semanticModel, sb);
             }
 
-            sb.AppendLine($"            }}");
+            sb.AppendLine($"            }},");
+            sb.AppendLine($"            {alias}");
             sb.AppendLine($"        );");
             sb.AppendLine();
         }

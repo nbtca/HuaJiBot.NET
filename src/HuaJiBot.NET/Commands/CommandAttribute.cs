@@ -9,6 +9,9 @@ public class CommandAttribute(string key, string description) : Attribute
 {
     public string Key => key;
     public string Description => description;
+
+    /// <summary>Telegram-only <c>/alias</c>, shown in the bot command menu.</summary>
+    public string? Alias { get; set; }
 }
 
 public enum CommandArgumentType

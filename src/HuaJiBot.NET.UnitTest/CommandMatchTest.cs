@@ -18,10 +18,10 @@ internal class CommandMatchTest
 
     private readonly RecordingAdapter _adapter = new();
 
-    private GroupMessageEventArgs Message(string text) =>
+    private GroupMessageEventArgs Message(string text, RecordingAdapter? adapter = null) =>
         new(() => new DefaultCommandReader([text]), () => ValueTask.FromResult("group"))
         {
-            Service = _adapter,
+            Service = adapter ?? _adapter,
             MessageId = "1",
             GroupId = "group",
             SenderId = "user",
@@ -63,6 +63,29 @@ internal class CommandMatchTest
     {
         var service = new CommandService(_adapter);
         Assert.That(service.ProcessHelp(Message(text)), Is.EqualTo(expected));
+    }
+
+    [Test]
+    public async Task Help_OnQq_RepliesWithTheSameText()
+    {
+        RecordingAdapter adapter = new();
+        var service = new CommandService(adapter);
+        service.SetupCommands(new SchedulePlugin());
+
+        service.ProcessHelp(Message("帮助", adapter));
+        for (var i = 0; i < 50 && adapter.Sends.Count == 0; i++)
+            await Task.Delay(20);
+
+        Assert.That(
+            adapter.Sends.Single().Messages,
+            Is.EqualTo(
+                new SendingMessageBase[]
+                {
+                    new ReplyMessage("1"),
+                    new TextMessage($"可用命令：{Environment.NewLine}日程 <string> {Environment.NewLine}    {Environment.NewLine}"),
+                }
+            )
+        );
     }
 
     [Test]
