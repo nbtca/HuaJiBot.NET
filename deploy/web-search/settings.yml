@@ -1,4 +1,9 @@
-use_default_settings: true
+use_default_settings:
+  engines:
+    keep_only:
+      - brave
+      - sogou
+      - google cse
 
 search:
   formats:
@@ -11,20 +16,16 @@ server:
   image_proxy: false
 
 outgoing:
-  request_timeout: 8.0
-  max_request_timeout: 15.0
+  request_timeout: 4.0
+  max_request_timeout: 6.0
 
 engines:
-  - name: google
-    disabled: false
-    timeout: 10.0
+  - name: brave
+    timeout: 4.0
+    weight: 2
   - name: google cse
-    timeout: 10.0
-  - name: 360search
-    disabled: false
-    timeout: 10.0
+    timeout: 4.0
+    weight: 2
   - name: sogou
-    disabled: false
-    timeout: 10.0
-  - name: bing
-    disabled: true
+    timeout: 3.0
+    weight: 1

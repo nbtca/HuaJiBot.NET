@@ -82,58 +82,51 @@ internal class WebDataServiceTest
 
         var result = await new WebDataService(client, "http://searxng:8080").SearchAsync("宁波天气");
 
-        Assert.That(requested!.Host, Is.EqualTo("searxng"));
-        Assert.That(requested.Query, Does.Contain("format=json"));
-        Assert.That(requested.Query, Does.Contain("google"));
-        Assert.That(requested.Query, Does.Not.Contain("bing"));
+        var query = Uri.UnescapeDataString(requested!.Query);
+        Assert.That(requested.Host, Is.EqualTo("searxng"));
+        Assert.That(query, Does.Contain("format=json"));
+        Assert.That(query, Does.Contain("brave"));
+        Assert.That(query, Does.Contain("sogou"));
+        Assert.That(query, Does.Contain("google cse"));
+        Assert.That(query, Does.Not.Contain("360search"));
+        Assert.That(query, Does.Not.Contain("bing"));
         Assert.That(result, Does.Contain("https://example.org/weather"));
     }
 
     [Test]
-    public async Task SearchRetriesWithAlternateEnginesWhenFirstSearchIsEmpty()
-    {
-        var requests = new List<Uri>();
-        using var client = new HttpClient(new FakeHandler(request =>
-        {
-            requests.Add(request.RequestUri!);
-            var json = requests.Count == 1
-                ? "{\"results\":[]}"
-                : "{\"results\":[{\"title\":\"仓库\",\"url\":\"https://github.com/nbtca/HuaJiBot.NET\",\"content\":\"项目\"}]}";
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json),
-            };
-        }));
-
-        var result = await new WebDataService(client, "http://127.0.0.1:8088").SearchAsync("开源 Bot 教程");
-
-        Assert.That(requests, Has.Count.EqualTo(2));
-        Assert.That(requests[1].Query, Does.Contain("engines="));
-        Assert.That(result, Does.Contain("https://github.com/nbtca/HuaJiBot.NET"));
-    }
-
-    [Test]
-    public async Task SearchRetriesAfterAnEngineRequestFails()
+    public async Task SearchDoesNotRetryWhenTheEngineReturnsNoResults()
     {
         var requestCount = 0;
         using var client = new HttpClient(new FakeHandler(_ =>
         {
             requestCount++;
-            return requestCount == 1
-                ? new HttpResponseMessage(HttpStatusCode.BadGateway)
-                : new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent("""
-                        {"results":[{"title":"资料","url":"https://example.org/fact","content":"内容"}]}
-                        """),
-                };
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"results\":[]}"),
+            };
+        }));
+
+        var result = await new WebDataService(client, "http://127.0.0.1:8088").SearchAsync("开源 Bot 教程");
+
+        Assert.That(requestCount, Is.EqualTo(1));
+        Assert.That(result, Does.Contain("未返回结果"));
+    }
+
+    [Test]
+    public async Task SearchDoesNotRetryAfterAnEngineRequestFails()
+    {
+        var requestCount = 0;
+        using var client = new HttpClient(new FakeHandler(_ =>
+        {
+            requestCount++;
+            return new HttpResponseMessage(HttpStatusCode.BadGateway);
         }));
 
         var result = await new WebDataService(client, "http://searxng:8080")
             .SearchAsync("不熟悉的事实");
 
-        Assert.That(requestCount, Is.EqualTo(2));
-        Assert.That(result, Does.Contain("https://example.org/fact"));
+        Assert.That(requestCount, Is.EqualTo(1));
+        Assert.That(result, Does.Contain("未返回结果"));
     }
 
     [TestCase("查询车次 D2294")]
