@@ -46,10 +46,11 @@ type bypasses the model to invoke search directly.
 asks about local conditions without naming one. It is only context for the
 model, not a separate weather tool.
 
-The deployment currently uses Google, Google CSE, 360 Search, and Sogou through
-SearXNG. Bing is disabled in the supplied settings because this host returned
-unrelated results during earlier tests. Results show the retrieval time and
-engine. Identifier queries omit pages that do not contain the identifier.
+The deployment asks SearXNG for Brave, Sogou, and Google CSE only. The supplied
+settings load just those three engines, and each engine times out within 4
+seconds. `web_search` sends one request and gives up after 6 seconds. Results
+show the retrieval time and engine. Identifier queries omit pages that do not
+contain the identifier.
 
 When the search has no reliable result or fails, the agent should say that it
 cannot verify the answer. Model tool choice and upstream search coverage are

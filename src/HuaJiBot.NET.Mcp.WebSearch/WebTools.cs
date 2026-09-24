@@ -8,7 +8,7 @@ namespace HuaJiBot.NET.Mcp.WebSearch;
 [McpServerToolType]
 public sealed class WebTools
 {
-    private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(35) };
+    private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(6) };
     private static readonly WebDataService Data = new(
         Client,
         Environment.GetEnvironmentVariable("SEARXNG_URL") ?? "http://127.0.0.1:8088"
@@ -29,26 +29,21 @@ public sealed class WebDataService(HttpClient client, string searxngBaseUrl)
     public async Task<string> SearchAsync(string query)
     {
         query = Validate(query, "搜索词", 160);
-        for (var attempt = 0; attempt < 2; attempt++)
+        const string engines = "brave,sogou,google cse";
+        var path = "search?format=json&q=" + Uri.EscapeDataString(query)
+            + "&engines=" + Uri.EscapeDataString(engines);
+        try
         {
-            var engines = attempt == 0
-                ? "google,google cse,360search,sogou"
-                : "google cse,360search";
-            var path = "search?format=json&q=" + Uri.EscapeDataString(query)
-                + "&engines=" + Uri.EscapeDataString(engines);
-            try
-            {
-                using var response = await client.GetAsync(new Uri(_searchBase, path));
-                response.EnsureSuccessStatusCode();
-                using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
-                var text = FormatSearchResults(json.RootElement, query);
-                if (text.Length > 0)
-                    return $"检索时间：{DateTimeOffset.Now:yyyy-MM-dd HH:mm zzz}\n{text}";
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
-            {
-                Console.Error.WriteLine($"网页搜索第 {attempt + 1} 次请求失败：{ex.Message}");
-            }
+            using var response = await client.GetAsync(new Uri(_searchBase, path));
+            response.EnsureSuccessStatusCode();
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
+            var text = FormatSearchResults(json.RootElement, query);
+            if (text.Length > 0)
+                return $"检索时间：{DateTimeOffset.Now:yyyy-MM-dd HH:mm zzz}\n{text}";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            Console.Error.WriteLine($"网页搜索请求失败：{ex.Message}");
         }
         return "搜索引擎暂时未返回结果，请稍后重试。";
     }
