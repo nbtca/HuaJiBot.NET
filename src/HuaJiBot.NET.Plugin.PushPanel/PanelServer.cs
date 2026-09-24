@@ -56,60 +56,13 @@ internal sealed class PanelServer : IDisposable
         try
         {
             var request = context.Request;
-            var path = request.Url?.AbsolutePath ?? "/";
-            if (request.HttpMethod == "GET" && path is "/" or "/index.html")
-            {
-                await WriteText(context.Response, 200, "text/html; charset=utf-8", _page);
-                return;
-            }
-            if (path != "/api/rules")
+            var handler = SelectHandler(request.Url?.AbsolutePath ?? "/", request.HttpMethod);
+            if (handler is null)
             {
                 await WriteJson(context.Response, 404, new { error = "没有这个地址" });
                 return;
             }
-            if (!Authorized(request))
-            {
-                await WriteJson(context.Response, 401, new { error = "口令不对" });
-                return;
-            }
-            if (request.HttpMethod == "GET")
-            {
-                await WriteJson(context.Response, 200, PushRules.Read(_config));
-                return;
-            }
-            if (request.HttpMethod == "PUT")
-            {
-                var body = await ReadBody(request);
-                if (body.Length > MaxBodyChars)
-                {
-                    await WriteJson(context.Response, 413, new { error = "请求过大" });
-                    return;
-                }
-                PushRulesDocument? document;
-                try
-                {
-                    document = JsonConvert.DeserializeObject<PushRulesDocument>(body, PushRules.Json);
-                }
-                catch (JsonException)
-                {
-                    await WriteJson(context.Response, 400, new { error = "请求不是规则 JSON" });
-                    return;
-                }
-                if (document is null)
-                {
-                    await WriteJson(context.Response, 400, new { error = "请求是空的" });
-                    return;
-                }
-                var error = PushRules.Apply(_config, document);
-                if (error is not null)
-                {
-                    await WriteJson(context.Response, 400, new { error });
-                    return;
-                }
-                await WriteJson(context.Response, 200, PushRules.Read(_config));
-                return;
-            }
-            await WriteJson(context.Response, 405, new { error = "只接受读取和保存" });
+            await handler(context);
         }
         catch (Exception)
         {
@@ -123,6 +76,73 @@ internal sealed class PanelServer : IDisposable
             }
         }
     }
+
+    private Func<HttpListenerContext, Task>? SelectHandler(string path, string method)
+    {
+        if (method == "GET" && path is "/" or "/index.html")
+            return ServePage;
+        if (path != "/api/rules")
+            return null;
+        return method switch
+        {
+            "GET" => ServeRules,
+            "PUT" => SaveRules,
+            _ => MethodNotAllowed,
+        };
+    }
+
+    private Task ServePage(HttpListenerContext context) =>
+        WriteText(context.Response, 200, "text/html; charset=utf-8", _page);
+
+    private async Task ServeRules(HttpListenerContext context)
+    {
+        if (!Authorized(context.Request))
+        {
+            await WriteJson(context.Response, 401, new { error = "口令不对" });
+            return;
+        }
+        await WriteJson(context.Response, 200, PushRules.Read(_config));
+    }
+
+    private async Task SaveRules(HttpListenerContext context)
+    {
+        if (!Authorized(context.Request))
+        {
+            await WriteJson(context.Response, 401, new { error = "口令不对" });
+            return;
+        }
+        var body = await ReadBody(context.Request);
+        if (body.Length > MaxBodyChars)
+        {
+            await WriteJson(context.Response, 413, new { error = "请求过大" });
+            return;
+        }
+        PushRulesDocument? document;
+        try
+        {
+            document = JsonConvert.DeserializeObject<PushRulesDocument>(body, PushRules.Json);
+        }
+        catch (JsonException)
+        {
+            await WriteJson(context.Response, 400, new { error = "请求不是规则 JSON" });
+            return;
+        }
+        if (document is null)
+        {
+            await WriteJson(context.Response, 400, new { error = "请求是空的" });
+            return;
+        }
+        var error = PushRules.Apply(_config, document);
+        if (error is not null)
+        {
+            await WriteJson(context.Response, 400, new { error });
+            return;
+        }
+        await WriteJson(context.Response, 200, PushRules.Read(_config));
+    }
+
+    private Task MethodNotAllowed(HttpListenerContext context) =>
+        WriteJson(context.Response, 405, new { error = "只接受读取和保存" });
 
     private bool Authorized(HttpListenerRequest request)
     {
