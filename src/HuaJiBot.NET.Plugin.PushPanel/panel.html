@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HuaJiBot 推送规则</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #e7e5e4;
+      --paper: #fafaf9;
+      --card: #fff;
+      --accent: #9a3412;
+      --danger: #b91c1c;
+      --ok: #166534;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 15px/1.5 "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+    header, main, #login { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 28px 0 8px; display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: end; }
+    header h1 { margin: 0; font-size: 28px; letter-spacing: -0.03em; }
+    header p { margin: 4px 0 0; color: var(--muted); flex-basis: 100%; }
+    .actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+    button, input, select, textarea {
+      font: inherit;
+      color: inherit;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      padding: 7px 10px;
+    }
+    button { cursor: pointer; }
+    button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+    button.ghost { background: transparent; }
+    #status { color: var(--muted); min-height: 1.5em; }
+    #status.error { color: var(--danger); }
+    #status.ok { color: var(--ok); }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px 18px 8px;
+      margin: 14px 0;
+    }
+    section h2 { margin: 0 0 4px; font-size: 18px; }
+    .note { color: var(--muted); margin: 0 0 12px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+    th { text-align: left; font-weight: 600; color: var(--muted); font-size: 13px; }
+    th, td { padding: 6px 8px 6px 0; vertical-align: top; }
+    td input, td select, td textarea { width: 100%; }
+    .row-actions { width: 64px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 12px; }
+    label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 13px; }
+    label input, label select { width: 100%; }
+    .check { flex-direction: row; align-items: center; color: var(--ink); font-size: 15px; }
+    #login { margin-top: 24px; }
+    .warn { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; }
+    @media (max-width: 720px) {
+      .actions { margin-left: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>推送规则</h1>
+      <p>保存后写入正在运行的配置，下一次推送按新规则走。口令、密钥和模型配置不会出现在这里。</p>
+    </div>
+    <div class="actions">
+      <span id="status"></span>
+      <button id="reload" class="ghost" type="button">重新读取</button>
+      <button id="save" class="primary" type="button">保存</button>
+    </div>
+  </header>
+  <form id="login">
+    <section>
+      <h2>登录</h2>
+      <p class="note">口令在这台机器人的 config.json 里，字段是 Plugins.PushPanel.Token。</p>
+      <label>口令<input id="token" type="password" autocomplete="current-password" required /></label>
+      <p><button class="primary" type="submit">进入</button></p>
+    </section>
+  </form>
+  <main id="app" hidden>
+    <section>
+      <h2>GitHub</h2>
+      <p class="note">只推默认分支。机器人账号，以及一次提交里只改点文件的 push，不会发。私有仓库必须先写在下面。没映射的公开仓库会自动归到 default。</p>
+      <div id="muted" class="warn" hidden>906370401 仍在目标里。机器人在这个群被禁言，推到这里会失败。</div>
+      <h3>分组</h3>
+      <table>
+        <thead><tr><th>名称</th><th>目标，逗号分隔</th><th></th></tr></thead>
+        <tbody id="gh-groups"></tbody>
+      </table>
+      <button type="button" id="add-group" class="ghost">添加分组</button>
+      <h3>仓库</h3>
+      <table>
+        <thead><tr><th>owner/name</th><th>分组</th><th></th></tr></thead>
+        <tbody id="gh-routes"></tbody>
+      </table>
+      <button type="button" id="add-route" class="ghost">添加仓库</button>
+    </section>
+    <section>
+      <h2>日程</h2>
+      <p class="note">非全天事件开始前 60 分钟、结束前 5 分钟提醒。黑名单且关键词为空表示全部事件。社团事务走同一套群过滤。</p>
+      <div class="grid">
+        <label class="check"><input id="weekly-on" type="checkbox" /> 周一预告</label>
+        <label>预告小时<input id="weekly-hour" type="number" min="0" max="23" /></label>
+        <label>星期（0 是周日）<input id="weekly-day" type="number" min="0" max="6" /></label>
+        <label class="check"><input id="daily-on" type="checkbox" /> 每日临期</label>
+        <label>临期小时<input id="daily-hour" type="number" min="0" max="23" /></label>
+      </div>
+      <table>
+        <thead><tr><th>群或话题</th><th>模式</th><th>关键词，逗号分隔</th><th></th></tr></thead>
+        <tbody id="cal-groups"></tbody>
+      </table>
+      <button type="button" id="add-cal" class="ghost">添加日程目标</button>
+    </section>
+    <section>
+      <h2>维修</h2>
+      <p class="note">卡住才进每日摘要：待接单、已接单、待审核各自超过下面的天数。没有卡住的工单就不发。原始群留空表示不推原始 JSON。</p>
+      <div class="grid">
+        <label>原始 JSON 群<input id="raw-group" /></label>
+        <label>摘要小时<input id="remind-hour" type="number" min="0" max="23" /></label>
+        <label>从这时起算<input id="remind-since" /></label>
+        <label>待接单天数<input id="open-days" type="number" min="0" step="0.5" /></label>
+        <label>已接单天数<input id="accepted-days" type="number" min="0" step="0.5" /></label>
+        <label>待审核天数<input id="committed-days" type="number" min="0" step="0.5" /></label>
+      </div>
+      <label>格式化推送，逗号分隔<textarea id="info-groups" rows="2"></textarea></label>
+      <label>每日摘要，逗号分隔<textarea id="remind-groups" rows="2"></textarea></label>
+    </section>
+    <section>
+      <h2>Minecraft 消息桥</h2>
+      <p class="note">地址和口令不在这里改。可以改每个群转不转发。</p>
+      <div id="bridge"></div>
+    </section>
+    <section>
+      <h2>每日聊天总结</h2>
+      <p class="note">时刻用 Asia/Shanghai，总结前一个自然日。群列表为空则不发。</p>
+      <div class="grid">
+        <label>小时<input id="sum-hour" type="number" min="0" max="23" /></label>
+        <label>分钟<input id="sum-minute" type="number" min="0" max="59" /></label>
+        <label>最少消息数<input id="sum-min" type="number" min="0" /></label>
+      </div>
+      <label>群，逗号分隔<textarea id="sum-groups" rows="2"></textarea></label>
+    </section>
+  </main>
+  <script>
+    const tokenInput = document.querySelector("#token");
+    const status = document.querySelector("#status");
+    const app = document.querySelector("#app");
+    const login = document.querySelector("#login");
+    const events = ["JoinLeft", "Chat", "PlayerDeath", "PlayerAchievement"];
+    let rules = null;
+
+    function setStatus(text, kind) {
+      status.textContent = text || "";
+      status.className = kind || "";
+    }
+    function splitList(value) {
+      return value.split(",").map(item => item.trim()).filter(Boolean);
+    }
+    function authHeaders() {
+      return { Authorization: "Bearer " + sessionStorage.getItem("push-panel-token") };
+    }
+    async function api(method, body) {
+      const response = await fetch("/api/rules", {
+        method,
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body)
+      });
+      const payload = await response.json().catch(() => ({ error: "响应不是 JSON" }));
+      if (!response.ok) throw new Error(payload.error || ("HTTP " + response.status));
+      return payload;
+    }
+    function removeButton() {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "ghost";
+      button.textContent = "删除";
+      button.addEventListener("click", () => {
+      const row = button.closest("tr");
+      const inGroups = !!row.closest("#gh-groups");
+      row.remove();
+      if (inGroups) refreshRouteSelects();
+      showMuted();
+    });
+      return button;
+    }
+    function cellInput(value) {
+      const input = document.createElement("input");
+      input.value = value ?? "";
+      return input;
+    }
+    function addGroupRow(name, targets) {
+      const row = document.createElement("tr");
+      const nameCell = document.createElement("td");
+      const targetCell = document.createElement("td");
+      const action = document.createElement("td");
+      nameCell.append(cellInput(name));
+      targetCell.append(cellInput((targets || []).join(", ")));
+      action.append(removeButton());
+      row.append(nameCell, targetCell, action);
+      document.querySelector("#gh-groups").append(row);
+    }
+    function groupNames() {
+      return [...document.querySelectorAll("#gh-groups tr")].map(row => row.cells[0].querySelector("input").value.trim()).filter(Boolean);
+    }
+    function addRouteRow(repo, group) {
+      const row = document.createElement("tr");
+      const repoCell = document.createElement("td");
+      const groupCell = document.createElement("td");
+      const action = document.createElement("td");
+      repoCell.append(cellInput(repo));
+      const select = document.createElement("select");
+      for (const name of groupNames()) {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        if (name === group) option.selected = true;
+        select.append(option);
+      }
+      if (group && !groupNames().includes(group)) {
+        const option = document.createElement("option");
+        option.value = group;
+        option.textContent = group;
+        option.selected = true;
+        select.append(option);
+      }
+      groupCell.append(select);
+      action.append(removeButton());
+      row.append(repoCell, groupCell, action);
+      document.querySelector("#gh-routes").append(row);
+    }
+    function refreshRouteSelects() {
+      const names = groupNames();
+      for (const select of document.querySelectorAll("#gh-routes select")) {
+        const current = select.value;
+        select.replaceChildren();
+        for (const name of names) {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          select.append(option);
+        }
+        if ([...select.options].some(option => option.value === current)) select.value = current;
+      }
+    }
+    function addCalendarRow(group) {
+      const row = document.createElement("tr");
+      const id = document.createElement("td");
+      const mode = document.createElement("td");
+      const words = document.createElement("td");
+      const action = document.createElement("td");
+      id.append(cellInput(group?.groupId));
+      const select = document.createElement("select");
+      for (const value of ["BlackList", "WhiteList", "Default"]) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value === "BlackList" ? "黑名单" : value === "WhiteList" ? "白名单" : "全部";
+        if (value === (group?.mode || "BlackList")) option.selected = true;
+        select.append(option);
+      }
+      mode.append(select);
+      words.append(cellInput((group?.keywords || []).join(", ")));
+      action.append(removeButton());
+      row.append(id, mode, words, action);
+      document.querySelector("#cal-groups").append(row);
+    }
+    function renderBridge(clients) {
+      const root = document.querySelector("#bridge");
+      root.replaceChildren();
+      (clients || []).forEach((client, index) => {
+        const block = document.createElement("div");
+        block.dataset.address = client.address || "";
+        block.dataset.index = String(index);
+        const title = document.createElement("h3");
+        title.textContent = client.address || "未命名客户端";
+        const table = document.createElement("table");
+        const head = document.createElement("thead");
+        head.innerHTML = "<tr><th>群或话题</th><th>启用</th><th>群到游戏</th><th>游戏到群</th><th>不转发的事件</th><th></th></tr>";
+        const body = document.createElement("tbody");
+        for (const group of client.groups || []) {
+          const row = document.createElement("tr");
+          const id = document.createElement("td");
+          id.append(cellInput(group.groupId));
+          const enabled = document.createElement("td");
+          const enabledBox = document.createElement("input");
+          enabledBox.type = "checkbox";
+          enabledBox.checked = !!group.enabled;
+          enabled.append(enabledBox);
+          const toClient = document.createElement("td");
+          const toClientBox = document.createElement("input");
+          toClientBox.type = "checkbox";
+          toClientBox.checked = !!group.forwardToClient;
+          toClient.append(toClientBox);
+          const fromClient = document.createElement("td");
+          const fromClientBox = document.createElement("input");
+          fromClientBox.type = "checkbox";
+          fromClientBox.checked = !!group.forwardFromClient;
+          fromClient.append(fromClientBox);
+          const disabled = document.createElement("td");
+          const picker = document.createElement("select");
+          picker.multiple = true;
+          picker.size = 4;
+          const skipped = new Set(group.disabledEvents || []);
+          for (const name of events) {
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            option.selected = skipped.has(name);
+            picker.append(option);
+          }
+          disabled.append(picker);
+          const action = document.createElement("td");
+          action.append(removeButton());
+          row.append(id, enabled, toClient, fromClient, disabled, action);
+          body.append(row);
+        }
+        table.append(head, body);
+        const add = document.createElement("button");
+        add.type = "button";
+        add.className = "ghost";
+        add.textContent = "添加群";
+        add.addEventListener("click", () => {
+          const row = document.createElement("tr");
+          const id = document.createElement("td");
+          id.append(cellInput(""));
+          const boxes = [true, true, true].map(checked => {
+            const cell = document.createElement("td");
+            const box = document.createElement("input");
+            box.type = "checkbox";
+            box.checked = checked;
+            cell.append(box);
+            return cell;
+          });
+          const disabled = document.createElement("td");
+          const picker = document.createElement("select");
+          picker.multiple = true;
+          picker.size = 4;
+          for (const name of events) {
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            picker.append(option);
+          }
+          disabled.append(picker);
+          const action = document.createElement("td");
+          action.append(removeButton());
+          row.append(id, ...boxes, disabled, action);
+          body.append(row);
+        });
+        block.append(title, table, add);
+        root.append(block);
+      });
+    }
+    function showMuted() {
+      const values = [...document.querySelectorAll("#app input, #app textarea")]
+        .map(field => field.value)
+        .join(" ");
+      document.querySelector("#muted").hidden = !values.includes("906370401");
+    }
+    function fill(data) {
+      rules = data;
+      document.querySelector("#gh-groups").replaceChildren();
+      document.querySelector("#gh-routes").replaceChildren();
+      document.querySelector("#cal-groups").replaceChildren();
+      const github = data.github;
+      if (github) {
+        for (const [name, targets] of Object.entries(github.groups || {})) addGroupRow(name, targets);
+        for (const [repo, group] of Object.entries(github.routes || {})) addRouteRow(repo, group);
+      }
+      const calendar = data.calendar;
+      if (calendar) {
+        document.querySelector("#weekly-on").checked = !!calendar.weeklyEnabled;
+        document.querySelector("#daily-on").checked = !!calendar.dailyEnabled;
+        document.querySelector("#weekly-hour").value = calendar.weeklyHour;
+        document.querySelector("#daily-hour").value = calendar.dailyHour;
+        document.querySelector("#weekly-day").value = calendar.weeklyDay;
+        for (const group of calendar.groups || []) addCalendarRow(group);
+      }
+      const repair = data.repair;
+      if (repair) {
+        document.querySelector("#raw-group").value = repair.pushRawGroup || "";
+        document.querySelector("#remind-hour").value = repair.remindHour;
+        document.querySelector("#remind-since").value = repair.remindSince || "";
+        document.querySelector("#open-days").value = repair.openDays;
+        document.querySelector("#accepted-days").value = repair.acceptedDays;
+        document.querySelector("#committed-days").value = repair.committedDays;
+        document.querySelector("#info-groups").value = (repair.pushInfoGroups || []).join(", ");
+        document.querySelector("#remind-groups").value = (repair.remindGroups || []).join(", ");
+      }
+      renderBridge(data.bridge?.clients || []);
+      const summary = data.summary;
+      if (summary) {
+        document.querySelector("#sum-hour").value = summary.hour;
+        document.querySelector("#sum-minute").value = summary.minute;
+        document.querySelector("#sum-min").value = summary.minMessageCount;
+        document.querySelector("#sum-groups").value = (summary.groupIds || []).join(", ");
+      }
+      showMuted();
+    }
+    function collect() {
+      const next = structuredClone(rules);
+      if (next.github) {
+        next.github.groups = {};
+        for (const row of document.querySelectorAll("#gh-groups tr")) {
+          const name = row.cells[0].querySelector("input").value.trim();
+          next.github.groups[name] = splitList(row.cells[1].querySelector("input").value);
+        }
+        next.github.routes = {};
+        for (const row of document.querySelectorAll("#gh-routes tr")) {
+          const repo = row.cells[0].querySelector("input").value.trim();
+          next.github.routes[repo] = row.cells[1].querySelector("select").value;
+        }
+      }
+      if (next.calendar) {
+        next.calendar.weeklyEnabled = document.querySelector("#weekly-on").checked;
+        next.calendar.dailyEnabled = document.querySelector("#daily-on").checked;
+        next.calendar.weeklyHour = Number(document.querySelector("#weekly-hour").value);
+        next.calendar.dailyHour = Number(document.querySelector("#daily-hour").value);
+        next.calendar.weeklyDay = Number(document.querySelector("#weekly-day").value);
+        next.calendar.groups = [...document.querySelectorAll("#cal-groups tr")].map(row => ({
+          groupId: row.cells[0].querySelector("input").value.trim(),
+          mode: row.cells[1].querySelector("select").value,
+          keywords: splitList(row.cells[2].querySelector("input").value)
+        }));
+      }
+      if (next.repair) {
+        next.repair.pushRawGroup = document.querySelector("#raw-group").value.trim();
+        next.repair.remindHour = Number(document.querySelector("#remind-hour").value);
+        next.repair.remindSince = document.querySelector("#remind-since").value.trim();
+        next.repair.openDays = Number(document.querySelector("#open-days").value);
+        next.repair.acceptedDays = Number(document.querySelector("#accepted-days").value);
+        next.repair.committedDays = Number(document.querySelector("#committed-days").value);
+        next.repair.pushInfoGroups = splitList(document.querySelector("#info-groups").value);
+        next.repair.remindGroups = splitList(document.querySelector("#remind-groups").value);
+      }
+      if (next.bridge) {
+        next.bridge.clients = [...document.querySelectorAll("#bridge > div")].map(block => ({
+          address: block.dataset.address,
+          groups: [...block.querySelectorAll("tbody tr")].map(row => ({
+            groupId: row.cells[0].querySelector("input").value.trim(),
+            enabled: row.cells[1].querySelector("input").checked,
+            forwardToClient: row.cells[2].querySelector("input").checked,
+            forwardFromClient: row.cells[3].querySelector("input").checked,
+            disabledEvents: [...row.cells[4].querySelector("select").selectedOptions].map(option => option.value)
+          }))
+        }));
+      }
+      if (next.summary) {
+        next.summary.hour = Number(document.querySelector("#sum-hour").value);
+        next.summary.minute = Number(document.querySelector("#sum-minute").value);
+        next.summary.minMessageCount = Number(document.querySelector("#sum-min").value);
+        next.summary.groupIds = splitList(document.querySelector("#sum-groups").value);
+      }
+      return next;
+    }
+    async function load() {
+      setStatus("正在读取…");
+      const data = await api("GET");
+      fill(data);
+      setStatus("已读取", "ok");
+    }
+    document.querySelector("#login").addEventListener("submit", async event => {
+      event.preventDefault();
+      sessionStorage.setItem("push-panel-token", tokenInput.value);
+      try {
+        await load();
+        login.hidden = true;
+        app.hidden = false;
+      } catch (error) {
+        sessionStorage.removeItem("push-panel-token");
+        setStatus(error.message, "error");
+      }
+    });
+    document.querySelector("#reload").addEventListener("click", () => load().catch(error => setStatus(error.message, "error")));
+    document.querySelector("#save").addEventListener("click", async () => {
+      if (!rules) {
+        setStatus("请先登录", "error");
+        return;
+      }
+      try {
+        setStatus("正在保存…");
+        fill(await api("PUT", collect()));
+        setStatus("已保存", "ok");
+      } catch (error) {
+        setStatus(error.message, "error");
+      }
+    });
+    document.querySelector("#add-group").addEventListener("click", () => { addGroupRow("", []); refreshRouteSelects(); });
+    document.querySelector("#gh-groups").addEventListener("input", refreshRouteSelects);
+    document.querySelector("#add-route").addEventListener("click", () => addRouteRow("", groupNames()[0] || ""));
+    document.querySelector("#add-cal").addEventListener("click", () => addCalendarRow(null));
+    document.body.addEventListener("input", showMuted);
+    if (sessionStorage.getItem("push-panel-token")) {
+      load().then(() => { login.hidden = true; app.hidden = false; }).catch(() => setStatus("口令已失效", "error"));
+    }
+  </script>
+</body>
+</html>

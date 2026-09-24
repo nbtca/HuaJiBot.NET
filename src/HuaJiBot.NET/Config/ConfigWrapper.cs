@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using System.Diagnostics.CodeAnalysis;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace HuaJiBot.NET.Config;
@@ -6,6 +7,24 @@ namespace HuaJiBot.NET.Config;
 public class ConfigWrapper(Config config)
 {
     private readonly Dictionary<string, ConfigBase> _plugins = new();
+
+    public bool TryGetLive(string key, [NotNullWhen(true)] out ConfigBase? live) =>
+        _plugins.TryGetValue(key, out live);
+
+    /// <summary>
+    /// Runs the edit while the config lock is held. Saves only when the edit returns null.
+    /// </summary>
+    public string? Change(Func<string?> edit)
+    {
+        lock (Config.SaveLock)
+        {
+            var error = edit();
+            if (error is not null)
+                return error;
+            Save();
+            return null;
+        }
+    }
 
     public void Populate(string key, ConfigBase existValue) //填充配置
     {

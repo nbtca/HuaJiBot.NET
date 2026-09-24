@@ -19,6 +19,7 @@
   <Project Path="src/HuaJiBot.NET.Plugin.DailySummary/HuaJiBot.NET.Plugin.DailySummary.csproj" />
   <Project Path="src/HuaJiBot.NET.Plugin.GitHubBridge/HuaJiBot.NET.Plugin.GitHubBridge.csproj" />
   <Project Path="src/HuaJiBot.NET.Plugin.MessageBridge/HuaJiBot.NET.Plugin.MessageBridge.csproj" />
+  <Project Path="src/HuaJiBot.NET.Plugin.PushPanel/HuaJiBot.NET.Plugin.PushPanel.csproj" />
   <Project Path="src/HuaJiBot.NET.Plugin.RepairTeam/HuaJiBot.NET.Plugin.RepairTeam.csproj" />
   <Project Path="src/HuaJiBot.NET.SourceGenerator/HuaJiBot.NET.SourceGenerator.csproj" />
   <Project Path="src/HuaJiBot.NET.UnitTest/HuaJiBot.NET.UnitTest.csproj" />
