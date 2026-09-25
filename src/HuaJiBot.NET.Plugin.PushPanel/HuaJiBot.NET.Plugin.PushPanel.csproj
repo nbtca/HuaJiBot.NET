@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />
+    <ProjectReference Include="..\HuaJiBot.NET.Plugin.Calendar\HuaJiBot.NET.Plugin.Calendar.csproj" />
+    <ProjectReference Include="..\HuaJiBot.NET.Plugin.DailySummary\HuaJiBot.NET.Plugin.DailySummary.csproj" />
+    <ProjectReference Include="..\HuaJiBot.NET.Plugin.GitHubBridge\HuaJiBot.NET.Plugin.GitHubBridge.csproj" />
+    <ProjectReference Include="..\HuaJiBot.NET.Plugin.MessageBridge\HuaJiBot.NET.Plugin.MessageBridge.csproj" />
+    <ProjectReference Include="..\HuaJiBot.NET.Plugin.RepairTeam\HuaJiBot.NET.Plugin.RepairTeam.csproj" />
+    <ProjectReference Include="..\HuaJiBot.NET.SourceGenerator\HuaJiBot.NET.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="panel.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="HuaJiBot.NET.UnitTest" />
+  </ItemGroup>
+</Project>
