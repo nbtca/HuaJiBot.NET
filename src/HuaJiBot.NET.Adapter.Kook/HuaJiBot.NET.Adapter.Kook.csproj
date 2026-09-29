@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Kook.Net.WebSocket" Version="0.11.1" />
+    <ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />
+  </ItemGroup>
+</Project>

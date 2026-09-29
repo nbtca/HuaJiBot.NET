@@ -2,6 +2,7 @@
 using HuaJiBot.NET.Adapter.OneBot;
 using HuaJiBot.NET.Adapter.Satori;
 using HuaJiBot.NET.Adapter.Telegram;
+using HuaJiBot.NET.Adapter.Kook;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Config;
 using HuaJiBot.NET.Interfaces;
@@ -45,6 +46,7 @@ services.AddSingleton<BotServiceBase>(sp =>
         Config.ServiceType.OneBot => new OneBotAdapter(cfg.OneBot.Url, cfg.OneBot.Token) { Logger = lg },
         Config.ServiceType.Satori => new SatoriAdapter(cfg.Satori.Url, cfg.Satori.Token) { Logger = lg },
         Config.ServiceType.Telegram => new TelegramAdapter(cfg.Telegram.Token) { Logger = lg },
+        Config.ServiceType.Kook => new KookAdapter(cfg.Kook.Token) { Logger = lg },
         _ => throw new NotSupportedException("不支持的协议类型"),
     };
 });
@@ -59,8 +61,6 @@ using var provider = services.BuildServiceProvider();
 var api = provider.GetRequiredService<BotServiceBase>(); //创建协议适配器
 var adapterApi = provider.GetRequiredService<IAdapterService>();
 var internalService = provider.GetRequiredService<Internal>();
-await internalService.SetupServiceAsync(api, config); //协议适配器
-var pluginManager = new PluginManager();
 var accountId = ""; //账号
 api.Events.OnBotLogin += (_, eventArgs) =>
 {
@@ -71,6 +71,8 @@ api.Events.OnBotLogin += (_, eventArgs) =>
     );
     accountId = eventArgs.Accounts.FirstOrDefault();
 };
+await internalService.SetupServiceAsync(api, config); //协议适配器
+var pluginManager = new PluginManager();
 var pluginDir =
     Environment.GetEnvironmentVariable("HUAJIBOT_PLUGIN_DIR")
     ?? Path.Combine(Environment.CurrentDirectory, "plugins"); //插件目录
