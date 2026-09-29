@@ -363,7 +363,7 @@ public class KookAdapter : BotServiceBase
                 // 群主判定不依赖用户缓存：OwnerId 始终可用；管理员判定需用户已缓存，否则不臆造。
                 if (guild.OwnerId == uid)
                     return MemberType.Owner;
-                return guild.GetUser(uid) is { } user ? ResolveMemberType(user) : MemberType.Member;
+                return guild.GetUser(uid) is { } user ? ResolveMemberType(user) : MemberType.Unknown;
 
             case KookChannelKind.Direct:
                 // 私聊没有成员类型概念。
