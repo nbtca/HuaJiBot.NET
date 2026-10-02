@@ -211,6 +211,7 @@ internal class OneBotMessageHandler(OneBotApi api, OneBotAdapter service)
                                             _ => MemberType.Unknown,
                                         },
                                         TextMessageLazy = new(() => ToPlainText(message)),
+                                        ImageUrls = ExtractImageUrls(message),
                                     }
                                 );
                             }
@@ -232,6 +233,13 @@ internal class OneBotMessageHandler(OneBotApi api, OneBotAdapter service)
         }
 #endif
     }
+
+    internal static string[] ExtractImageUrls(IEnumerable<MessageEntity> messages) =>
+        messages.OfType<ImageMessageEntity>()
+            .Select(image => string.IsNullOrWhiteSpace(image.Url) ? image.File : image.Url)
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
 
     private static string ToPlainText(IEnumerable<MessageEntity> message) =>
         string.Concat(

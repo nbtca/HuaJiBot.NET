@@ -12,6 +12,7 @@ public class GroupMessage
     public required string SenderName { get; set; } = "";
     public DateTime Timestamp { get; set; } = DateTime.Now;
     public required string? Content { get; set; } = "";
+    public string[] ImageUrls { get; set; } = [];
     public required bool IsBot { get; set; } = false;
     public required string? ReplyToMessageId { get; set; } = null;
 }

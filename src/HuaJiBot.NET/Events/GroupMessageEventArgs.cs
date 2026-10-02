@@ -46,6 +46,8 @@ public class GroupMessageEventArgs(
 
     /// <summary>Sender role in the group; Unknown when the adapter does not provide it.</summary>
     public MemberType SenderMemberType { get; init; }
+    /// <summary>Image attachments, distinct from URLs typed as text.</summary>
+    public string[] ImageUrls { get; init; } = [];
     public required Lazy<string> TextMessageLazy { get; init; }
     public string TextMessage => TextMessageLazy.Value;
     public CommandReader CommandReader => createCommandReader();
