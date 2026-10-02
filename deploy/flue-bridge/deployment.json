@@ -1,5 +1,5 @@
 {
-  "verifiedAt": "2026-10-02T23:16:27.2131836+08:00",
+  "verifiedAt": "2026-10-02T23:23:05.0733730+08:00",
   "accountEmail": "nbtca@protonmail.com",
   "accountId": "a415a3ae7a197093d02233755d38800b",
   "worker": "huaji-agent",
@@ -38,7 +38,8 @@
     "OneBot identity and canary membership verified",
     "Signed ingress HTTP 202 followed by real model reply and Queue acknowledgment",
     "Linux bridge SQLite startup, adapter login, running container with zero restarts",
-    "AIChat canary disabled; DailySummary and other services preserved"
+    "AIChat canary disabled; DailySummary and other services preserved",
+    "OneBot real-event regression: account ID populated and mention reaches bridge; 10 bridge tests passed"
   ],
   "pending": [
     "Real group mention/reply-thread acceptance",
@@ -46,5 +47,7 @@
     "GitHub publication of separate agent repository"
   ],
   "model": "cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-  "activationBackup": "/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T151502Z"
+  "activationBackup": "/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T151502Z",
+  "currentImage": "huajibot-local:flue-canary-onebot-fix",
+  "latestActivationBackup": "/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T152218Z"
 }

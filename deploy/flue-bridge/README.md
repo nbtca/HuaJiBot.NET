@@ -50,7 +50,7 @@ Cloudflare HTTP pull's `visibility_timeout` is expressed in milliseconds; the pl
 
 ## Storage, build and rollback
 
-The canary overlay image is `huajibot-local:flue-canary-060f43b` on `/home/yunacelisse/stacks/huajibot`. `Dockerfile` preserves existing plugins while replacing the CLI and adding bridge dependencies. `activate.sh` checks artifact hashes, backs up config/compose/plugin data, stops only the bot, checks the intended configuration delta, and automatically restores the old config/image on startup failure. `bridge.env` is a private mode-0600 file. Supply sudo authentication through the operator's terminal; never save it in scripts.
+The canary overlay image is `huajibot-local:flue-canary-onebot-fix` on `/home/yunacelisse/stacks/huajibot`. `Dockerfile` preserves existing plugins while replacing the CLI and adding bridge dependencies. `activate.sh` checks artifact hashes, backs up config/compose/plugin data, stops only the bot, checks the intended configuration delta, and automatically restores the old config/image on startup failure. `bridge.env` is a private mode-0600 file. Supply sudo authentication through the operator's terminal; never save it in scripts.
 
 The activation backup is `/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T151502Z`. For a deployment rollback, stop only `huaji-bot-dotnet`, restore `config.json` and `compose.yaml` from that directory, and run `docker compose up -d --no-deps huaji-bot-dotnet`. Keep the bridge database and Queue. Revoke the Worker canary allowlist after the switch.
 

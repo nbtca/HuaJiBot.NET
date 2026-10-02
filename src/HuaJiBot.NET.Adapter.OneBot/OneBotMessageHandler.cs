@@ -197,6 +197,7 @@ internal class OneBotMessageHandler(OneBotApi api, OneBotAdapter service)
                                     )
                                     {
                                         Service = service,
+                                        RobotId = json.Value<string>("self_id") ?? QQ,
                                         MessageId = msgId,
                                         GroupId = groupId,
                                         SenderId = userId,

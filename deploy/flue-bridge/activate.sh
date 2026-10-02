@@ -4,7 +4,7 @@ umask 077
 
 STACK=/home/yunacelisse/stacks/huajibot
 STAGE="$STACK/deploy/flue-canary"
-IMAGE=huajibot-local:flue-canary-060f43b
+IMAGE=huajibot-local:flue-canary-onebot-fix
 STATUS="$STAGE/activation-status.json"
 BACKUP="$STACK/backups/flue-canary-$(date -u +%Y%m%dT%H%M%SZ)"
 STOPPED=0

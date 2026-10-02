@@ -61,6 +61,27 @@ public class FlueBridgeTest
     private static QueueLease Lease(ReplyJob job) => new(JsonSerializer.Serialize(job, BridgeJson.Options), "lease-1");
 
     [Test]
+    public async Task OneBotGroupEventCarriesAccountIdAndReachesBridge()
+    {
+        var adapter = new HuaJiBot.NET.Adapter.OneBot.OneBotAdapter("ws://unused", null)
+        { Logger = new HuaJiBot.NET.Logger.ConsoleLogger() };
+        GroupMessageEventArgs? received = null;
+        adapter.Events.OnGroupMessageReceived += (_, e) => received = e;
+        var handler = new HuaJiBot.NET.Adapter.OneBot.OneBotMessageHandler(
+            new HuaJiBot.NET.Adapter.OneBot.OneBotApi(adapter, _ => { }), adapter);
+        await handler.ProcessMessageAsync(Newtonsoft.Json.Linq.JObject.Parse("""
+            {"post_type":"message","message_type":"group","self_id":"bot",
+             "group_id":"-100:42","user_id":"user","message_id":"real-event",
+             "sender":{"nickname":"Alice","role":"member"},
+             "message":[{"type":"at","data":{"qq":"bot"}},
+                        {"type":"text","data":{"text":"question"}}]}
+            """));
+        Assert.That(received, Is.Not.Null);
+        Assert.That(received!.RobotId, Is.EqualTo("bot"));
+        Assert.That(_engine.Normalize(received), Is.Not.Null);
+    }
+
+    [Test]
     public void MentionsCreateIsolatedThreadsAndRepliesResolveMappedMessages()
     {
         var first = _engine.Normalize(Message("root1", new CommonCommandReader.ReaderAt("bot"), "first"))!;
