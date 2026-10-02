@@ -12,6 +12,7 @@ public partial class Config
         OneBot,
         Satori,
         Telegram,
+        Kook,
     }
 
     public ServiceType Service { get; set; } = ServiceType.OneBot;
@@ -38,6 +39,13 @@ public partial class Config
     }
 
     public TelegramConnectionInfo Telegram { get; set; } = new();
+
+    public class KookConnectionInfo
+    {
+        public string Token { get; set; } = "";
+    }
+
+    public KookConnectionInfo Kook { get; set; } = new();
 
     public string[] ExtraPlugins { get; set; } = [];
 
