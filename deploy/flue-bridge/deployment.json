@@ -22,6 +22,7 @@
   "hmacSecretConfigured": true,
   "destinationAllowlist": [],
   "botEnabled": false,
+  "canaryGroupId": "466691612",
   "verified": [
     "Worker health HTTP 200",
     "Unsigned ingress HTTP 401",
@@ -29,7 +30,7 @@
     "Public agent route HTTP 404"
   ],
   "pending": [
-    "Canary robot/group selection",
+    "Canary robot ID verification",
     "Bot scoped Queue API token",
     "Bot deployment",
     "Real model/Queue/adapter acceptance",
