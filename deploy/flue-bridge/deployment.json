@@ -1,0 +1,38 @@
+{
+  "verifiedAt": "2026-10-02T22:41:45+08:00",
+  "accountEmail": "nbtca@protonmail.com",
+  "accountId": "a415a3ae7a197093d02233755d38800b",
+  "worker": "huaji-agent",
+  "workerUrl": "https://huaji-agent.nbtca.workers.dev",
+  "workerVersionId": "274df599-02f5-48b0-ae0a-4e2225ad6ae3",
+  "queue": {
+    "name": "huajibot-outbound-main",
+    "id": "3181cdb9b0054a4a8f0d0bc70b8a48c5"
+  },
+  "deadLetterQueue": {
+    "name": "huajibot-outbound-main-dlq",
+    "id": "e7c2fe8f8002433fb679df48a19e1611"
+  },
+  "httpPullConsumer": {
+    "enabled": true,
+    "visibilityTimeoutSeconds": 120,
+    "maxRetries": 5,
+    "retryDelaySeconds": 10
+  },
+  "hmacSecretConfigured": true,
+  "destinationAllowlist": [],
+  "botEnabled": false,
+  "verified": [
+    "Worker health HTTP 200",
+    "Unsigned ingress HTTP 401",
+    "Valid signed unauthorized ingress HTTP 403",
+    "Public agent route HTTP 404"
+  ],
+  "pending": [
+    "Canary robot/group selection",
+    "Bot scoped Queue API token",
+    "Bot deployment",
+    "Real model/Queue/adapter acceptance",
+    "GitHub publication of separate agent repository"
+  ]
+}
