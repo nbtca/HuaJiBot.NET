@@ -1,10 +1,10 @@
 {
-  "verifiedAt": "2026-10-02T23:23:05.0733730+08:00",
+  "verifiedAt": "2026-10-02T23:53:19.4205030+08:00",
   "accountEmail": "nbtca@protonmail.com",
   "accountId": "a415a3ae7a197093d02233755d38800b",
   "worker": "huaji-agent",
   "workerUrl": "https://huaji-agent.nbtca.workers.dev",
-  "workerVersionId": "b6dbc039-6d7c-4699-806f-ca0c8b6cf27b",
+  "workerVersionId": "13cc55d9-58e7-4585-9590-e033e6b6884c",
   "queue": {
     "name": "huajibot-outbound-main",
     "id": "3181cdb9b0054a4a8f0d0bc70b8a48c5"
@@ -39,10 +39,14 @@
     "Signed ingress HTTP 202 followed by real model reply and Queue acknowledgment",
     "Linux bridge SQLite startup, adapter login, running container with zero restarts",
     "AIChat canary disabled; DailySummary and other services preserved",
-    "OneBot real-event regression: account ID populated and mention reaches bridge; 10 bridge tests passed"
+    "OneBot real-event regression: account ID populated and mention reaches bridge; 10 bridge tests passed",
+    "User mention received and first reply sent; original reply target mapped in SQLite",
+    "Follow-up mapping verified; native model tool-history HTTP 400 diagnosed and fixed",
+    "Real synthetic two-turn model/tool execution passed, one reply tool per turn; 9 Worker tests passed",
+    "Temporary inspection route removed: HTTP 404"
   ],
   "pending": [
-    "Real group mention/reply-thread acceptance",
+    "User verification of repaired real group follow-up",
     "Real platform failure/restart/DLQ acceptance",
     "GitHub publication of separate agent repository"
   ],
