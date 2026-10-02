@@ -1,10 +1,10 @@
 {
-  "verifiedAt": "2026-10-03T01:56:20.1868874+08:00",
+  "verifiedAt": "2026-10-03T02:08:19.4038430+08:00",
   "accountEmail": "nbtca@protonmail.com",
   "accountId": "a415a3ae7a197093d02233755d38800b",
   "worker": "huaji-agent",
   "workerUrl": "https://huaji-agent.nbtca.workers.dev",
-  "workerVersionId": "bc91eef8-be78-42ea-9191-9bee467ccc54",
+  "workerVersionId": "7ced73d2-a203-49a1-868b-66dba2fe28a1",
   "queue": {
     "name": "huajibot-outbound-main",
     "id": "3181cdb9b0054a4a8f0d0bc70b8a48c5"
@@ -43,13 +43,15 @@
     "User mention received and first reply sent; original reply target mapped in SQLite",
     "Follow-up mapping verified; native model tool-history HTTP 400 diagnosed and fixed",
     "Real synthetic two-turn model/tool execution passed, one reply tool per turn; 9 Worker tests passed",
-    "Temporary inspection route removed: HTTP 404"
+    "Temporary inspection route removed: HTTP 404",
+    "Agnes stateless Worker tool call/streaming/recall HTTP 200",
+    "Primary-enabled real two-turn Worker/model/Queue recall passed; both synthetic replies acknowledged",
+    "Temporary Agnes diagnostic removed; HTTP 404"
   ],
   "pending": [
     "User verification of repaired real group follow-up",
     "Real platform failure/restart/DLQ acceptance",
-    "GitHub publication of separate agent repository",
-    "Resolve Agnes Worker-origin rate limit or authorize rate-limit fallback"
+    "GitHub publication of separate agent repository"
   ],
   "model": "cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
   "activationBackup": "/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T151502Z",
@@ -57,10 +59,11 @@
   "latestActivationBackup": "/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T152218Z",
   "agnesPrimary": {
     "model": "agnes-3.0-flash",
-    "workerError": "HTTP 429 / edge code 1015",
+    "workerError": "Intermittent HTTP 429 / edge code 1015; subsequent two-turn test passed",
     "secretConfigured": true,
     "fallbackPolicy": "explicit quota exhaustion only",
     "directToolsStreamingAndRecallVerified": true,
-    "enabled": false
+    "enabled": true,
+    "workerTwoTurnQueueRecallVerified": true
   }
 }
