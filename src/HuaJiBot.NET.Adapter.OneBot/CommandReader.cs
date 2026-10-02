@@ -32,6 +32,9 @@ internal class OneBotCommandReader(BotService service, List<MessageEntity> msg)
                         case ReplyMessageEntity { MessageId: var id }:
                             yield return new ReaderReply(new(messageId: id));
                             break;
+                        case ImageMessageEntity:
+                            // Images are provided separately through GroupMessageEventArgs.ImageUrls.
+                            break;
                         default:
                             service.LogDebug($"未转换消息类型：{element.GetType().Name}");
                             break;

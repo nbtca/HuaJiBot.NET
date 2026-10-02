@@ -11,6 +11,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Fonts\ANSI Shadow.flf" />
+    <InternalsVisibleTo Include="HuaJiBot.NET.UnitTest" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HuaJiBot.NET\HuaJiBot.NET.csproj" />

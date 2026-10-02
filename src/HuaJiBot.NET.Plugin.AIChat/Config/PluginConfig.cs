@@ -6,6 +6,10 @@ public class PluginConfig : ConfigBase
 {
     public string SystemPrompt = "你是一个有用的AI助手";
     public ModelConfig Model = new();
+    /// <summary>Enable only for models that accept image content.</summary>
+    public bool SupportsVision = false;
+    public int MaxImagesPerRequest = 4;
+    public int MaxImageBytes = 8 * 1024 * 1024;
 
     /// <summary>
     /// Groups where the bot answers. Empty answers no group.

@@ -4,7 +4,6 @@ using HuaJiBot.NET.Plugin.AIChat.Config;
 using HuaJiBot.NET.Plugin.AIChat.Service;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Newtonsoft.Json;
 using System.Collections.Concurrent;
 
 namespace HuaJiBot.NET.Plugin.AIChat;
@@ -18,7 +17,9 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private static readonly TimeSpan SessionIdleTimeout = TimeSpan.FromHours(1);
     private static readonly TimeSpan LlmTimeout = TimeSpan.FromSeconds(90);
     private readonly ConcurrentDictionary<string, GroupSession> _sessions = new();
-    private AgentConnector Connector => AgentConnector.Create(Service, Config.Model);
+    private AgentConnector Connector => AgentConnector.Create(Service,
+        Config.SupportsVision ? Config.Model with { Logging = false } : Config.Model);
+    private readonly VisionInput _visionInput = new();
 
     private AIFunction[]? _tools;
 
@@ -103,6 +104,10 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             Warn($"群组 {e.GroupId} 的 AI 请求超过 {LlmTimeout.TotalSeconds:0} 秒");
             await e.Reply("模型响应超时，请稍后重试。");
         }
+        catch (VisionInputException exception)
+        {
+            await e.Reply(exception.Message);
+        }
         finally
         {
             _busyGroups.TryRemove(e.GroupId, out _);
@@ -116,21 +121,21 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         CancellationToken cancellationToken
     )
     {
-        Info(
-            "调用AI消息\n\t"
-                + JsonConvert
-                    .SerializeObject(
-                        messages,
-                        new JsonSerializerSettings
-                        {
-                            Formatting = Formatting.Indented,
-                            NullValueHandling = NullValueHandling.Ignore,
-                        }
-                    )
-                    .Replace("\n", "\n\t")
-        );
+        await _visionInput.PrepareAsync(messages, Config.SupportsVision, Config.MaxImagesPerRequest,
+            Config.MaxImageBytes, cancellationToken);
+        Info($"调用AI：{messages.Count} 条消息，{messages.Sum(message => message.Contents.OfType<DataContent>().Count())} 张图片");
         var connector = Connector;
-        var session = await GetSessionAsync(connector, e.GroupId, cancellationToken);
+        AgentSession session;
+        if (messages.Any(message => message.Contents.OfType<DataContent>().Any()))
+        {
+            // Reply context is already reconstructed above. Do not retain image bytes across turns.
+            _sessions.TryRemove(e.GroupId, out _);
+            session = await connector.CreateSessionAsync(cancellationToken);
+        }
+        else
+        {
+            session = await GetSessionAsync(connector, e.GroupId, cancellationToken);
+        }
         var agent = connector.CreateAIAgentWithOptions(
             BuildSystemPrompt(
                 systemPrompt,
@@ -200,7 +205,8 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         {
             if (!Service.AllRobots.Contains(atId))
                 return; //仅处理At机器人
-            if (!reader.Input(out var restText, true) || string.IsNullOrWhiteSpace(restText))
+            _ = reader.Input(out var restText, true);
+            if (string.IsNullOrWhiteSpace(restText) && e.ImageUrls.Length == 0)
             {
                 try
                 {
@@ -221,6 +227,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     new GroupMessage
                     {
                         Content = restText,
+                        ImageUrls = e.ImageUrls,
                         GroupId = e.GroupId,
                         MessageId = e.MessageId,
                         SenderId = e.SenderId,
@@ -229,7 +236,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         ReplyToMessageId = null,
                     }
                 );
-                if (AsciiArtTools.TryRenderCommand(restText, out var asciiArt))
+                if (e.ImageUrls.Length == 0 && AsciiArtTools.TryRenderCommand(restText!, out var asciiArt))
                 {
                     // Send raw text. Markdown conversion changes FIGlet spacing and line breaks.
                     foreach (var msgId in await e.Reply(asciiArt))
@@ -252,7 +259,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 //调用LLM回复
                 await InvokeLlmMessage(
                     Config.SystemPrompt,
-                    [new ChatMessage(ChatRole.User, restText)],
+                    [VisionInput.CreateMessage(restText, e.ImageUrls)],
                     e
                 );
             }
@@ -295,7 +302,7 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 void FetchReply(string replyId)
                 {
                     var replyMessage = _history.GetMessage(replyId);
-                    if (replyMessage is not null)
+                    if (replyMessage is not null && replyMessage.GroupId == e.GroupId)
                     { //获取到被回复的消息
                         PrependMessage(replyMessage);
                     }
@@ -335,16 +342,17 @@ public class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     prompts.Add(
                         message.IsBot
                             ? new ChatMessage(ChatRole.Assistant, message.Content)
-                            : new ChatMessage(ChatRole.User, message.Content)
+                            : VisionInput.CreateMessage(message.Content, message.ImageUrls)
                     );
                 }
-                prompts.Add(new ChatMessage(ChatRole.User, text));
+                prompts.Add(VisionInput.CreateMessage(text, e.ImageUrls));
 
                 //收到回复消息记录
                 _history.StoreMessage(
                     new GroupMessage
                     {
                         Content = text,
+                        ImageUrls = e.ImageUrls,
                         GroupId = e.GroupId,
                         MessageId = e.MessageId,
                         SenderId = e.SenderId,
