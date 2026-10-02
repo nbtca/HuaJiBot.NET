@@ -1,10 +1,10 @@
 {
-  "verifiedAt": "2026-10-03T02:08:19.4038430+08:00",
+  "verifiedAt": "2026-10-03T02:14:33.8441915+08:00",
   "accountEmail": "nbtca@protonmail.com",
   "accountId": "a415a3ae7a197093d02233755d38800b",
   "worker": "huaji-agent",
   "workerUrl": "https://huaji-agent.nbtca.workers.dev",
-  "workerVersionId": "7ced73d2-a203-49a1-868b-66dba2fe28a1",
+  "workerVersionId": "ffd675ae-becb-4d8e-baa2-67ba54c3036f",
   "queue": {
     "name": "huajibot-outbound-main",
     "id": "3181cdb9b0054a4a8f0d0bc70b8a48c5"
@@ -46,12 +46,15 @@
     "Temporary inspection route removed: HTTP 404",
     "Agnes stateless Worker tool call/streaming/recall HTTP 200",
     "Primary-enabled real two-turn Worker/model/Queue recall passed; both synthetic replies acknowledged",
-    "Temporary Agnes diagnostic removed; HTTP 404"
+    "Temporary Agnes diagnostic removed; HTTP 404",
+    "18 Worker tests including primary/secondary key order and rate-limit fallback passed",
+    "Two-turn real Worker Queue test passed with cloudflare-limit-fallback observed in both DO runs"
   ],
   "pending": [
     "User verification of repaired real group follow-up",
     "Real platform failure/restart/DLQ acceptance",
-    "GitHub publication of separate agent repository"
+    "GitHub publication of separate agent repository",
+    "Valid secondary Agnes API key (or its correct endpoint)"
   ],
   "model": "cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
   "activationBackup": "/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T151502Z",
@@ -61,9 +64,11 @@
     "model": "agnes-3.0-flash",
     "workerError": "Intermittent HTTP 429 / edge code 1015; subsequent two-turn test passed",
     "secretConfigured": true,
-    "fallbackPolicy": "explicit quota exhaustion only",
+    "fallbackPolicy": "Any HTTP 429 or explicit quota exhaustion: primary Agnes, secondary if valid/configured, then Cloudflare",
     "directToolsStreamingAndRecallVerified": true,
     "enabled": true,
-    "workerTwoTurnQueueRecallVerified": true
+    "workerTwoTurnQueueRecallVerified": true,
+    "secondarySecretConfigured": false,
+    "secondaryValidation": "HTTP 401 / Invalid token twice; supplied secondary secret removed"
   }
 }
