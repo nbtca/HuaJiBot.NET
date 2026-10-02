@@ -2,7 +2,9 @@
 
 HuaJiBot.NET forwards messages to the separate `huaji-agent` Worker over signed HTTPS and pulls replies from Cloudflare Queue. The bridge contains no model or Flue agent implementation. OneBot, Satori, and Telegram keep their existing adapter APIs. ServerlessMQ is unchanged.
 
-The initial Worker and primary Queue/DLQ were deployed to `nbtca@protonmail.com` on 2026-10-02. See `deployment.json` for resource IDs and the verified HTTP checks. The Worker allowlist is empty and the bot plugin is disabled pending canary selection and a scoped Queue token. This is a prepared deployment, not a completed chat migration.
+The Worker and primary Queue/DLQ were deployed to `nbtca@protonmail.com` on 2026-10-02. The bridge is enabled for robot `3623498320`, group `466691612`; that group was removed from the old AIChat plugin. DailySummary and other services are preserved. A signed synthetic request produced a real model reply through Queue; group delivery and reply-thread acceptance await user testing. See `deployment.json` for the deployed resources and validation boundaries.
+
+The account's Workers Free plan rejects Kimi K2.6. The deployed model is `cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast`, verified through real inference and Queue delivery.
 
 On the current Windows machine, .NET SDK 10.0.401 was installed at `%USERPROFILE%\.codex\dependencies\dotnet`. If an existing terminal still resolves the older system runtime, prepend that directory to its `PATH` (or invoke its `dotnet.exe` directly) before building. The generated shared HMAC secret is stored in the user's `HUAJIBOT_BRIDGE_HMAC_SECRET` environment variable and Cloudflare's Worker secret store; inject it into the bot's deployment environment without putting it in configuration/Git.
 
@@ -47,6 +49,10 @@ Replies are JSON strings published with Queue `contentType: 'text'`; `json`/`byt
 Cloudflare HTTP pull's `visibility_timeout` is expressed in milliseconds; the plugin setting is in seconds. The plugin pulls one lease per batch to avoid expiring later leases while adapters render/send an earlier reply. It polls every second during the active window, gradually backs off to the idle interval, and wakes immediately after accepted ingress.
 
 ## Storage, build and rollback
+
+The canary overlay image is `huajibot-local:flue-canary-060f43b` on `/home/yunacelisse/stacks/huajibot`. `Dockerfile` preserves existing plugins while replacing the CLI and adding bridge dependencies. `activate.sh` checks artifact hashes, backs up config/compose/plugin data, stops only the bot, checks the intended configuration delta, and automatically restores the old config/image on startup failure. `bridge.env` is a private mode-0600 file. Supply sudo authentication through the operator's terminal; never save it in scripts.
+
+The activation backup is `/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T151502Z`. For a deployment rollback, stop only `huaji-bot-dotnet`, restore `config.json` and `compose.yaml` from that directory, and run `docker compose up -d --no-deps huaji-bot-dotnet`. Keep the bridge database and Queue. Revoke the Worker canary allowlist after the switch.
 
 The plugin stores `flue_bridge.db` in its normal plugin data directory. Preserve that directory across restarts and container replacement. The default 30-day retention should exceed the Queue's message retention. Old mappings and sent rows are pruned hourly. SQLite uses WAL, FULL synchronization, parameterized SQL, and atomic mapping/ledger commits.
 

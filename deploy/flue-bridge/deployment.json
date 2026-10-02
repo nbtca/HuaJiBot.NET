@@ -1,10 +1,10 @@
 {
-  "verifiedAt": "2026-10-02T22:41:45+08:00",
+  "verifiedAt": "2026-10-02T23:16:27.2131836+08:00",
   "accountEmail": "nbtca@protonmail.com",
   "accountId": "a415a3ae7a197093d02233755d38800b",
   "worker": "huaji-agent",
   "workerUrl": "https://huaji-agent.nbtca.workers.dev",
-  "workerVersionId": "274df599-02f5-48b0-ae0a-4e2225ad6ae3",
+  "workerVersionId": "b6dbc039-6d7c-4699-806f-ca0c8b6cf27b",
   "queue": {
     "name": "huajibot-outbound-main",
     "id": "3181cdb9b0054a4a8f0d0bc70b8a48c5"
@@ -20,20 +20,31 @@
     "retryDelaySeconds": 10
   },
   "hmacSecretConfigured": true,
-  "destinationAllowlist": [],
-  "botEnabled": false,
+  "destinationAllowlist": [
+    {
+      "robotId": "3623498320",
+      "bridgeInstance": "main",
+      "groupId": "466691612"
+    }
+  ],
+  "botEnabled": true,
   "canaryGroupId": "466691612",
   "verified": [
     "Worker health HTTP 200",
     "Unsigned ingress HTTP 401",
     "Valid signed unauthorized ingress HTTP 403",
-    "Public agent route HTTP 404"
+    "Public agent route HTTP 404",
+    "Queue scoped token pull/ack HTTP 200",
+    "OneBot identity and canary membership verified",
+    "Signed ingress HTTP 202 followed by real model reply and Queue acknowledgment",
+    "Linux bridge SQLite startup, adapter login, running container with zero restarts",
+    "AIChat canary disabled; DailySummary and other services preserved"
   ],
   "pending": [
-    "Canary robot ID verification",
-    "Bot scoped Queue API token",
-    "Bot deployment",
-    "Real model/Queue/adapter acceptance",
+    "Real group mention/reply-thread acceptance",
+    "Real platform failure/restart/DLQ acceptance",
     "GitHub publication of separate agent repository"
-  ]
+  ],
+  "model": "cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+  "activationBackup": "/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T151502Z"
 }
