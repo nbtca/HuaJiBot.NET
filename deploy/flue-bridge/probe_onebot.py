@@ -11,7 +11,7 @@ import urllib.parse
 from pathlib import Path
 
 
-def probe(config_path, group_id):
+def probe(config_path, group_id, history_output=None, since=0):
     config = json.loads(Path(config_path).read_text())
     endpoint = urllib.parse.urlsplit(config["OneBot"]["Url"])
     if endpoint.scheme not in ("ws", "wss"):
@@ -100,13 +100,52 @@ def probe(config_path, group_id):
         robot_id = str(login["user_id"])
         group = call("get_group_info", {"group_id": int(group_id)})
         member = call("get_group_member_info", {"group_id": int(group_id), "user_id": int(robot_id)})
+        if history_output:
+            records = {}
+            cursor = None
+            covered = False
+            for _ in range(10):
+                params = {"group_id": int(group_id), "count": 100}
+                if cursor is not None:
+                    params["message_seq"] = cursor
+                data = call("get_group_msg_history", params)
+                messages = data.get("messages", [])
+                if not messages:
+                    covered = True
+                    break
+                covered = min(int(item.get("time", 0)) for item in messages) <= since
+                for item in messages:
+                    timestamp = int(item.get("time", 0))
+                    if timestamp < since or str(item.get("user_id")) == robot_id:
+                        continue
+                    message_id = str(item["message_id"])
+                    segments = item.get("message", [])
+                    text = "".join(segment.get("data", {}).get("text", "") for segment in segments if isinstance(segment, dict) and segment.get("type") == "text") if isinstance(segments, list) else "（非文本消息）"
+                    sender = item.get("sender", {})
+                    components = ["main", robot_id, str(group_id), message_id]
+                    event_id = ":".join(urllib.parse.quote(value, safe="") for value in components)
+                    records[message_id] = {"version": 1, "eventId": event_id, "conversationId": "huajibot:" + event_id,
+                        "kind": "archive", "destination": {"bridgeInstance": "main", "robotId": robot_id, "groupId": str(group_id)},
+                        "message": {"messageId": message_id, "senderId": str(item.get("user_id")), "senderName": sender.get("card") or sender.get("nickname") or "成员",
+                                    "text": text or "（非文本消息）", "images": [], "observedAt": timestamp * 1000}, "replyTo": None}
+                if covered:
+                    break
+                sequences = [int(item["message_seq"]) for item in messages if "message_seq" in item]
+                if not sequences or cursor == min(sequences) - 1:
+                    break
+                cursor = min(sequences) - 1
+            descriptor = os.open(history_output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(descriptor, "w") as output:
+                for record in sorted(records.values(), key=lambda item: item["message"]["observedAt"]):
+                    output.write(json.dumps(record, ensure_ascii=False) + "\n")
+            return {"historyRecords": len(records), "coversMigrationWindow": covered}
         return {"robotId": robot_id, "groupId": str(group["group_id"]), "role": member.get("role"),
                 "muteUntil": member.get("shut_up_timestamp", 0)}
 
 
 if __name__ == "__main__":
     try:
-        print(json.dumps(probe(sys.argv[1], sys.argv[2])))
+        print(json.dumps(probe(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None, int(sys.argv[4]) if len(sys.argv) > 4 else 0)))
     except Exception as error:
         print("OneBot probe failed: " + type(error).__name__, file=sys.stderr)
         sys.exit(1)
