@@ -61,6 +61,30 @@ public class FlueBridgeTest
     private static QueueLease Lease(ReplyJob job) => new(JsonSerializer.Serialize(job, BridgeJson.Options), "lease-1");
 
     [Test]
+    public void SummaryDateAliasesWithOptionalSpacesUseSummaryRouting()
+    {
+        var index = 0;
+        foreach (var day in new[] { "今", "昨", "前" })
+            foreach (var suffix in new[] { "天", "日" })
+                foreach (var gap in new[] { "", " ", "　" })
+                    foreach (var inner in new[] { "", " ", "　" })
+                    {
+                        var text = "总结" + gap + day + inner + suffix;
+                        var message = new GroupMessageEventArgs(() => new DefaultCommandReader([text]), () => ValueTask.FromResult("group"))
+                        {
+                            Service = new TestAdapter(),
+                            RobotId = "bot",
+                            GroupId = "-100:42",
+                            MessageId = "alias-" + index++,
+                            SenderId = "user",
+                            SenderMemberCard = "Alice",
+                            TextMessageLazy = new(() => text)
+                        };
+                        Assert.That(_engine.Normalize(message)!.Kind, Is.EqualTo("summary"), text);
+                    }
+    }
+
+    [Test]
     public async Task OneBotGroupEventCarriesAccountIdAndReachesBridge()
     {
         var adapter = new HuaJiBot.NET.Adapter.OneBot.OneBotAdapter("ws://unused", null)

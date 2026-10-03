@@ -29,7 +29,7 @@ internal sealed class BridgeEngine(PluginConfig config, BridgeStore store, IPlug
         var textReader = mentionsBot ? mentionReader : replyReader;
         var text = chat && textReader.Input(out var rest, true) ? rest : e.TextMessage;
         if (string.IsNullOrWhiteSpace(text)) text = e.ImageUrls.Length > 0 ? "请描述这张图片。" : "（非文本消息）";
-        var summary = System.Text.RegularExpressions.Regex.IsMatch(text.Trim(), @"^(总结|summary)(\s+(今天|昨天|前天))?$");
+        var summary = System.Text.RegularExpressions.Regex.IsMatch(text.Trim(), @"^(总结|summary)(\s*[今昨前]\s*[天日])?$");
         var kind = summary ? "summary" : chat ? "chat" : "archive";
         var eventId = string.Join(':', new[] { config.BridgeInstance, robot, e.GroupId, e.MessageId }.Select(Uri.EscapeDataString));
         var message = new IngressEvent(1, eventId, conversation,
