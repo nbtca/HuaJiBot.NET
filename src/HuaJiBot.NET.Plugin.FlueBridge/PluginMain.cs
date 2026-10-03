@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using System.Collections.Concurrent;
 using HuaJiBot.NET.Events;
 using Newtonsoft.Json.Linq;
 
@@ -9,7 +10,8 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     public PluginConfig Config { get; } = new();
     private readonly CancellationTokenSource _stop = new();
     private readonly SemaphoreSlim _wake = new(0, 1);
-    private readonly Channel<GroupMessageEventArgs> _incoming = Channel.CreateBounded<GroupMessageEventArgs>(100);
+    private readonly Channel<IngressEvent> _incoming = Channel.CreateBounded<IngressEvent>(100);
+    private readonly ConcurrentDictionary<string, byte> _queued = new();
     private BridgeStore? _store;
     private HttpClient? _http;
     private BridgeEngine? _engine;
@@ -37,6 +39,7 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         _ingress = new IngressClient(_http, new Uri(Config.IngressUrl), hmac, Config.MaxMessageBytes);
         _queue = new CloudflareQueue(_http, Config, token);
         _engine = new BridgeEngine(Config, _store, Service, _queue, message => Warn(message));
+        foreach (var destination in Config.Destinations) _engine.SeedSummaryAnchors(destination.RobotId, destination.GroupId);
         Service.Events.OnGroupMessageReceived += Receive;
         _running = Task.WhenAll(ForwardLoopAsync(_stop.Token), PullLoopAsync(_stop.Token));
         Info("Flue桥接已启动");
@@ -45,8 +48,21 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     private void Receive(object? sender, GroupMessageEventArgs e)
     {
-        if (e.RobotId is { } robot && Config.Allows(robot, e.GroupId) && !_incoming.Writer.TryWrite(e))
-            Warn("Flue ingress buffer is full; message was not forwarded.");
+        if (e.RobotId is not { } robot || !Config.Allows(robot, e.GroupId)) return;
+        try
+        {
+            var message = _engine!.Normalize(e);
+            if (message is null) return;
+            if (message.Kind == "chat" && e.ImageUrls.Length > 4) { _ = e.Reply("单条消息最多支持4张图片，请分开发送。"); return; }
+            _store!.SaveIngress(message);
+            Enqueue(message);
+        }
+        catch (Exception) { Warn("Flue ingress recording failed."); }
+    }
+
+    private void Enqueue(IngressEvent message)
+    {
+        if (_queued.TryAdd(message.EventId, 0) && !_incoming.Writer.TryWrite(message)) _queued.TryRemove(message.EventId, out _);
     }
 
     private void Activate()
@@ -59,17 +75,16 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     {
         try
         {
-            await foreach (var e in _incoming.Reader.ReadAllAsync(ct))
+            await foreach (var message in _incoming.Reader.ReadAllAsync(ct))
             {
                 try
                 {
-                    var message = _engine!.Normalize(e);
-                    if (message is null) continue;
                     for (var attempt = 0; ; attempt++)
                     {
                         try
                         {
                             await _ingress!.SendAsync(message, ct);
+                            _store!.RemoveIngress(message.EventId);
                             Activate();
                             break;
                         }
@@ -82,6 +97,7 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                 catch (Exception) { Warn("Agent ingress forwarding failed."); }
+                finally { _queued.TryRemove(message.EventId, out _); }
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
@@ -97,6 +113,7 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             {
                 try
                 {
+                    foreach (var message in _store!.PendingIngress()) Enqueue(message);
                     if (DateTimeOffset.UtcNow >= nextPrune)
                     {
                         _store!.Prune(DateTimeOffset.UtcNow.AddDays(-Config.RetentionDays));

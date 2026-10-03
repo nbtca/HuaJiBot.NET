@@ -1,10 +1,10 @@
 {
-  "verifiedAt": "2026-10-03T02:14:33.8441915+08:00",
+  "verifiedAt": "2026-10-03T14:24:31.4773546+08:00",
   "accountEmail": "nbtca@protonmail.com",
   "accountId": "a415a3ae7a197093d02233755d38800b",
   "worker": "huaji-agent",
   "workerUrl": "https://huaji-agent.nbtca.workers.dev",
-  "workerVersionId": "ffd675ae-becb-4d8e-baa2-67ba54c3036f",
+  "workerVersionId": "2a4e1461-eb53-48e6-9963-f5ba2e82d880",
   "queue": {
     "name": "huajibot-outbound-main",
     "id": "3181cdb9b0054a4a8f0d0bc70b8a48c5"
@@ -48,18 +48,22 @@
     "Primary-enabled real two-turn Worker/model/Queue recall passed; both synthetic replies acknowledged",
     "Temporary Agnes diagnostic removed; HTTP 404",
     "18 Worker tests including primary/secondary key order and rate-limit fallback passed",
-    "Two-turn real Worker Queue test passed with cloudflare-limit-fallback observed in both DO runs"
+    "Two-turn real Worker Queue test passed with cloudflare-limit-fallback observed in both DO runs",
+    "Real Agent MCP search, image recognition, image follow-up without prior color disclosure, summary Workflow and Queue replies passed",
+    "494 read-only LiteDB records imported; live D1 archive increased to 521 records",
+    "Local AIChat/DailySummary disabled; bot running with zero restarts; OneBot identity/member verified",
+    "Temporary acceptance destination revoked and its D1 fixture records removed"
   ],
   "pending": [
-    "User verification of repaired real group follow-up",
+    "User acceptance of summary/search/image mention/image follow-up in QQ group",
     "Real platform failure/restart/DLQ acceptance",
-    "GitHub publication of separate agent repository",
-    "Valid secondary Agnes API key (or its correct endpoint)"
+    "GitHub publication of independent huaji-agent repository",
+    "Valid secondary Agnes key or its correct endpoint"
   ],
   "model": "cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
   "activationBackup": "/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T151502Z",
-  "currentImage": "huajibot-local:flue-canary-onebot-fix",
-  "latestActivationBackup": "/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T152218Z",
+  "currentImage": "huajibot-local:worker-features-v2",
+  "latestActivationBackup": "/home/yunacelisse/stacks/huajibot/backups/worker-features-20261003T054443Z",
   "agnesPrimary": {
     "model": "agnes-3.0-flash",
     "workerError": "Intermittent HTTP 429 / edge code 1015; subsequent two-turn test passed",
@@ -70,5 +74,21 @@
     "workerTwoTurnQueueRecallVerified": true,
     "secondarySecretConfigured": false,
     "secondaryValidation": "HTTP 401 / Invalid token twice; supplied secondary secret removed"
+  },
+  "workerFeatures": {
+    "vision": true,
+    "latestLiveArchiveRecords": 521,
+    "searchMcp": true,
+    "visionFollowup": true,
+    "d1DatabaseId": "f017db6e-cd05-4d34-af55-9d13f7337538",
+    "historyImportedRecords": 494,
+    "cronUtc": "*/5 16 * * *",
+    "workflow": "huaji-daily-summary",
+    "localDailySummaryEnabled": false,
+    "dailySummary": true,
+    "originalMigrationBackup": "/home/yunacelisse/stacks/huajibot/backups/worker-features-20261003T052735Z",
+    "bridgeTests": 12,
+    "imageFallbackModel": "cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct",
+    "workerTests": 23
   }
 }

@@ -42,6 +42,7 @@ internal sealed class BridgeStore : IDisposable
                 resulting_message_ids TEXT NOT NULL, updated_at INTEGER NOT NULL);
             CREATE INDEX IF NOT EXISTS mapping_age ON message_conversations(created_at);
             CREATE INDEX IF NOT EXISTS delivery_age ON queue_deliveries(updated_at);
+            CREATE TABLE IF NOT EXISTS ingress_outbox (event_id TEXT PRIMARY KEY, body TEXT NOT NULL, created_at INTEGER NOT NULL);
             """;
         command.ExecuteNonQuery();
     }
@@ -78,6 +79,43 @@ internal sealed class BridgeStore : IDisposable
     internal void Map(string robot, string group, string message, string conversation)
     {
         lock (_gate) MapCore(robot, group, message, conversation, null);
+    }
+
+    internal void SaveIngress(IngressEvent message)
+    {
+        lock (_gate)
+        {
+            using var cmd = _db.CreateCommand();
+            cmd.CommandText = "INSERT OR IGNORE INTO ingress_outbox VALUES($id,$body,$t)";
+            cmd.Parameters.AddWithValue("$id", message.EventId);
+            cmd.Parameters.AddWithValue("$body", JsonSerializer.Serialize(message, BridgeJson.Options));
+            cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    internal IngressEvent[] PendingIngress()
+    {
+        lock (_gate)
+        {
+            using var cmd = _db.CreateCommand();
+            cmd.CommandText = "SELECT body FROM ingress_outbox ORDER BY created_at,rowid LIMIT 50";
+            using var reader = cmd.ExecuteReader();
+            var messages = new List<IngressEvent>();
+            while (reader.Read()) messages.Add(JsonSerializer.Deserialize<IngressEvent>(reader.GetString(0), BridgeJson.Options)!);
+            return messages.ToArray();
+        }
+    }
+
+    internal void RemoveIngress(string id)
+    {
+        lock (_gate)
+        {
+            using var cmd = _db.CreateCommand();
+            cmd.CommandText = "DELETE FROM ingress_outbox WHERE event_id=$id";
+            cmd.Parameters.AddWithValue("$id", id);
+            cmd.ExecuteNonQuery();
+        }
     }
 
     internal bool WasSent(string job)

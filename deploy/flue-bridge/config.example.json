@@ -5,12 +5,20 @@
     "IngressUrl": "https://huaji-agent.nbtca.workers.dev/channels/huajibot/events",
     "AccountId": "a415a3ae7a197093d02233755d38800b",
     "QueueId": "3181cdb9b0054a4a8f0d0bc70b8a48c5",
-    "Destinations": [{ "RobotId": "3623498320", "GroupId": "466691612" }],
+    "Destinations": [
+      {
+        "RobotId": "3623498320",
+        "GroupId": "466691612"
+      }
+    ],
     "MaxMessageBytes": 32768,
     "RetentionDays": 30,
     "ActiveWindowSeconds": 120,
     "IdlePollSeconds": 15,
     "RetryDelaySeconds": 10,
     "VisibilityTimeoutSeconds": 120
+  },
+  "每日聊天总结": {
+    "Enabled": false
   }
 }

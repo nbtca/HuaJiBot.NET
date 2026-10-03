@@ -95,9 +95,35 @@ public class FlueBridgeTest
             Assert.That(reply.Message.Text, Is.EqualTo("follow-up"));
             Assert.That(first.Destination.GroupId, Is.EqualTo("-100:42"));
             Assert.That(first.ConversationId, Does.Contain("-100%3A42"));
-            Assert.That(_engine.Normalize(Message("other", "ordinary text")), Is.Null);
-            Assert.That(_engine.Normalize(Message("unknown", new CommonCommandReader.ReaderReply(new("missing")), "unknown")), Is.Null);
+            Assert.That(_engine.Normalize(Message("other", "ordinary text"))!.Kind, Is.EqualTo("archive"));
+            Assert.That(_engine.Normalize(Message("unknown", new CommonCommandReader.ReaderReply(new("missing")), "unknown"))!.Kind, Is.EqualTo("archive"));
         });
+    }
+
+    [Test]
+    public void ArchiveOutboxSurvivesRestartAndKeepsOriginalPayload()
+    {
+        var message = _engine.Normalize(Message("archive", "ordinary text"))!;
+        _store.SaveIngress(message);
+        _store.SaveIngress(message with { Message = message.Message with { Text = "changed" } });
+        _store.Dispose();
+        _store = new BridgeStore(_path);
+        var pending = _store.PendingIngress();
+        Assert.That(pending, Has.Length.EqualTo(1));
+        Assert.That(pending[0].Message.Text, Is.EqualTo(message.Message.Text));
+        _store.RemoveIngress(message.EventId);
+        Assert.That(_store.PendingIngress(), Is.Empty);
+    }
+
+    [Test]
+    public async Task ScheduledSummaryUsesKnownAnchorWithoutPlatformReplyId()
+    {
+        _engine.SeedSummaryAnchors("bot", "-100:42");
+        var anchor = "summary:" + DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy-MM-dd");
+        var conversation = _store.Find("bot", "-100:42", anchor)!;
+        var job = new ReplyJob(1, "scheduled", conversation, new("main", "bot", "-100:42", anchor), new("markdown", "summary"), DateTimeOffset.UtcNow, "summary");
+        await _engine.DeliverAsync(Lease(job), CancellationToken.None);
+        Assert.That(_store.WasSent("scheduled"), Is.True);
     }
 
     [Test]
