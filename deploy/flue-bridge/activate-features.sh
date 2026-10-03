@@ -4,7 +4,7 @@ umask 077
 
 STACK=/home/yunacelisse/stacks/huajibot
 STAGE="$STACK/deploy/flue-feature"
-IMAGE=huajibot-local:worker-features-v2
+IMAGE=huajibot-local:worker-features-v4
 STATUS="$STAGE/activation-status.json"
 BACKUP="$STACK/backups/worker-features-$(date -u +%Y%m%dT%H%M%SZ)"
 STOPPED=0

@@ -1,5 +1,5 @@
 {
-  "verifiedAt": "2026-10-03T14:24:31.4773546+08:00",
+  "verifiedAt": "2026-10-03T15:00:09.6761576+08:00",
   "accountEmail": "nbtca@protonmail.com",
   "accountId": "a415a3ae7a197093d02233755d38800b",
   "worker": "huaji-agent",
@@ -52,7 +52,9 @@
     "Real Agent MCP search, image recognition, image follow-up without prior color disclosure, summary Workflow and Queue replies passed",
     "494 read-only LiteDB records imported; live D1 archive increased to 521 records",
     "Local AIChat/DailySummary disabled; bot running with zero restarts; OneBot identity/member verified",
-    "Temporary acceptance destination revoked and its D1 fixture records removed"
+    "Temporary acceptance destination revoked and its D1 fixture records removed",
+    "Authenticated OneBot history export covered the migration window; 50 records re-imported with deduplication",
+    "Image ingress timeout separated from Queue HTTP timeout; archive forwarding leaves Queue polling idle"
   ],
   "pending": [
     "User acceptance of summary/search/image mention/image follow-up in QQ group",
@@ -62,7 +64,7 @@
   ],
   "model": "cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
   "activationBackup": "/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T151502Z",
-  "currentImage": "huajibot-local:worker-features-v2",
+  "currentImage": "huajibot-local:worker-features-v4",
   "latestActivationBackup": "/home/yunacelisse/stacks/huajibot/backups/worker-features-20261003T054443Z",
   "agnesPrimary": {
     "model": "agnes-3.0-flash",
@@ -89,6 +91,7 @@
     "originalMigrationBackup": "/home/yunacelisse/stacks/huajibot/backups/worker-features-20261003T052735Z",
     "bridgeTests": 12,
     "imageFallbackModel": "cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct",
-    "workerTests": 23
+    "workerTests": 23,
+    "recoveredPlatformHistoryRecords": 50
   }
 }

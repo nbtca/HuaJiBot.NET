@@ -14,6 +14,7 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private readonly ConcurrentDictionary<string, byte> _queued = new();
     private BridgeStore? _store;
     private HttpClient? _http;
+    private HttpClient? _queueHttp;
     private BridgeEngine? _engine;
     private IngressClient? _ingress;
     private IReplyQueue? _queue;
@@ -35,9 +36,11 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
         _store = new BridgeStore(Path.Combine(Service.GetPluginDataPath(), "flue_bridge.db"));
         // Signed requests and Queue credentials must never follow a redirect to another host.
-        _http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(30) };
+        // Admission may download four images (20 seconds each) before dispatch.
+        _http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(100) };
+        _queueHttp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(30) };
         _ingress = new IngressClient(_http, new Uri(Config.IngressUrl), hmac, Config.MaxMessageBytes);
-        _queue = new CloudflareQueue(_http, Config, token);
+        _queue = new CloudflareQueue(_queueHttp, Config, token);
         _engine = new BridgeEngine(Config, _store, Service, _queue, message => Warn(message));
         foreach (var destination in Config.Destinations) _engine.SeedSummaryAnchors(destination.RobotId, destination.GroupId);
         Service.Events.OnGroupMessageReceived += Receive;
@@ -85,7 +88,7 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                         {
                             await _ingress!.SendAsync(message, ct);
                             _store!.RemoveIngress(message.EventId);
-                            Activate();
+                            if (message.Kind != "archive") Activate();
                             break;
                         }
                         catch (HttpRequestException ex) when (attempt < 2 && (ex.StatusCode is null
@@ -154,6 +157,7 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private void Cleanup()
     {
         _http?.Dispose();
+        _queueHttp?.Dispose();
         _store?.Dispose();
         _wake.Dispose();
         _stop.Dispose();
