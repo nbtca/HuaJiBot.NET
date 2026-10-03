@@ -65,7 +65,7 @@
   "model": "cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
   "activationBackup": "/home/yunacelisse/stacks/huajibot/backups/flue-canary-20261002T151502Z",
   "currentImage": "huajibot-local:worker-features-v4",
-  "latestActivationBackup": "/home/yunacelisse/stacks/huajibot/backups/worker-features-20261003T054443Z",
+  "latestActivationBackup": "/home/yunacelisse/stacks/huajibot/backups/worker-features-20261003T065807Z",
   "agnesPrimary": {
     "model": "agnes-3.0-flash",
     "workerError": "Intermittent HTTP 429 / edge code 1015; subsequent two-turn test passed",
