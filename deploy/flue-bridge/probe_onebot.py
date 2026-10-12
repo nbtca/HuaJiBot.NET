@@ -19,7 +19,9 @@ def probe(config_path, group_id, history_output=None, since=0):
     port = endpoint.port or (443 if endpoint.scheme == "wss" else 80)
     connection = socket.create_connection((endpoint.hostname, port), timeout=10)
     if endpoint.scheme == "wss":
-        connection = ssl.create_default_context().wrap_socket(connection, server_hostname=endpoint.hostname)
+        context = ssl.create_default_context()
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        connection = context.wrap_socket(connection, server_hostname=endpoint.hostname)
     with connection:
         key = base64.b64encode(os.urandom(16)).decode()
         path = endpoint.path or "/"
