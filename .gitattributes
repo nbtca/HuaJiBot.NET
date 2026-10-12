@@ -13,4 +13,5 @@
  
 *.docx   diff=astextplain
 *.DOCX   diff=astextplain
+src/HuaJiBot.NET.UnitTest/TestData/AgentProtocol/** text eol=lf
 
