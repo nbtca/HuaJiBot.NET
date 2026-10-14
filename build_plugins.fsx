@@ -108,6 +108,13 @@ for dir in binDirs do
             let dest = Path.Combine(libsDir, fileName)
             File.Copy(file, dest, true)
             printfn "Copy %s to %s" file dest
+    // Preserve native dependencies (e.g. SQLite) alongside the managed plugin libraries.
+    let runtimes = Path.Combine(dir, "runtimes")
+    if Directory.Exists runtimes then
+        for file in Directory.GetFiles(runtimes, "*", SearchOption.AllDirectories) do
+            let dest = Path.Combine(libsDir, "runtimes", Path.GetRelativePath(runtimes, file))
+            Directory.CreateDirectory(Path.GetDirectoryName dest) |> ignore
+            File.Copy(file, dest, true)
 //remove original output
 for dir in binDirs do
     Directory.Delete(dir, true)

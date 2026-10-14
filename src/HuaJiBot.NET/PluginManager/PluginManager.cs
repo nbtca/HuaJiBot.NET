@@ -132,7 +132,11 @@ public class PluginManager
         var libsDir = Path.Combine(directoryInfo.FullName, "libs");
         if (!Directory.Exists(libsDir))
             Directory.CreateDirectory(libsDir);
-        var libs = Directory.GetFiles(libsDir, "*.dll", SearchOption.AllDirectories); //获取所有依赖库
+        // Runtime assets include native DLLs and must not be loaded as managed assemblies.
+        var runtimePrefix = Path.Combine(libsDir, "runtimes") + Path.DirectorySeparatorChar;
+        var libs = Directory.GetFiles(libsDir, "*.dll", SearchOption.AllDirectories)
+            .Where(path => !path.StartsWith(runtimePrefix, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
         foreach (
             var lib in libs.OrderBy(
                 x => x.EndsWith(".Abstractions.dll", StringComparison.InvariantCultureIgnoreCase),
@@ -147,7 +151,7 @@ public class PluginManager
             var file in directoryInfo
                 .EnumerateFiles("*.dll", SearchOption.AllDirectories) //遍历所有dll文件
                                                                       //SearchOption.AllDirectories 包括所有子目录
-                .SkipWhile(x => libs.Contains(x.FullName)) //跳过libs目录下的dll
+                .Where(x => !x.FullName.StartsWith(libsDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
         )
         {
             api.Log(
