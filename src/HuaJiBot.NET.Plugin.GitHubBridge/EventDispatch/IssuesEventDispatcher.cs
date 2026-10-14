@@ -27,12 +27,13 @@ internal static class IssuesEventDispatcher
         if (!ShouldBroadcast(body))
             return;
         using Cards cards = new();
+        var card = cards.Card(() => BuildCommentCardAsync(body));
         var post = GitHubPosts.Comment(
             body,
-            cards.Card(() => BuildCommentCardAsync(body, GitHubPosts.Excerpt(body.Comment.Body))),
+            card,
             Cards.Once<SendingMessageBase[]>(async () =>
                 [
-                    new ImageMessage(await cards.Card(() => BuildCommentCardAsync(body, body.Comment.Body))()),
+                    new ImageMessage(await card()),
                     new LinkMessage("View comment", await plugin.OrRawAsync(body.Issue.HtmlUrl)),
                 ]
             )
@@ -51,12 +52,13 @@ internal static class IssuesEventDispatcher
         if (!ShouldBroadcast(body))
             return;
         using Cards cards = new();
+        var card = cards.Card(() => BuildIssueCardAsync(body));
         var post = GitHubPosts.Issue(
             body,
-            cards.Card(() => BuildIssueCardAsync(body, GitHubPosts.Excerpt(body.Issue.Body))),
+            card,
             Cards.Once<SendingMessageBase[]>(async () =>
                 [
-                    new ImageMessage(await cards.Card(() => BuildIssueCardAsync(body, body.Issue.Body))()),
+                    new ImageMessage(await card()),
                     new LinkMessage(
                         $"Open #{body.Issue.Number}",
                         await plugin.OrRawAsync(body.Issue.HtmlUrl)
@@ -71,29 +73,23 @@ internal static class IssuesEventDispatcher
         );
     }
 
-    private static Task<TempFile.AutoDeleteFile> BuildCommentCardAsync(
-        IssueCommentEventBody body,
-        string? content
-    ) =>
+    private static Task<TempFile.AutoDeleteFile> BuildCommentCardAsync(IssueCommentEventBody body) =>
         BuildCardAsync(
             body.Repository,
             body.Issue,
             body.Sender,
             body.Issue.State,
-            content,
+            body.Comment.Body,
             $"@{body.Sender.Login} {body.Action} comment."
         );
 
-    private static Task<TempFile.AutoDeleteFile> BuildIssueCardAsync(
-        IssuesEventBody body,
-        string? content
-    ) =>
+    private static Task<TempFile.AutoDeleteFile> BuildIssueCardAsync(IssuesEventBody body) =>
         BuildCardAsync(
             body.Repository,
             body.Issue,
             body.Sender,
             body.Action is "opened" or "reopened" ? "open" : body.Action,
-            content,
+            body.Issue.Body,
             $"@{body.Sender.Login} {body.Action} issue"
         );
 

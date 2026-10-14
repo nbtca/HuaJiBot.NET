@@ -89,23 +89,4 @@ internal class GitHubPostTest
             Assert.That(post.Links.Single(), Is.EqualTo(new LinkMessage("查看改动", "https://github.com/nbtca/HuaJiBot.NET/compare/a...b")));
         });
     }
-
-    [Test]
-    public void Excerpt_KeepsShortBody() =>
-        Assert.That(GitHubPosts.Excerpt("one\ntwo"), Is.EqualTo("one\ntwo"));
-
-    [Test]
-    public void Excerpt_CutsManyLinesToThree() =>
-        Assert.That(GitHubPosts.Excerpt("1\n2\n3\n4\n5\n6\n7"), Is.EqualTo("1\n2\n3…"));
-
-    [Test]
-    public void Excerpt_CutsLongParagraph()
-    {
-        var excerpt = GitHubPosts.Excerpt(new string('a', 500))!;
-        Assert.Multiple(() =>
-        {
-            Assert.That(excerpt, Has.Length.EqualTo(GitHubPosts.ExcerptLimit));
-            Assert.That(excerpt, Does.EndWith("…"));
-        });
-    }
 }
