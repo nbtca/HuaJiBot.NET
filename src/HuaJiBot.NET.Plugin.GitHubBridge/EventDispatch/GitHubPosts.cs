@@ -7,8 +7,6 @@ namespace HuaJiBot.NET.Plugin.GitHubBridge.EventDispatch;
 
 internal static class GitHubPosts
 {
-    internal const int ExcerptLimit = 280;
-
     internal static Post Issue(
         IssuesEventBody body,
         Func<Task<string>> card,
@@ -50,23 +48,6 @@ internal static class GitHubPosts
             Tags = ["push", body.Repository.Name],
             Links = [new("查看改动", body.Compare.ToString())],
         };
-
-    internal static string? Excerpt(string? body)
-    {
-        if (body is null)
-            return null;
-        var text = body.ReplaceLineEndings("\n").Trim();
-        var lines = text.Split('\n');
-        if (lines.Length <= 6 && text.Length <= ExcerptLimit)
-            return text;
-        var head = string.Join('\n', lines.Take(3));
-        if (lines.Length > 3 && head.Length < ExcerptLimit)
-            return head + '…';
-        var end = ExcerptLimit - 1;
-        if (char.IsLowSurrogate(head[end]))
-            end--;
-        return head[..end] + '…';
-    }
 
     private static string Verb(string action) =>
         action switch
