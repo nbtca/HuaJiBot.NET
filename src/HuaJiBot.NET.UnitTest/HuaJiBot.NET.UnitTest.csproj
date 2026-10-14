@@ -29,6 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="TestData\AgentProtocol\**\*" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="..\HuaJiBot.NET.Adapter.OneBot\HuaJiBot.NET.Adapter.OneBot.csproj" />
     <ProjectReference Include="..\HuaJiBot.NET.Plugin.FlueBridge\HuaJiBot.NET.Plugin.FlueBridge.csproj" />
     <ProjectReference Include="..\HuaJiBot.NET.Adapter.Telegram\HuaJiBot.NET.Adapter.Telegram.csproj" />

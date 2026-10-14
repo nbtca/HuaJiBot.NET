@@ -10,7 +10,7 @@ using Moq;
 
 namespace HuaJiBot.NET.UnitTest;
 
-public class FlueBridgeTest
+public partial class FlueBridgeTest
 {
     private string _path = null!;
     private BridgeStore _store = null!;
