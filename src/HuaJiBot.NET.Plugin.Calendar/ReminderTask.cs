@@ -69,7 +69,12 @@ internal class ReminderTask : IDisposable
             var remindEnd = end.AddMinutes(RemindBeforeStartMinutes);
             foreach (var (period, e) in Calendar.GetEvents(remindStart, remindEnd))
             {
-                if (e.IsAllDay || period.StartTime < remindStart || period.StartTime > remindEnd)
+                if (
+                    e.IsAllDay
+                    || e.ShouldSkipNotification()
+                    || period.StartTime < remindStart
+                    || period.StartTime > remindEnd
+                )
                     continue;
                 ScheduleReminder(
                     period.StartTime.AddMinutes(-RemindBeforeStartMinutes) - now,
@@ -93,7 +98,13 @@ internal class ReminderTask : IDisposable
             remindEnd = end.AddMinutes(RemindBeforeEndMinutes);
             foreach (var (period, e) in Calendar.GetEvents(remindStart, remindEnd))
             {
-                if (e.IsAllDay || e.End is null || period.EndTime < remindStart || period.EndTime > remindEnd)
+                if (
+                    e.IsAllDay
+                    || e.End is null
+                    || e.ShouldSkipNotification()
+                    || period.EndTime < remindStart
+                    || period.EndTime > remindEnd
+                )
                     continue;
                 ScheduleReminder(
                     period.EndTime.AddMinutes(-RemindBeforeEndMinutes) - now,

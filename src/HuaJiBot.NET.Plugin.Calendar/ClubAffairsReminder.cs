@@ -149,7 +149,11 @@ internal class ClubAffairsReminder : IDisposable
             return false;
         }
         var weekEnd = now.AddDays(7);
-        var events = Calendar.GetEvents(now, weekEnd).OrderBy(x => x.period.StartTime).ToList();
+        var events = Calendar
+            .GetEvents(now, weekEnd)
+            .Where(x => !x.e.ShouldSkipNotification())
+            .OrderBy(x => x.period.StartTime)
+            .ToList();
         foreach (var group in Config.ReminderGroups)
         {
             var groupEvents = events.Where(x => group.Matches(x.e)).ToList();
@@ -183,7 +187,7 @@ internal class ClubAffairsReminder : IDisposable
         // Only events starting tomorrow, so a multi-day event is not repeated every day.
         var events = Calendar
             .GetEvents(tomorrow, dayAfterTomorrow)
-            .Where(x => x.period.StartTime >= tomorrow)
+            .Where(x => x.period.StartTime >= tomorrow && !x.e.ShouldSkipNotification())
             .OrderBy(x => x.period.StartTime)
             .ToList();
         foreach (var group in Config.ReminderGroups)
