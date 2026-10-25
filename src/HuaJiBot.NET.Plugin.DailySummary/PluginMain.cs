@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using HuaJiBot.NET.AI;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Commands;
@@ -147,7 +147,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     // ReSharper disable once UnusedMember.Global
     public async Task SummaryCommand(
         GroupMessageEventArgs e,
-        [CommandArgumentEnum<SummaryTarget>("日期")] SummaryTarget? target = null
+        [CommandArgumentEnum<SummaryTarget>("日期")] SummaryTarget? day = null
     )
     {
         if (!Config.GroupIds.Contains(e.GroupId))
@@ -162,7 +162,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         _cooldown[e.SenderId] = now;
         _ = Task.Delay(Cooldown).ContinueWith(_ => _cooldown.TryRemove(e.SenderId, out var _));
 
-        var date = now.Date.AddDays(-(int)(target ?? SummaryTarget.昨天));
+        var date = now.Date.AddDays(-(int)(day ?? SummaryTarget.昨天));
         await e.Reply($"收到，正在总结 {date:yyyy-MM-dd} 的聊天记录…");
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(Config.LlmTimeoutSeconds));
         try

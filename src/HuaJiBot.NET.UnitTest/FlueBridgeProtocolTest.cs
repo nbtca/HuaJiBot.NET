@@ -17,12 +17,16 @@ public partial class FlueBridgeTest
         var ingress = JsonSerializer.Deserialize<IngressEvent>(ingressJson, BridgeJson.Options)!;
         var replyJson = ProtocolFixture("examples/reply-job.json");
         var reply = JsonSerializer.Deserialize<ReplyJob>(replyJson, BridgeJson.Options)!;
+        var commandJson = ProtocolFixture("v2/examples/command-job.json");
+        var command = JsonSerializer.Deserialize<CommandJob>(commandJson, BridgeJson.Options)!;
         Assert.Multiple(() =>
         {
             Assert.That(JsonNode.DeepEquals(JsonNode.Parse(ingressJson), JsonSerializer.SerializeToNode(ingress, BridgeJson.Options)), Is.True);
             Assert.That(JsonNode.DeepEquals(JsonNode.Parse(replyJson), JsonSerializer.SerializeToNode(reply, BridgeJson.Options)), Is.True);
+            Assert.That(JsonNode.DeepEquals(JsonNode.Parse(commandJson), JsonSerializer.SerializeToNode(command, BridgeJson.Options)), Is.True);
             Assert.That(ingress.Kind, Is.EqualTo("chat"));
             Assert.That(reply.Destination.ReplyToMessageId, Is.EqualTo(ingress.Message.MessageId));
+            Assert.That(command.Command.Id, Is.EqualTo("schedule"));
         });
     }
 

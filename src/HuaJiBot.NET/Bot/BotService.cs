@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using HuaJiBot.NET.Agent;
 using HuaJiBot.NET.Events;
 using HuaJiBot.NET.Interfaces;
@@ -202,6 +202,8 @@ public abstract class BotService : IMessageService, IPluginService, IAdapterServ
 
     public IReadOnlyDictionary<string, IEnumerable<AgentFunctionInfo>> ExportFunctions =>
         _commandService.ExportFunctions;
+
+    public ICommandService CommandService => _commandService;
 
     public void SetupCommands(PluginBase plugin) => _commandService.SetupCommands(plugin);
 

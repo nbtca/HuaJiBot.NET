@@ -17,6 +17,10 @@ internal record ReplyDestination(string BridgeInstance, string RobotId, string G
 internal record ReplyContent(string Format, string Text);
 internal record ReplyJob(int Version, string JobId, string ConversationId,
     ReplyDestination Destination, ReplyContent Content, DateTimeOffset CreatedAt, string Kind = "chat");
+internal record CommandRequest(string Id, JsonElement Arguments);
+internal record CommandJob(int Version, string JobId, string ConversationId,
+    ReplyDestination Destination, string SenderId, string SenderName, CommandRequest Command,
+    DateTimeOffset CreatedAt, string Kind = "command");
 internal record QueueLease(string Body, string LeaseId);
 
 internal interface IReplyQueue

@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using HuaJiBot.NET.Agent;
 using HuaJiBot.NET.Bot;
@@ -70,12 +70,13 @@ public abstract partial class PluginBase
     public record CommandInfo(
         string Name,
         string Description,
-        Action<object?[]?> Method,
+        Func<object?[]?, Task> Method,
         CommandArgumentInfo[] Arguments,
         string? Alias = null
     );
 
     public record CommandArgumentInfo(
+        string Name,
         CommandArgumentAttribute Attribute,
         Type Type,
         bool IsOptional,
@@ -93,6 +94,7 @@ public abstract partial class PluginBase
                 var arguments = (
                     from x in method.GetParameters()
                     select new CommandArgumentInfo(
+                        x.Name ?? "arg",
                         x.GetCustomAttribute<CommandArgumentAttribute>()
                             ?? new CommandArgumentUnknownAttribute(x.ParameterType),
                         x.ParameterType,
@@ -106,19 +108,12 @@ public abstract partial class PluginBase
                     args =>
                     {
                         var result = method.Invoke(this, args);
-                        if (result is Task task)
+                        return result switch
                         {
-                            task.ContinueWith(
-                                t =>
-                                {
-                                    if (t.Exception is not null)
-                                    {
-                                        Error($"执行命令 {overload.Key} 时出现异常：", t.Exception);
-                                    }
-                                },
-                                TaskContinuationOptions.OnlyOnFaulted
-                            );
-                        }
+                            Task task => task,
+                            ValueTask valueTask => valueTask.AsTask(),
+                            _ => Task.CompletedTask,
+                        };
                     },
                     arguments,
                     overload.Alias
