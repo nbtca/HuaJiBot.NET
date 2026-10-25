@@ -1,4 +1,4 @@
-﻿﻿using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using HuaJiBot.NET.Bot;
 using HuaJiBot.NET.Events;

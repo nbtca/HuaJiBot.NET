@@ -1,4 +1,4 @@
-﻿﻿using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using HuaJiBot.NET.Agent;
@@ -230,23 +230,23 @@ public class CommandService : ICommandService
                     value = str;
                     break;
                 case CommandArgumentType.RegexString:
-                {
-                    var regexAttr = (CommandArgumentStringMatchAttribute)arg.Attribute;
-                    if (!reader.Input(out var regexStr))
-                        continue;
-                    if (!Regex.IsMatch(regexStr, regexAttr.Pattern, regexAttr.Options))
-                        continue;
-                    value = regexStr;
-                    break;
-                }
+                    {
+                        var regexAttr = (CommandArgumentStringMatchAttribute)arg.Attribute;
+                        if (!reader.Input(out var regexStr))
+                            continue;
+                        if (!Regex.IsMatch(regexStr, regexAttr.Pattern, regexAttr.Options))
+                            continue;
+                        value = regexStr;
+                        break;
+                    }
                 case CommandArgumentType.Enum:
-                {
-                    var enumAttr = (CommandArgumentEnumAttributeBase)arg.Attribute;
-                    if (!reader.Match(enumAttr.EnumItems, x => [x.Key, x.Alias], out var item))
-                        continue;
-                    value = item.Value;
-                    break;
-                }
+                    {
+                        var enumAttr = (CommandArgumentEnumAttributeBase)arg.Attribute;
+                        if (!reader.Match(enumAttr.EnumItems, x => [x.Key, x.Alias], out var item))
+                            continue;
+                        value = item.Value;
+                        break;
+                    }
                 default:
                     throw new ArgumentOutOfRangeException();
             }
