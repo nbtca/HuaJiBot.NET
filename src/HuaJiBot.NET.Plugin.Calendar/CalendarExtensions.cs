@@ -9,6 +9,14 @@ namespace HuaJiBot.NET.Plugin.Calendar;
 
 internal static partial class CalendarExtensions
 {
+    internal const string SkipNotificationKeyword = "[skip notification]";
+
+    internal static bool ShouldSkipNotification(this CalendarEvent calendarEvent) =>
+        calendarEvent.Description?.Contains(
+            SkipNotificationKeyword,
+            StringComparison.OrdinalIgnoreCase
+        ) == true;
+
     /// <summary>
     /// Wraps an ical.net <see cref="Ical.Net.DataTypes.Period"/> and converts its times to
     /// <see cref="DateTimeOffset"/>. The <paramref name="calendarEvent"/> is required to

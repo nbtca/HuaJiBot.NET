@@ -16,7 +16,7 @@ jobs:
           dotnet-version: '10.x'
 
       - name: Run focused tests
-        run: dotnet test src/HuaJiBot.NET.UnitTest --filter 'FullyQualifiedName~DailySummaryTest|FullyQualifiedName~AsciiArtToolsTest|FullyQualifiedName~WebDataServiceTest|FullyQualifiedName~VisionInputTest|FullyQualifiedName~FlueBridgeTest'
+        run: dotnet test src/HuaJiBot.NET.UnitTest --filter 'FullyQualifiedName~DailySummaryTest|FullyQualifiedName~AsciiArtToolsTest|FullyQualifiedName~WebDataServiceTest|FullyQualifiedName~VisionInputTest|FullyQualifiedName~FlueBridgeTest|FullyQualifiedName~ClubAffairsReminderTest|FullyQualifiedName~CalendarOutputTest'
 
   format-check:
     runs-on: ubuntu-latest

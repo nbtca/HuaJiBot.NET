@@ -9,10 +9,16 @@ internal class ClubAffairsReminderTest
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 21, 9, 0, 0, TimeSpan.FromHours(8));
 
-    private static CalendarEvent Event(string summary, DateTimeOffset start, DateTimeOffset end) =>
+    private static CalendarEvent Event(
+        string summary,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        string? description = null
+    ) =>
         new()
         {
             Summary = summary,
+            Description = description,
             Start = new CalDateTime(start.UtcDateTime, "UTC"),
             End = new CalDateTime(end.UtcDateTime, "UTC"),
         };
@@ -80,6 +86,51 @@ internal class ClubAffairsReminderTest
         Assert.That(reminder.SendDailyReminder(Now), Is.True);
 
         Assert.That(SentTo(adapter, "all"), Does.Contain("招新宣讲").And.Not.Contain("例会筹备"));
+    }
+
+    [Test]
+    public void Reminders_SkipEventsMarkedWithSkipNotification()
+    {
+        var calendar = new Ical.Net.Calendar();
+        calendar.Events.Add(
+            Event(
+                "NWDC （待定）",
+                Now.AddHours(25),
+                Now.AddHours(27),
+                "具体日期待确认\n[skip notification]"
+            )
+        );
+        calendar.Events.Add(Event("正式活动", Now.AddHours(26), Now.AddHours(28)));
+        var config = new PluginConfig
+        {
+            ReminderGroups = [new() { GroupId = "all", Mode = FilterMode.BlackList, Keywords = [] }],
+        };
+        var adapter = new RecordingAdapter();
+        var reminder = new ClubAffairsReminder(adapter, config, () => calendar);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(reminder.SendWeeklySummary(Now), Is.True);
+            Assert.That(reminder.SendDailyReminder(Now), Is.True);
+            Assert.That(SentTo(adapter, "all"), Does.Contain("正式活动").And.Not.Contain("NWDC"));
+        });
+    }
+
+    [TestCase("[skip notification]")]
+    [TestCase("Details\n[SKIP NOTIFICATION]\n")]
+    public void SkipNotificationKeyword_IsCaseInsensitive(string description)
+    {
+        var calendarEvent = Event("Placeholder", Now, Now.AddHours(1), description);
+
+        Assert.That(calendarEvent.ShouldSkipNotification(), Is.True);
+    }
+
+    [Test]
+    public void SkipNotificationKeyword_DoesNotHideOtherEvents()
+    {
+        var calendarEvent = Event("Real event", Now, Now.AddHours(1), "No notification marker");
+
+        Assert.That(calendarEvent.ShouldSkipNotification(), Is.False);
     }
 
     [Test]
