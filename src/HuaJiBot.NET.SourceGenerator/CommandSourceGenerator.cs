@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -195,7 +196,7 @@ public class CommandSourceGenerator : IIncrementalGenerator
             sb.AppendLine($"        yield return new CommandInfo(");
             sb.AppendLine($"            \"{key}\",");
             sb.AppendLine($"            \"{description}\",");
-            sb.AppendLine($"            args => ");
+            sb.AppendLine($"            args =>");
             sb.AppendLine($"            {{");
 
             // Check if method returns void
@@ -238,23 +239,21 @@ public class CommandSourceGenerator : IIncrementalGenerator
 
             sb.AppendLine(");");
 
-            if (!isVoid)
+            if (isVoid)
             {
-                sb.AppendLine($"                if (result is Task task)");
-                sb.AppendLine($"                {{");
-                sb.AppendLine($"                    task.ContinueWith(");
-                sb.AppendLine($"                        t =>");
-                sb.AppendLine($"                        {{");
-                sb.AppendLine($"                            if (t.Exception is not null)");
-                sb.AppendLine($"                            {{");
-                sb.AppendLine(
-                    $"                                Error($\"执行命令 {key} 时出现异常：\", t.Exception);"
-                );
-                sb.AppendLine($"                            }}");
-                sb.AppendLine($"                        }},");
-                sb.AppendLine($"                        TaskContinuationOptions.OnlyOnFaulted");
-                sb.AppendLine($"                    );");
-                sb.AppendLine($"                }}");
+                sb.AppendLine($"                return Task.CompletedTask;");
+            }
+            else if (method.ReturnType?.ToString().StartsWith("ValueTask", StringComparison.Ordinal) == true)
+            {
+                sb.AppendLine($"                return result.AsTask();");
+            }
+            else if (method.ReturnType?.ToString().StartsWith("Task", StringComparison.Ordinal) == true)
+            {
+                sb.AppendLine($"                return result;");
+            }
+            else
+            {
+                sb.AppendLine($"                return Task.CompletedTask;");
             }
             sb.AppendLine($"            }},");
 
@@ -323,6 +322,7 @@ public class CommandSourceGenerator : IIncrementalGenerator
         }
 
         sb.AppendLine($"                new CommandArgumentInfo(");
+        sb.AppendLine($"                    \"{param.Identifier.ValueText}\",");
         sb.AppendLine($"                    {attributeCreation},");
         sb.AppendLine($"                    typeof({typeForTypeof}),");
         sb.AppendLine($"                    {isOptional},");

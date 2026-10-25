@@ -148,6 +148,19 @@ internal sealed class BridgeStore : IDisposable
         }
     }
 
+    internal void CompleteCommand(CommandJob job)
+    {
+        lock (_gate)
+        {
+            using var cmd = _db.CreateCommand();
+            cmd.CommandText = "INSERT INTO queue_deliveries VALUES ($j,'sent',$c,'[]',$t) ON CONFLICT(job_id) DO NOTHING";
+            cmd.Parameters.AddWithValue("$j", job.JobId);
+            cmd.Parameters.AddWithValue("$c", job.ConversationId);
+            cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            cmd.ExecuteNonQuery();
+        }
+    }
+
     internal void Prune(DateTimeOffset before)
     {
         lock (_gate)

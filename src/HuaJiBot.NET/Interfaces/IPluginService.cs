@@ -48,5 +48,6 @@ public interface IPluginService
     ConfigWrapper Config { get; }
     ILogger Logger { get; }
     IReadOnlyDictionary<string, IEnumerable<AgentFunctionInfo>> ExportFunctions { get; }
+    ICommandService CommandService { get; }
     string GetPluginDataPath();
 }

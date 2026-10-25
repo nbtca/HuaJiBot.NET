@@ -170,7 +170,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     [Command("日程", "查看近期日程", Alias = "schedule")]
     // ReSharper disable once UnusedMember.Global
     public async Task CalendarCommandAsync(
-        [CommandArgumentString("时间")] string? content,
+        [CommandArgumentString("时间")] string? weeks,
         GroupMessageEventArgs e
     )
     {
@@ -179,9 +179,9 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             return;
         var now = Utils.NetworkTime.Now;
         var week = 1;
-        if (!string.IsNullOrWhiteSpace(content)) //参数不为空
+        if (!string.IsNullOrWhiteSpace(weeks)) //参数不为空
         {
-            if (!int.TryParse(content, out week)) //尝试转换为数字表示周数
+            if (!int.TryParse(weeks, out week)) //尝试转换为数字表示周数
             {
                 await e.Reply("参数错误");
                 return;

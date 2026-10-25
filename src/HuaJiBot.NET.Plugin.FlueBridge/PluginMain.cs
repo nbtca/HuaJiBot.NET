@@ -1,5 +1,7 @@
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using System.Collections.Concurrent;
+using HuaJiBot.NET.Bot;
+using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using Newtonsoft.Json.Linq;
 
@@ -41,7 +43,7 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         _queueHttp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(30) };
         _ingress = new IngressClient(_http, new Uri(Config.IngressUrl), hmac, Config.MaxMessageBytes);
         _queue = new CloudflareQueue(_queueHttp, Config, token);
-        _engine = new BridgeEngine(Config, _store, Service, _queue, message => Warn(message));
+        _engine = new BridgeEngine(Config, _store, Service, _queue, message => Warn(message), ExecuteCommandAsync);
         foreach (var destination in Config.Destinations) _engine.SeedSummaryAnchors(destination.RobotId, destination.GroupId);
         Service.Events.OnGroupMessageReceived += Receive;
         _running = Task.WhenAll(ForwardLoopAsync(_stop.Token), PullLoopAsync(_stop.Token));
@@ -142,6 +144,29 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    }
+
+    private async Task ExecuteCommandAsync(CommandJob job, CancellationToken ct)
+    {
+        if (Service is not BotService botService)
+            throw new InvalidOperationException("FlueBridge command execution requires a BotService.");
+
+        var e = new GroupMessageEventArgs(
+            () => new DefaultCommandReader([]),
+            () => ValueTask.FromResult(string.Empty)
+        )
+        {
+            Service = botService,
+            RobotId = job.Destination.RobotId,
+            MessageId = job.Destination.ReplyToMessageId,
+            GroupId = job.Destination.GroupId,
+            SenderId = job.SenderId,
+            SenderMemberCard = job.SenderName,
+            SenderMemberType = MemberType.Unknown,
+            TextMessageLazy = new(() => string.Empty),
+        };
+
+        await Service.CommandService.ExecuteCommandAsync(job.Command.Id, job.Command.Arguments, e, ct);
     }
 
     protected override void Unload()

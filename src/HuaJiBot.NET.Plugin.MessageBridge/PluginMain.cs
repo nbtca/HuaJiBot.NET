@@ -333,8 +333,8 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     [Command("事件", "开关事件", Alias = "events")]
     // ReSharper disable once UnusedMember.Global
     public void EventControlCommand(
-        [CommandArgumentEnum<ClientEventType>("类型")] ClientEventType? typeOptional,
-        [CommandArgumentString("状态")] string? status,
+        [CommandArgumentEnum<ClientEventType>("类型")] ClientEventType? type,
+        [CommandArgumentString("状态")] string? enabled,
         GroupMessageEventArgs e
     )
     {
@@ -343,7 +343,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             e.Reply("只有群管理员可以修改事件转发设置");
             return;
         }
-        if (typeOptional is not { } type)
+        if (type is not { } selectedType)
         {
             var allStatus = new StringBuilder();
             foreach (var clientInfo in Config.Clients)
@@ -373,14 +373,14 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             );
             return;
         }
-        var name = EnumToAttributeName(type);
-        if (!StringToToggle(status ?? "", out var result))
+        var name = EnumToAttributeName(selectedType);
+        if (!StringToToggle(enabled ?? "", out var result))
         {
             var currentStatusDisabled =
                 Config
                     .Clients.SelectMany(x => x.Groups)
                     .FirstOrDefault(x => x is { Enabled: true })
-                    ?.ForwardFromClientDisabledEvent.Contains(type)
+                    ?.ForwardFromClientDisabledEvent.Contains(selectedType)
                 ?? true;
             e.Reply("状态 可选：true、false\n" + $"当前{name}状态：{!currentStatusDisabled}");
             return;
@@ -393,9 +393,9 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             )
             {
                 if (result)
-                    group.ForwardFromClientDisabledEvent.Remove(type);
+                    group.ForwardFromClientDisabledEvent.Remove(selectedType);
                 else
-                    group.ForwardFromClientDisabledEvent.Add(type);
+                    group.ForwardFromClientDisabledEvent.Add(selectedType);
                 Service.Config.Save();
                 e.Reply($"已 {(result ? "开启" : "关闭")} 事件 {name} 的转发");
                 return;
