@@ -14,12 +14,20 @@ internal sealed class PanelServer : IDisposable
     private readonly string _token;
     private readonly ConfigWrapper _config;
     private readonly string _page;
+    private readonly Func<bool> _isConnected;
     private readonly CancellationTokenSource _cts = new();
 
-    public PanelServer(string host, int port, string token, ConfigWrapper config)
+    public PanelServer(
+        string host,
+        int port,
+        string token,
+        ConfigWrapper config,
+        Func<bool>? isConnected = null
+    )
     {
         _token = token;
         _config = config;
+        _isConnected = isConnected ?? (() => true);
         _page = ReadPage();
         _listener.Prefixes.Add($"http://{host}:{port}/");
     }
@@ -81,6 +89,8 @@ internal sealed class PanelServer : IDisposable
     {
         if (method == "GET" && path is "/" or "/index.html")
             return ServePage;
+        if (method == "GET" && path == "/healthz")
+            return ServeHealth;
         if (path != "/api/rules")
             return null;
         return method switch
@@ -89,6 +99,17 @@ internal sealed class PanelServer : IDisposable
             "PUT" => SaveRules,
             _ => MethodNotAllowed,
         };
+    }
+
+    // Unauthenticated and public: reports connection state only, nothing from the config.
+    private Task ServeHealth(HttpListenerContext context)
+    {
+        var connected = _isConnected();
+        return WriteJson(
+            context.Response,
+            connected ? 200 : 503,
+            new { status = connected ? "ok" : "disconnected" }
+        );
     }
 
     private Task ServePage(HttpListenerContext context) =>

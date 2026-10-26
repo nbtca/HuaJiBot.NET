@@ -45,6 +45,9 @@ public interface IPluginService
     void RecallMessage(string? robotId, string targetGroup, string msgId);
     Task<string[]> FeedbackAt(string? robotId, string targetGroup, string msgId, string text);
     string[] AllRobots { get; }
+
+    /// <summary>Whether the adapter is currently connected to its platform.</summary>
+    bool IsConnected { get; }
     ConfigWrapper Config { get; }
     ILogger Logger { get; }
     IReadOnlyDictionary<string, IEnumerable<AgentFunctionInfo>> ExportFunctions { get; }

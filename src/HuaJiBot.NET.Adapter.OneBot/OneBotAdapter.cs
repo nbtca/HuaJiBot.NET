@@ -19,6 +19,8 @@ public class OneBotAdapter(string ws, string? token) : BotServiceBase
 
     protected override Task SetupServiceAsyncCore() => Client.StartAsync();
 
+    public override bool IsConnected => Client.IsConnected;
+
     public override string[] AllRobots => Client.QQ is not null ? [Client.QQ] : [];
 
     public override async Task<string[]> SendGroupMessageAsync(

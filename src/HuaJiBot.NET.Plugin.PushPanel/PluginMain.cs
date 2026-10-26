@@ -41,7 +41,13 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
         try
         {
-            _server = new PanelServer(Config.Host, Config.Port, Config.Token, Service.Config);
+            _server = new PanelServer(
+                Config.Host,
+                Config.Port,
+                Config.Token,
+                Service.Config,
+                () => Service.IsConnected
+            );
             _server.Start();
             Service.Log($"[PushPanel] http://{Config.Host}:{Config.Port}/");
         }
