@@ -176,6 +176,30 @@ internal class PushPanelTest
         });
     }
 
+    [Test]
+    public async Task Panel_HealthzReportsConnectionWithoutToken()
+    {
+        using var scope = new ConfigScope();
+        var connected = true;
+        var port = FreePort();
+        using var server = new PanelServer("127.0.0.1", port, "panel-secret", scope.Wrapper, () => connected);
+        server.Start();
+        using var http = new HttpClient();
+
+        var up = await http.GetAsync($"http://127.0.0.1:{port}/healthz");
+        connected = false;
+        var down = await http.GetAsync($"http://127.0.0.1:{port}/healthz");
+        var body = await down.Content.ReadAsStringAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(up.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(down.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+            Assert.That(body, Does.Contain("disconnected"));
+            Assert.That(body, Does.Not.Contain("panel-secret"));
+        });
+    }
+
     private static int FreePort()
     {
         var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);

@@ -120,6 +120,7 @@ public abstract class BotService : IMessageService, IPluginService, IAdapterServ
     public Config.ConfigWrapper Config { get; internal set; } = null!;
     public abstract IEvents Events { get; }
     public abstract string[] AllRobots { get; }
+    public virtual bool IsConnected => AllRobots.Length > 0;
 
     protected abstract void ReconnectCore();
     protected abstract Task SetupServiceAsyncCore();

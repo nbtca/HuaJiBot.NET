@@ -71,6 +71,8 @@ public class WebsocketClient : IWebsocketClient
         _client.MessageReceived += OnMessageReceived;
     }
 
+    public bool IsConnected => _client.Connected;
+
     public async Task StartAsync()
     {
         await ConnectAsync();
