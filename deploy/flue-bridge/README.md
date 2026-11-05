@@ -30,8 +30,11 @@ Supply these environment variables to the bot container/process:
 
 - `HUAJIBOT_BRIDGE_HMAC_SECRET`: the same secret configured on the Worker.
 - `HUAJIBOT_QUEUE_API_TOKEN`: an account-scoped Cloudflare token with Queue read/write permission, limited to the intended account.
+- `HUAJIBOT_BRIDGE_PROXY` (optional): an absolute HTTP/HTTPS proxy URL reachable from the bot container, without credentials, path, query, or fragment. It applies only to signed Worker ingress and Cloudflare Queue requests; adapters and other plugins keep their existing network configuration. When unset, the bridge retains .NET's default proxy behavior. Restart the bot after changing this variable.
 
 Do not put either secret in plugin configuration or Git. The Worker must independently allowlist the same bridge instance, robot and group. The bot needs outbound HTTPS only; no public listener or Tunnel is used.
+
+Bridge requests identify the client as `HuaJiBot-Bridge/1.0`, including Queue pull, acknowledgement, and retry calls. This avoids relying on an empty/library-default user agent on Cloudflare-managed `workers.dev` endpoints. Redirects remain disabled and TLS certificate validation uses the normal .NET defaults, including when a bridge proxy is configured.
 
 ## Version 1 wire contract
 

@@ -36,11 +36,12 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             if (Config.Destinations.Any(d => groups.Contains(d.GroupId)))
                 throw new InvalidOperationException("AIChat and FlueBridge groups must be mutually exclusive.");
         }
-        _store = new BridgeStore(Path.Combine(Service.GetPluginDataPath(), "flue_bridge.db"));
         // Signed requests and Queue credentials must never follow a redirect to another host.
         // Admission may download four images (20 seconds each) before dispatch.
-        _http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(100) };
-        _queueHttp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(30) };
+        var bridgeProxy = Environment.GetEnvironmentVariable("HUAJIBOT_BRIDGE_PROXY");
+        _http = new HttpClient(BridgeHttp.CreateHandler(bridgeProxy)) { Timeout = TimeSpan.FromSeconds(100) };
+        _queueHttp = new HttpClient(BridgeHttp.CreateHandler(bridgeProxy)) { Timeout = TimeSpan.FromSeconds(30) };
+        _store = new BridgeStore(Path.Combine(Service.GetPluginDataPath(), "flue_bridge.db"));
         _ingress = new IngressClient(_http, new Uri(Config.IngressUrl), hmac, Config.MaxMessageBytes);
         _forwarder = new IngressForwarder(_store, _ingress, Config.RetryDelaySeconds);
         _queue = new CloudflareQueue(_queueHttp, Config, token);

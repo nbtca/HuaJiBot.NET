@@ -21,6 +21,7 @@ internal sealed class IngressClient(HttpClient http, Uri url, string secret, int
         if (body.Length > maxBytes) throw new InvalidDataException("Ingress message exceeds size limit.");
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
         using var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.UserAgent.ParseAdd(BridgeHttp.UserAgent);
         request.Content = new ByteArrayContent(body);
         request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
         request.Headers.Add("X-HuaJiBot-Timestamp", timestamp);

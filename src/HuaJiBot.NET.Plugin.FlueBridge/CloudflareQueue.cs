@@ -14,6 +14,7 @@ internal sealed class CloudflareQueue(HttpClient http, PluginConfig config, stri
     private async Task<Envelope> CallAsync(string action, object payload, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, _base + action);
+        request.Headers.UserAgent.ParseAdd(BridgeHttp.UserAgent);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = new StringContent(JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
         using var response = await http.SendAsync(request, ct);

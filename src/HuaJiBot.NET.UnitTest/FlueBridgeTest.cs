@@ -249,13 +249,14 @@ public partial class FlueBridgeTest
     [Test]
     public async Task HttpClientsUseExactSignedBodyAndCloudflareLeaseProtocol()
     {
-        var requests = new List<(Uri Uri, string Body, string? Signature, string? Timestamp)>();
+        var requests = new List<(Uri Uri, string Body, string? Signature, string? Timestamp, string UserAgent)>();
         using var http = new HttpClient(new CaptureHandler(async request =>
         {
             var body = await request.Content!.ReadAsStringAsync();
             requests.Add((request.RequestUri!, body,
                 request.Headers.TryGetValues("X-HuaJiBot-Signature", out var sig) ? sig.Single() : null,
-                request.Headers.TryGetValues("X-HuaJiBot-Timestamp", out var ts) ? ts.Single() : null));
+                request.Headers.TryGetValues("X-HuaJiBot-Timestamp", out var ts) ? ts.Single() : null,
+                request.Headers.UserAgent.ToString()));
             return new(HttpStatusCode.OK) { Content = new StringContent("{\"success\":true,\"result\":{\"messages\":[{\"body\":\"hello\",\"lease_id\":\"lease\"}]}}") };
         }));
         var message = _engine.Normalize(Message("签名", new CommonCommandReader.ReaderAt("bot"), "中文问题"))!;
@@ -269,6 +270,7 @@ public partial class FlueBridgeTest
         await queue.RetryAsync("lease", CancellationToken.None);
         Assert.Multiple(() =>
         {
+            Assert.That(requests.Select(x => x.UserAgent), Is.All.EqualTo("HuaJiBot-Bridge/1.0"));
             Assert.That(requests[1].Uri.AbsolutePath, Is.EqualTo("/client/v4/accounts/account/queues/queue/messages/pull"));
             Assert.That(JsonDocument.Parse(requests[1].Body).RootElement.GetProperty("visibility_timeout").GetInt32(), Is.EqualTo(120000));
             Assert.That(requests[2].Body, Does.Contain("\"acks\":[{\"lease_id\":\"lease\"}]"));
