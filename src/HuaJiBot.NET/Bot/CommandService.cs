@@ -43,7 +43,9 @@ public class CommandService : ICommandService
         return true;
     }
 
-    public void SendHelp(GroupMessageEventArgs e)
+    public void SendHelp(GroupMessageEventArgs e) => _ = SendHelpAsync(e);
+
+    private Task SendHelpAsync(GroupMessageEventArgs e)
     {
         var sb = new StringBuilder();
         sb.AppendLine("可用命令：");
@@ -97,15 +99,18 @@ public class CommandService : ICommandService
                 + string.Join("\n", lines.Append("• /help — 查看全部命令").Select(Post.Escape)),
             sb.ToString()
         );
-        _ = e.Service.SendGroupMessageAsync(e.RobotId, e.GroupId, new ReplyMessage(e.MessageId), post);
+        return e.ReplyPostAsync(post);
     }
 
     public void ProcessCommand(GroupMessageEventArgs e) => _ = ProcessCommandSafeAsync(e);
 
     public async Task<bool> ProcessCommandAsync(GroupMessageEventArgs e)
     {
-        if (ProcessHelp(e))
+        if (e.CommandReader.Match(["help", "帮助"], x => x, out _, true))
+        {
+            await SendHelpAsync(e);
             return true;
+        }
 
         var reader = e.CommandReader;
         if (!reader.Input(out var matched) || !_commands.TryGetValue(matched, out var matchedItem))
@@ -128,7 +133,7 @@ public class CommandService : ICommandService
         cancellationToken.ThrowIfCancellationRequested();
         if (string.Equals(commandId, "help", StringComparison.OrdinalIgnoreCase))
         {
-            SendHelp(e);
+            await SendHelpAsync(e);
             return;
         }
 

@@ -1,7 +1,6 @@
 ﻿using System.Threading.Channels;
 using System.Collections.Concurrent;
 using HuaJiBot.NET.Bot;
-using HuaJiBot.NET.Commands;
 using HuaJiBot.NET.Events;
 using Newtonsoft.Json.Linq;
 
@@ -19,6 +18,7 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     private HttpClient? _queueHttp;
     private BridgeEngine? _engine;
     private IngressClient? _ingress;
+    private IngressForwarder? _forwarder;
     private IReplyQueue? _queue;
     private Task? _running;
     private long _lastActiveTicks;
@@ -42,8 +42,12 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         _http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(100) };
         _queueHttp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(30) };
         _ingress = new IngressClient(_http, new Uri(Config.IngressUrl), hmac, Config.MaxMessageBytes);
+        _forwarder = new IngressForwarder(_store, _ingress, Config.RetryDelaySeconds);
         _queue = new CloudflareQueue(_queueHttp, Config, token);
-        _engine = new BridgeEngine(Config, _store, Service, _queue, message => Warn(message), ExecuteCommandAsync);
+        if (Service is not BotService botService)
+            throw new InvalidOperationException("FlueBridge command execution requires a BotService.");
+        var commands = new CommandExecutor(_store, botService);
+        _engine = new BridgeEngine(Config, _store, Service, _queue, message => Warn(message), commands.ExecuteAsync);
         foreach (var destination in Config.Destinations) _engine.SeedSummaryAnchors(destination.RobotId, destination.GroupId);
         Service.Events.OnGroupMessageReceived += Receive;
         _running = Task.WhenAll(ForwardLoopAsync(_stop.Token), PullLoopAsync(_stop.Token));
@@ -67,6 +71,7 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     private void Enqueue(IngressEvent message)
     {
+        if (!_store!.IngressReady(message.EventId)) return;
         if (_queued.TryAdd(message.EventId, 0) && !_incoming.Writer.TryWrite(message)) _queued.TryRemove(message.EventId, out _);
     }
 
@@ -84,21 +89,11 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             {
                 try
                 {
-                    for (var attempt = 0; ; attempt++)
+                    if (await _forwarder!.ForwardAsync(message, ct))
                     {
-                        try
-                        {
-                            await _ingress!.SendAsync(message, ct);
-                            _store!.RemoveIngress(message.EventId);
-                            if (message.Kind != "archive") Activate();
-                            break;
-                        }
-                        catch (HttpRequestException ex) when (attempt < 2 && (ex.StatusCode is null
-                            || (int)ex.StatusCode >= 500 || (int)ex.StatusCode == 429))
-                        { await Task.Delay(TimeSpan.FromSeconds(Config.RetryDelaySeconds), ct); }
-                        catch (OperationCanceledException) when (!ct.IsCancellationRequested && attempt < 2)
-                        { await Task.Delay(TimeSpan.FromSeconds(Config.RetryDelaySeconds), ct); }
+                        if (message.Kind != "archive") Activate();
                     }
+                    else Warn("Agent ingress failed; the outbox retains its retry or rejection status.");
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                 catch (Exception) { Warn("Agent ingress forwarding failed."); }
@@ -144,29 +139,6 @@ public sealed class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-    }
-
-    private async Task ExecuteCommandAsync(CommandJob job, CancellationToken ct)
-    {
-        if (Service is not BotService botService)
-            throw new InvalidOperationException("FlueBridge command execution requires a BotService.");
-
-        var e = new GroupMessageEventArgs(
-            () => new DefaultCommandReader([]),
-            () => ValueTask.FromResult(string.Empty)
-        )
-        {
-            Service = botService,
-            RobotId = job.Destination.RobotId,
-            MessageId = job.Destination.ReplyToMessageId,
-            GroupId = job.Destination.GroupId,
-            SenderId = job.SenderId,
-            SenderMemberCard = job.SenderName,
-            SenderMemberType = MemberType.Unknown,
-            TextMessageLazy = new(() => string.Empty),
-        };
-
-        await Service.CommandService.ExecuteCommandAsync(job.Command.Id, job.Command.Arguments, e, ct);
     }
 
     protected override void Unload()

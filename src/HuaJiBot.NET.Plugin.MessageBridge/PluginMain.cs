@@ -332,15 +332,15 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
 
     [Command("事件", "开关事件", Alias = "events")]
     // ReSharper disable once UnusedMember.Global
-    public void EventControlCommand(
-        [CommandArgumentEnum<ClientEventType>("类型")] ClientEventType? type,
-        [CommandArgumentString("状态")] string? enabled,
-        GroupMessageEventArgs e
+    public async Task EventControlCommand(
+        GroupMessageEventArgs e,
+        [CommandArgumentEnum<ClientEventType>("类型")] ClientEventType? type = null,
+        [CommandArgumentString("状态")] string? enabled = null
     )
     {
         if (!IsGroupAdmin(e))
         {
-            e.Reply("只有群管理员可以修改事件转发设置");
+            await e.Reply("只有群管理员可以修改事件转发设置");
             return;
         }
         if (type is not { } selectedType)
@@ -362,7 +362,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                     }
                 }
             }
-            e.Reply(
+            await e.Reply(
                 "类型 可选："
                     + string.Join(
                         ", ",
@@ -379,10 +379,10 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
             var currentStatusDisabled =
                 Config
                     .Clients.SelectMany(x => x.Groups)
-                    .FirstOrDefault(x => x is { Enabled: true })
+                    .FirstOrDefault(x => x is { Enabled: true } && x.GroupId == e.GroupId)
                     ?.ForwardFromClientDisabledEvent.Contains(selectedType)
                 ?? true;
-            e.Reply("状态 可选：true、false\n" + $"当前{name}状态：{!currentStatusDisabled}");
+            await e.Reply("状态 可选：true、false\n" + $"当前{name}状态：{!currentStatusDisabled}");
             return;
         }
         foreach (var clientInfo in Config.Clients)
@@ -397,11 +397,11 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
                 else
                     group.ForwardFromClientDisabledEvent.Add(selectedType);
                 Service.Config.Save();
-                e.Reply($"已 {(result ? "开启" : "关闭")} 事件 {name} 的转发");
+                await e.Reply($"已 {(result ? "开启" : "关闭")} 事件 {name} 的转发");
                 return;
             }
         }
-        e.Reply($"未找到群 {e.GroupId} 的配置");
+        await e.Reply($"未找到群 {e.GroupId} 的配置");
     }
 
     private static bool IsGroupAdmin(GroupMessageEventArgs e)

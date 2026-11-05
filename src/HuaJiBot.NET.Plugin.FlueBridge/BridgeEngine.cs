@@ -39,7 +39,11 @@ internal sealed class BridgeEngine(PluginConfig config, BridgeStore store, IPlug
             reply?.messageId is { Length: > 0 } id ? new ReplyContext(id, reply.senderId, reply.content) : null, kind);
         if (JsonSerializer.SerializeToUtf8Bytes(message, BridgeJson.Options).Length > config.MaxMessageBytes)
             throw new InvalidDataException("Ingress message exceeds size limit.");
-        if (kind != "archive") store.Map(robot, e.GroupId, e.MessageId, conversation);
+        if (kind != "archive")
+        {
+            store.Map(robot, e.GroupId, e.MessageId, conversation);
+            store.SaveCommandOrigin(e);
+        }
         return message;
     }
 
@@ -83,7 +87,7 @@ internal sealed class BridgeEngine(PluginConfig config, BridgeStore store, IPlug
             || job.Command.Arguments.ValueKind != JsonValueKind.Object) return false;
         var descriptor = service.CommandService?.GetCommandCatalog()
             .FirstOrDefault(x => string.Equals(x.Id, job.Command.Id, StringComparison.OrdinalIgnoreCase));
-        if (descriptor is null) return false;
+        if (descriptor is null || store.CommandOrigin(job.Destination)?.SenderId != job.SenderId) return false;
         return store.Find(job.Destination.RobotId, job.Destination.GroupId, job.Destination.ReplyToMessageId) == job.ConversationId;
     }
 
@@ -168,7 +172,8 @@ internal sealed class BridgeEngine(PluginConfig config, BridgeStore store, IPlug
             try { job = JsonSerializer.Deserialize<CommandJob>(lease.Body, BridgeJson.Options); }
             catch (JsonException) { }
         }
-        if (job is { Version: 2 } && !string.IsNullOrWhiteSpace(job.JobId) && store.WasSent(job.JobId))
+        if (job is { Version: 2, Destination: not null } && job.Destination.BridgeInstance == config.BridgeInstance
+            && !string.IsNullOrWhiteSpace(job.JobId) && store.WasSent(job.JobId))
         {
             await queue.AckAsync(lease.LeaseId, ct);
             return;
@@ -183,16 +188,21 @@ internal sealed class BridgeEngine(PluginConfig config, BridgeStore store, IPlug
         try
         {
             ct.ThrowIfCancellationRequested();
-            await commandExecutor(job!, ct);
+            try
+            {
+                await commandExecutor(job!, ct);
+            }
+            catch (ArgumentException ex)
+            {
+                warn($"Command rejected: {ex.Message}");
+                var validated = job!;
+                var destination = validated.Destination!;
+                var content = new RichContent($"命令参数无效：{ex.Message}", destination.ReplyToMessageId);
+                await CommandExecutor.SendReplyAsync(store, validated, "error:" + content.Markdown,
+                    () => service.SendRichMessageAsync(destination.RobotId, destination.GroupId, content,
+                        () => Task.FromResult<SendingMessageBase[]>([content.ToPlainText()])));
+            }
             store.CompleteCommand(job!);
-        }
-        catch (ArgumentException ex)
-        {
-            warn($"Command rejected: {ex.Message}");
-            var content = new RichContent($"命令参数无效：{ex.Message}", job!.Destination.ReplyToMessageId);
-            await service.SendRichMessageAsync(job!.Destination.RobotId, job.Destination.GroupId, content,
-                () => Task.FromResult<SendingMessageBase[]>([content.ToPlainText()]));
-            store.CompleteCommand(job);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch

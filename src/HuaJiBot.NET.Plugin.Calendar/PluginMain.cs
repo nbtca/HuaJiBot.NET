@@ -128,19 +128,25 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         }
     }
 
-    private readonly ConcurrentDictionary<string, DateTimeOffset> _cache = new();
+    private readonly ConcurrentDictionary<string, (DateTimeOffset At, string? Robot, string Group, string Message)> _cache = new();
     private static readonly TimeSpan Cooldown = TimeSpan.FromSeconds(10);
 
     private async Task<bool> EnterCooldownAsync(GroupMessageEventArgs e)
     {
         var now = Utils.NetworkTime.Now;
-        if (_cache.TryGetValue(e.SenderId, out var last) && now - last < Cooldown)
+        if (_cache.TryGetValue(e.SenderId, out var last) && now - last.At < Cooldown)
         {
-            await e.Reply($"我知道你很急，但是你先别急，{(Cooldown - (now - last)).TotalSeconds:F0}秒后再逝");
+            // Queue retries of this admitted request must still deliver the actual result.
+            if (last.Robot == e.RobotId && last.Group == e.GroupId && last.Message == e.MessageId)
+                return true;
+            await e.Reply($"我知道你很急，但是你先别急，{(Cooldown - (now - last.At)).TotalSeconds:F0}秒后再逝");
             return false;
         }
-        _cache[e.SenderId] = now;
-        _ = Task.Delay(Cooldown).ContinueWith(_ => _cache.TryRemove(e.SenderId, out var _));
+        var entry = (now, e.RobotId, e.GroupId, e.MessageId);
+        _cache[e.SenderId] = entry;
+        _ = Task.Delay(Cooldown).ContinueWith(_ =>
+            ((ICollection<KeyValuePair<string, (DateTimeOffset, string?, string, string)>>)_cache)
+                .Remove(new(e.SenderId, entry)));
         return true;
     }
 
@@ -170,8 +176,8 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     [Command("日程", "查看近期日程", Alias = "schedule")]
     // ReSharper disable once UnusedMember.Global
     public async Task CalendarCommandAsync(
-        [CommandArgumentString("时间")] string? weeks,
-        GroupMessageEventArgs e
+        GroupMessageEventArgs e,
+        [CommandArgumentString("时间")] string? weeks = null
     )
     {
         await Sync.UpdateCalendarAsync();

@@ -52,14 +52,22 @@ public class GroupMessageEventArgs(
     public string TextMessage => TextMessageLazy.Value;
     public CommandReader CommandReader => createCommandReader();
 
+    /// <summary>Optional durable delivery hook for replies made by a queued command.</summary>
+    public Func<string, Func<Task<string[]>>, Task<string[]>>? ReplyHandler { get; init; }
+
+    private Task<string[]> SendReplyAsync(string key, Func<Task<string[]>> send) =>
+        ReplyHandler is { } handler ? handler(key, send) : send();
+
     /// <summary>
     /// 返回消息给发送者（at发送者）
     /// </summary>
     /// <param name="message"></param>
-    public async Task<string[]> Reply(string message)
-    {
-        return await Service.FeedbackAt(RobotId, GroupId, MessageId, message);
-    }
+    public Task<string[]> Reply(string message) =>
+        SendReplyAsync("text:" + message, () => Service.FeedbackAt(RobotId, GroupId, MessageId, message));
+
+    public Task<string[]> ReplyPostAsync(Post post) =>
+        SendReplyAsync("post:" + post.Markdown, () =>
+            Service.SendGroupMessageAsync(RobotId, GroupId, new ReplyMessage(MessageId), post));
 
     /// <summary>
     /// Replies with Markdown, falling back to plain text where rich messages are unsupported.
@@ -67,12 +75,12 @@ public class GroupMessageEventArgs(
     public Task<string[]> ReplyMarkdown(string markdown)
     {
         var content = new RichContent(markdown, MessageId);
-        return Service.SendRichMessageAsync(
+        return SendReplyAsync("markdown:" + markdown, () => Service.SendRichMessageAsync(
             RobotId,
             GroupId,
             content,
             () => Task.FromResult<SendingMessageBase[]>([content.ToPlainText()])
-        );
+        ));
     }
 
     /// <summary>群名称</summary>

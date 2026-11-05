@@ -68,6 +68,8 @@ The activation backup is `/home/yunacelisse/stacks/huajibot/backups/flue-canary-
 
 The plugin stores `flue_bridge.db` in its normal plugin data directory. Preserve that directory across restarts and container replacement. The default 30-day retention should exceed the Queue's message retention. Old mappings and sent rows are pruned hourly. SQLite uses WAL, FULL synchronization, parameterized SQL, and atomic mapping/ledger commits.
 
+The reliability update adds `ingress_failures`, `command_origins`, and `command_reply_receipts` with `CREATE TABLE IF NOT EXISTS`; existing outbox rows, mappings, and delivery receipts remain intact. Command sender identity and role come from the original adapter event saved locally, and the Queue sender must match that event. In-flight commands admitted before this upgrade have no trusted local sender record and are rejected; users can resend those requests after upgrading. New command replies are awaited, checked for nonempty platform receipts, and mapped back to their conversation. A persisted reply receipt suppresses the same command output after a partial failure or restart.
+
 `dotnet fsi build_plugins.fsx` includes SQLite's `runtimes` native assets in `plugins/libs/runtimes`. The bridge resolves its SQLite native library there when loaded from a plugin archive/container. Keep this directory when manually installing a plugin.
 
 Build and test:
@@ -87,5 +89,7 @@ Roll back by disabling FlueBridge, removing the canary destination from the Work
 Cloudflare delivery is at least once. A crash after adapter acceptance but before recording the returned receipt can produce a duplicate reply. If an adapter partially sends multiple messages and then fails, retrying can also duplicate the successful portion. There is no shared provider-side idempotency key.
 
 Inbound events are committed to `ingress_outbox` before entering the bounded channel. The original payload/event ID survives restart and retries; rows are removed only after Worker admission. Messages the platform never delivers while the bot is offline cannot be recovered by this outbox. Queue replies survive downtime according to Queue retention.
+
+Permanent HTTP 4xx admission failures (including 400, 403, 409, and 413) are excluded from polling while their original payload and status remain in SQLite for audit. HTTP 401, 408, 425, 429, network failures, and server errors remain retryable, with per-event exponential backoff capped at one hour. `ingress_failures` records the status, attempt count, next attempt, and rejection time; a rejected event no longer occupies the first 50 eligible outbox slots. Inspect these records together with the retained `ingress_outbox` before manually replaying a rejected event after its cause has been resolved.
 
 References: [issue #64](https://github.com/nbtca/HuaJiBot.NET/issues/64), [Cloudflare HTTP pull](https://developers.cloudflare.com/queues/configuration/pull-consumers/), [Flue channels](https://flueframework.com/docs/guide/channels/).
