@@ -64,7 +64,7 @@ internal class PluginPostTest
                 Is.EqualTo("🛠 **#900001 新报修**\nThinkPad · 无法开机\n\n> 进水了\n\n张三 · 09-21 11:45")
             );
             Assert.That(post.Tags, Is.EqualTo(new[] { "维修", "新报修" }));
-            Assert.That(post.Links, Is.EqualTo(new[] { new LinkMessage("去处理", TicketDigest.PortalUrl) }));
+            Assert.That(post.Links, Is.EqualTo(new[] { new LinkMessage("去处理", "https://nbtca.space/repair/admin?eventid=900001") }));
             Assert.That(fallback, Is.EqualTo(new SendingMessageBase[] { new TextMessage(RepairPlugin.FormatEvent(e)) }));
         });
     }
@@ -90,7 +90,7 @@ internal class PluginPostTest
                 )
             );
             Assert.That(post.Tags, Is.EqualTo(new[] { "维修", "提醒" }));
-            Assert.That(post.Links.Single().Url, Is.EqualTo(TicketDigest.PortalUrl));
+            Assert.That(post.Links.Single().Url, Is.EqualTo("https://nbtca.space/repair/admin"));
         });
     }
 

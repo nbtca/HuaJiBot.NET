@@ -149,7 +149,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         return new(string.Join("\n", lines), FormatEvent(e))
         {
             Tags = StateTag(e.Action) is { } tag ? ["维修", tag] : ["维修"],
-            Links = [new("去处理", TicketDigest.PortalUrl)],
+            Links = [new("去处理", TicketDigest.TicketUrl(e.EventId))],
         };
     }
 
