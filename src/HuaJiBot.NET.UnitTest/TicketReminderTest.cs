@@ -76,7 +76,7 @@ internal class TicketReminderTest
                   #790 天选4 · 清灰 · Skillful Li · 已 5 天
                 待审核：
                   #785 小新14 · 清灰 · 已 3 天
-                去处理：https://repair.nbtca.space
+                去处理：https://nbtca.space/repair/admin
                 """.ReplaceLineEndings("\n")
             )
         );

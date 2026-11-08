@@ -5,7 +5,9 @@ namespace HuaJiBot.NET.Plugin.RepairTeam;
 
 internal static class TicketDigest
 {
-    public const string PortalUrl = "https://repair.nbtca.space";
+    public const string PortalUrl = "https://nbtca.space/repair/admin";
+
+    public static string TicketUrl(long id) => $"{PortalUrl}?eventid={id}";
 
     private static readonly (string Status, string Title)[] Stages =
     [
