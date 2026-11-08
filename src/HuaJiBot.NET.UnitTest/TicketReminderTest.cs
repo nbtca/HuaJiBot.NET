@@ -228,6 +228,29 @@ internal class TicketReminderTest
     }
 
     [Test]
+    public async Task Client_WithoutSince_ReturnsOldTicketsToo()
+    {
+        var handler = new StubHandler(path =>
+            path switch
+            {
+                _ when path.StartsWith("/events?status=accepted&order=DESC&limit=50&offset=0") => (
+                    HttpStatusCode.OK,
+                    $"[{Summary(711, "2026-05-15T14:00:10+08:00")},{Summary(508, "2025-06-06T16:25:04+08:00")}]"
+                ),
+                _ when path.StartsWith("/events?") => (HttpStatusCode.OK, "[]"),
+                "/events/711" => (HttpStatusCode.OK, Detail(711, "accepted", "2026-05-15T14:00:10+08:00")),
+                "/events/508" => (HttpStatusCode.OK, Detail(508, "accepted", "2025-06-06T16:25:04+08:00")),
+                _ => (HttpStatusCode.NotFound, ""),
+            }
+        );
+        var client = new SaturdayClient(new HttpClient(handler), "https://api.test", (_, _) => { });
+
+        var tickets = await client.GetActiveTicketsAsync();
+
+        Assert.That(tickets.Select(x => x.Id), Is.EqualTo(new long[] { 711, 508 }));
+    }
+
+    [Test]
     public async Task Client_PagesUntilAPageEndsBeforeSince()
     {
         var handler = new StubHandler(path =>

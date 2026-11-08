@@ -38,7 +38,7 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         _reminder = new TicketReminder(
             Service,
             Config,
-            _saturday.GetActiveTicketsAsync,
+            since => _saturday.GetActiveTicketsAsync(since),
             Path.Combine(Service.GetPluginDataPath(), "ticket_reminder.json")
         );
         _reminder.Start();
@@ -182,15 +182,10 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
     {
         if (!Config.RemindGroups.Contains(e.GroupId) || _saturday is null)
             return;
-        if (Config.RemindSince is not { } since)
-        {
-            await e.Reply("未配置 RemindSince，工单查询未启用");
-            return;
-        }
         List<Ticket> tickets;
         try
         {
-            tickets = await _saturday.GetActiveTicketsAsync(since);
+            tickets = await _saturday.GetActiveTicketsAsync();
         }
         catch (Exception ex)
         {
