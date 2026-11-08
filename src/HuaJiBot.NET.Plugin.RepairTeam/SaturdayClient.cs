@@ -53,8 +53,8 @@ internal class SaturdayClient(HttpClient http, string baseUrl, Action<string, Ex
         public DateTimeOffset GmtCreate { get; set; }
     }
 
-    /// <summary>Tickets in progress that were created at or after <paramref name="since"/>.</summary>
-    public async Task<List<Ticket>> GetActiveTicketsAsync(DateTimeOffset since)
+    /// <summary>Tickets in progress, limited to those created at or after <paramref name="since"/> when given.</summary>
+    public async Task<List<Ticket>> GetActiveTicketsAsync(DateTimeOffset? since = null)
     {
         var tickets = new List<Ticket>();
         foreach (var status in ActiveStatuses)
@@ -64,7 +64,7 @@ internal class SaturdayClient(HttpClient http, string baseUrl, Action<string, Ex
                 var page = await GetAsync<List<EventDto>>(
                     $"events?status={status}&order=DESC&limit={PageSize}&offset={offset}"
                 );
-                var recent = page.TakeWhile(e => e.GmtCreate >= since).ToList();
+                var recent = page.TakeWhile(e => since is null || e.GmtCreate >= since).ToList();
                 foreach (var summary in recent)
                 {
                     try
