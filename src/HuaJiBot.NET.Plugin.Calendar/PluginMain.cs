@@ -206,7 +206,8 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         var now = Utils.NetworkTime.Now;
         if (await QueryRangeAsync(weeks, e, now) is not var (week, events))
             return;
-        await e.Reply($"近{week}周的日程：\n{events.BuildTextOutput(now)}");
+        var hint = events.Length == 0 ? "" : $"\n\n发送「日程详情 序号{(week == 1 ? "" : $" {week}")}」查看详细信息";
+        await e.Reply($"近{week}周的日程：\n{events.BuildTextOutput(now)}{hint}");
     }
 
     [Command("日程详情", "查看日程列表中指定序号的详细信息", Alias = "detail")]
