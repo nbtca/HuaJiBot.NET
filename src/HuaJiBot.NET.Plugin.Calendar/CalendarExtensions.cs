@@ -102,7 +102,7 @@ internal static partial class CalendarExtensions
     public static string BuildTextOutput(
         this IEnumerable<(Period period, CalendarEvent e)> @this,
         DateTimeOffset now
-    ) => string.Join("\n\n", @this.Select(item => item.BuildTextOutput(now, true)));
+    ) => string.Join("\n\n", @this.Select((item, i) => $"#{i + 1} {item.BuildTextOutput(now, true)}"));
 
     public static string BuildTextOutput(
         this (Period period, CalendarEvent e) @this,

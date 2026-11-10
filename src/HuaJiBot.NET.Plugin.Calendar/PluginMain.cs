@@ -167,6 +167,32 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         await e.Reply(output);
     }
 
+    private async Task<(int week, (CalendarExtensions.Period period, CalendarEvent e)[] events)?> QueryRangeAsync(
+        string? weeks,
+        GroupMessageEventArgs e,
+        DateTimeOffset now
+    )
+    {
+        var week = 1;
+        if (!string.IsNullOrWhiteSpace(weeks) && !int.TryParse(weeks, out week))
+        {
+            await e.Reply("参数错误");
+            return null;
+        }
+        if (week < Config.MinRange || week > Config.MaxRange)
+        {
+            await e.Reply($"超出范围 [{Config.MinRange},{Config.MaxRange}] ");
+            return null;
+        }
+        if (Calendar is null)
+        {
+            await e.Reply("日历获取失败");
+            return null;
+        }
+        var (start, end) = week > 0 ? (now, now.AddDays(7 * week)) : (now.AddDays(7 * week), now);
+        return (week, Calendar.GetEvents(start, end).ToArray());
+    }
+
     [Command("日程", "查看近期日程", Alias = "schedule")]
     // ReSharper disable once UnusedMember.Global
     public async Task CalendarCommandAsync(
@@ -178,41 +204,36 @@ public partial class PluginMain : PluginBase, IPluginWithConfig<PluginConfig>
         if (!await EnterCooldownAsync(e))
             return;
         var now = Utils.NetworkTime.Now;
-        var week = 1;
-        if (!string.IsNullOrWhiteSpace(weeks)) //参数不为空
-        {
-            if (!int.TryParse(weeks, out week)) //尝试转换为数字表示周数
-            {
-                await e.Reply("参数错误");
-                return;
-            }
-        }
+        if (await QueryRangeAsync(weeks, e, now) is not var (week, events))
+            return;
+        await e.Reply($"近{week}周的日程：\n{events.BuildTextOutput(now)}");
+    }
 
-        if (week < Config.MinRange || week > Config.MaxRange) //进行一个输入范围合法性检查
+    [Command("日程详情", "查看日程列表中指定序号的详细信息", Alias = "detail")]
+    // ReSharper disable once UnusedMember.Global
+    public async Task CalendarDetailCommandAsync(
+        [CommandArgumentString("序号")] string? index,
+        [CommandArgumentString("时间")] string? weeks,
+        GroupMessageEventArgs e
+    )
+    {
+        if (!int.TryParse(index, out var n))
         {
-            await e.Reply($"超出范围 [{Config.MinRange},{Config.MaxRange}] ");
+            await e.Reply("请提供日程序号，例如：日程详情 2");
             return;
         }
-        DateTimeOffset start,
-            end;
-        if (week > 0) //正数表示未来
+        await Sync.UpdateCalendarAsync();
+        if (!await EnterCooldownAsync(e))
+            return;
+        var now = Utils.NetworkTime.Now;
+        if (await QueryRangeAsync(weeks, e, now) is not var (_, events))
+            return;
+        if (n < 1 || n > events.Length)
         {
-            start = now; //开始于当前时间
-            end = start.AddDays(7 * week); //当前时间加上周数
-        }
-        else
-        {
-            end = now; //结束时间
-            start = end.AddDays(7 * week); //week是负的，所以开始时间等于现在减去..
-        }
-        if (Calendar is null)
-        {
-            await e.Reply("日历获取失败");
+            await e.Reply(events.Length == 0 ? "没有日程" : $"序号超出范围 [1,{events.Length}]");
             return;
         }
-        var output = Calendar.GetEvents(start, end).BuildTextOutput(now);
-        await e.Reply($"近{week}周的日程：\n{output}");
-        //Service.LogDebug(JsonConvert.SerializeObject(e));
+        await e.Reply($"#{n} {events[n - 1].BuildTextOutput(now)}");
     }
 
     public override IEnumerable<AgentFunctionInfo>? ExportFunctions
